@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.7.3
+
+- Fixed TradeLord expecting too much for goods it carries a day or more to a town that its villages restock before you arrive
+- With Enable extended debug logging on, TradeLord.log now says each hour what the villages will send their towns before you arrive
+
 ## 2.7.2
 
 - Fixed TradeLord buying goods with a low Conf just because they added up to more profit, when other goods earned more a day at their Conf

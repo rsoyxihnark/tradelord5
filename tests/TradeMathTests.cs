@@ -3180,6 +3180,83 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_villages_warehouse_holds_five_days_of_what_it_makes_and_it_stops_making_past_half_again()
+        {
+            Assert.Equal(62, TradeMath.AVillagesWarehouse(12.4f));
+            Assert.Equal(5, TradeMath.AVillagesWarehouse(0.3f));
+            Assert.Equal(5, TradeMath.AVillagesWarehouse(float.NaN));
+            Assert.Equal(30f, TradeMath.HeldAfter(10f, 10f, 2f, 60), 3);
+            Assert.Equal(90f, TradeMath.HeldAfter(80f, 10f, 3f, 60), 3);
+            Assert.Equal(95f, TradeMath.HeldAfter(95f, 10f, 1f, 60), 3);
+            Assert.Equal(2f, TradeMath.DaysUntilAVillageIsFull(50f, 60, 5f), 3);
+            Assert.Equal(0f, TradeMath.DaysUntilAVillageIsFull(60f, 60, 5f));
+            Assert.True(float.IsPositiveInfinity(TradeMath.DaysUntilAVillageIsFull(10f, 60, 0f)));
+        }
+
+        [Fact]
+        public void Villagers_take_three_fifths_of_each_good_and_set_out_about_seven_hours_after_the_warehouse_fills()
+        {
+            Assert.Equal(1f - 0.8f * 0.8f * 0.8f * 0.8f, TradeMath.ShareVillagersLoad(), 4);
+            Assert.Equal(1f / 0.15f / 24f, TradeMath.DaysVillagersWaitFor(TradeMath.VillagersSetOutAnHourWith), 4);
+            Assert.Equal(5f / 24f, TradeMath.DaysVillagersWaitFor(TradeMath.VillagersLeaveATownAnHourWith), 4);
+            Assert.True(float.IsPositiveInfinity(TradeMath.DaysVillagersWaitFor(0f)));
+        }
+
+        [Fact]
+        public void A_full_village_sends_its_goods_to_its_town_and_sends_again_once_its_warehouse_fills_again()
+        {
+            float share = TradeMath.ShareVillagersLoad();
+            float wait = 1f / 0.15f / 24f;
+            int warehouse = TradeMath.AVillagesWarehouse(12f);
+            List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                warehouse, 0f, 0f, true, 0.25f, 7f);
+            Assert.Equal(3, loads.Count);
+            Assert.Equal(wait + 0.25f, loads[0].Days, 3);
+            Assert.Equal((40f + 10f * wait) * share, loads[0].Units[0], 2);
+            Assert.Equal((20f + 2f * wait) * share, loads[0].Units[1], 2);
+            float left = (60f + 12f * wait) * (1f - share);
+            float refilled = wait + (warehouse - left) / 12f;
+            Assert.Equal(refilled + wait + 0.25f, loads[1].Days, 2);
+            Assert.True(loads[2].Days <= 7f);
+        }
+
+        [Fact]
+        public void Villagers_away_from_home_or_short_of_room_send_later_or_less_and_a_village_that_cannot_fill_sends_nothing()
+        {
+            float wait = 1f / 0.15f / 24f;
+            int warehouse = TradeMath.AVillagesWarehouse(12f);
+            List<TradeMath.VillageLoad> away = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                warehouse, 0f, 1f, true, 0.25f, 7f);
+            Assert.Equal(1f + wait + 0.25f, away[0].Days, 3);
+
+            List<TradeMath.VillageLoad> far = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                warehouse, 0f, 0f, true, 2f, 10f);
+            Assert.Equal(2, far.Count);
+            Assert.Equal(wait + 2f + 5f / 24f + 2f + wait + 2f, far[1].Days, 3);
+
+            List<TradeMath.VillageLoad> unraised = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                warehouse, 0f, 0f, false, 0.25f, 7f);
+            Assert.Equal(wait + wait + 0.25f, unraised[0].Days, 3);
+
+            List<TradeMath.VillageLoad> cut = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f, 5f }, new[] { 10f, 2f, 0f }, new[] { 1f, 1f, 50f }, new[] { false, false, true },
+                warehouse, 10f, 0f, true, 0.25f, 7f);
+            Assert.Equal(10f, cut[0].Units[0] + cut[0].Units[1], 2);
+            Assert.Equal(5f * TradeMath.ShareVillagersLoad(), cut[0].Units[2], 3);
+
+            Assert.Empty(TradeMath.WhatAVillageSends(new[] { 10f }, new[] { 0f }, new[] { 1f }, new[] { false },
+                                                     warehouse, 0f, 0f, true, 0.25f, 7f));
+            Assert.Empty(TradeMath.WhatAVillageSends(new[] { 60f }, new[] { 12f }, new[] { 1f }, new[] { false },
+                                                     warehouse, 0f, 0f, true, 0.25f, 0.4f));
+            Assert.Empty(TradeMath.WhatAVillageSends(null, new[] { 12f }, new[] { 1f }, new[] { false },
+                                                     warehouse, 0f, 0f, true, 0.25f, 7f));
+        }
+
+        [Fact]
         public void A_figure_priced_for_some_units_is_scaled_to_the_units_it_is_weighed_on()
         {
             Assert.Equal(10000, TradeMath.Scaled(2000, 100, 20));
