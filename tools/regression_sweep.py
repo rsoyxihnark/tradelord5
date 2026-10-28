@@ -11293,6 +11293,10 @@ WITHDRAWN_NEVER_WRITTEN = (
     "score the forecast in the log",
     "best market tolerance",
     "restock food (days of supply)",
+    "taken from the game's distance rather than walked",
+    "walks the road to every market again",
+    "the map holding up for seconds",
+    "far markets for small profits",
 )
 
 
@@ -14008,7 +14012,7 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
     ladder = between(S['Plan.cs'], "internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed) =>",
                      "internal static Ladder SellLadder(Leg leg) =>")
     score = method_body(S['Plan.cs'], "internal static float SaleScore(")
-    lands = between(S['Market.cs'], "internal static Ladder AsItLands", "internal static int OpeningOn")
+    lands = between(S['Market.cs'], "internal static Ladder AsItLands", "internal static int Opening(")
     step = method_body(S['Marker.cs'], "private int Next()")
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
@@ -14025,9 +14029,9 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
             and "trust = Confidence.AsPromisesHaveHeld(1f, arrivals, heldThere);" in score
             and "if (s.TrustWhatAMarketPaid && ledger != null && to != null &&" in score
             and ": Held(site, stocked, selling, quoted, landed, scanning: false);" in lands
-            and "landing == null ? quoted" in between(S['Market.cs'], "internal static int OpeningOn", ";")
-            and ": landing.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, landing.At(0)) : quoted;"
-                in between(S['Market.cs'], "internal static int OpeningOn", "internal static int Opening(")
+            and "OpeningOn" not in S['Market.cs']
+            and "_walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;" in step
+            and "return _walk != null ? _walk.At(_rungs.Count) : _flat;" in step
             and "_resale[at] = (buyer, rungs ?? new Ladder(buyer, Item(at), true, price, 0), till);" in buy_pass()
             and "!On ? 0" in between(S['Forecast.cs'], "internal static int WorthShiftAsItHasHeld", "private static int PriceShift")
             and ordered(step, "? Priced.At(_market, _el, _party, true)",
@@ -20480,7 +20484,7 @@ def the_village_ceiling_ships_at_a_day_and_days_is_marked_as_chosen():
     said = {path: spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())}
     scan = route_scan()
     return ("public float MaxTravelDaysVillage = 1f;" in S['Options.cs']
-            and all(words['TL307'].rstrip('.\u3002').endswith(' 1') for words in said.values())
+            and all(words['TL307'].rstrip('.\u3002').endswith(' 1.0') for words in said.values())
             and ordered(scan, "// Intended-Behavior: Days runs from where your party stands to Buy From and on to Sell At",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);")
             and "start it with `Intended-Behavior:`" in RULES
@@ -20551,7 +20555,8 @@ def the_ledger_sizes_each_route_to_the_room_your_cargo_will_have():
                         "int units = Math.Min(leg.Units, fits);",
                         "RouteQuote q = Bulk.Walk(leg.From, leg.To, leg.Item, units, leg.Till, spendCap,",
                         "bool sized = fits < leg.Units;",
-                        "SizedToCargo = sized && q.Units >= fits,")
+                        "HeldBackBy = sized && q.Units >= fits ? Bound.Cargo : moneyCapped ? moneyBound : Bound.None,")
+            and "SizedToCargo" not in ALL
             and "NothingFitsYourCargo = kept.Count == 0 && scan.CargoShut > 0;" in scan
             and "WhatTheMarkWouldKeep(site, ride, cargo, holdShare), holdShare);" in frees
             and "return (took.Weight, gold > 0L ? (int)gold : 0);" in frees
@@ -21427,9 +21432,11 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "float soonest = Travel.StraightDaysFromParty(s);",
                         "if (cap <= 0f) { reachable.Add((s, market, purse, soonest)); continue; }",
                         "reachable.Sort(FastestPurseFirst);",
-                        "if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
-                        "                if (s != holder && s != how.Intended &&\n"
-                        "                    TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;\n"
+                        "if (s != holder && s != how.Intended)\n"
+                        "                {\n"
+                        "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
+                        "                    if (TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;\n"
+                        "                }\n"
                         "                ride = Travel.EstimateDaysFromParty(s);\n"
                         "                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }\n"
                         "                how.Told++;",
@@ -21452,8 +21459,12 @@ def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
                         "most += (long)TradeMath.MostAForecastCanReach(quoted) * cargo[at].amount;",
                         "return most;")
             and best.count("MostThisCargoCouldFetch(") == 1
-            and "if (s != holder && s != how.Intended &&\n"
-                "                    TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;" in best
+            and "if (s != holder && s != how.Intended)\n"
+                "                {\n"
+                "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
+                "                    if (TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;\n"
+                "                }" in best
+            and best.count("<= bar) break;") == 1
             and '" left unpriced once no price they could pay would beat "' in
                 method_body(marker, "private static void Ultra"))
 
@@ -21681,11 +21692,13 @@ def a_road_that_would_not_walk_is_not_timed_as_flat_ground():
             and ordered(party, 'StopTheMeter(started, ref _partyWalks, "a road from your party", road);',
                         "float longer = !atSea && landRatio >= AllOnLand ? TheRoughRoadTakesLongerBy() : 1f;",
                         "road.Length = dist * longer;",
-                        "road.Runs = Unwalked(road.Length, landRatio, atSea);", "road.Longer = longer;")
+                        "road.Runs = Unwalked(road.Length, landRatio, atSea);")
             and ordered(pair, 'StopTheMeter(started, ref _pairWalks, "a road between markets", road);',
                         "float longer = landRatio >= AllOnLand ? TheRoughRoadTakesLongerBy() : 1f;",
                         "road.Length = dist * longer;",
-                        "road.Runs = Unwalked(road.Length, landRatio, false);", "road.Longer = longer;")
+                        "road.Runs = Unwalked(road.Length, landRatio, false);")
+            and "road.Longer" not in tr
+            and "internal float Longer;" not in tr
             and "road.Runs = Unwalked(dist, landRatio" not in tr
             and ordered(stalest, "ItemObject stalest = cargo[0].item.Item;",
                         "if (Options.Current.Omniscient || ledger == null) return stalest;",
@@ -21770,20 +21783,14 @@ chk("2.5.2", "TradeLord.log says how much of a market's till the sellers already
 def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_measured():
     tr = S['Travel.cs']
     pair = method_body(tr, "private static Road PairRoad")
-    guess = method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt")
     wanted = method_body(tr, "private static bool WalkWhatTheLedgerWanted(long started, long budget)")
     fill = method_body(tr, "private static void FillTheRoadsNow()")
     said = method_body(tr, "internal static string TheRideTo(Settlement target)")
     forget = method_body(tr, "private static void ForgetTheRoadsWalkedBehind")
-    return (pair and guess and wanted and fill and said and forget
-            and "internal bool Guessed;" in tr
+    return (pair and wanted and fill and said and forget
+            and "internal bool Guessed;" not in tr
             and "hit = RoadBetween(a, b);" in pair
-            and "TheRoadAsTheGameMeasuresIt" not in pair
-            and ordered(guess, "bool guess = landRatio >= AllOnLand && a != b;",
-                        "float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;",
-                        "float length = dist * longer;",
-                        "Length = length,", "Runs = Unwalked(length, landRatio, false),",
-                        "Guessed = guess", "Longer = longer")
+            and "TheRoadAsTheGameMeasuresIt" not in tr
             and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadBetween")
             and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadFromParty")
             and ordered(method_body(tr, "internal static float TheRoughRoadTakesLongerBy"),
@@ -21828,16 +21835,15 @@ def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_
             and ordered(fill, "if (!WalkWhatTheLedgerWanted(started, budget)) return;",
                         "bool held = TheSameMarkets(reach, _fillFor) && _fillOrder != null;",
                         "if (!held)", "_fillShell = 0;",
-                        "if (_pairDist.TryGetValue((from.StringId, to.StringId), out Road had) && !had.Guessed) continue;")
+                        "if (_pairDist.TryGetValue((from.StringId, to.StringId), out Road _)) continue;")
             and "_pairDist.ContainsKey(" not in tr
             and "ForgetWhatTheLedgerWanted();" in forget
             and "ForgetTheRoadsWalkedBehind();" in method_body(tr, "private static void DropIfNavalChanged")
-            and ordered(said, '" more taken from the game\'s distance"',
-                        "(_ratios.Count > 0",
+            and ordered(said, "(_ratios.Count > 0",
                         '", a road the ledger has not walked counted at "',
                         '" times longer for the ground it "',
                         '" still queued for the background"')
-            and "_pairGuesses = 0;" in method_body(tr, "private static void StartTheMeter"))
+            and "_pairGuesses" not in tr)
 
 
 chk("2.4.0", "a market road is walked the first time the ledger asks for it, the rest are walked in the background a frame at a time, and every walk measures how much longer the ground makes a ride than the game's distance makes it look, which TradeLord.log says",
@@ -21991,6 +21997,48 @@ def a_markets_narrow_till_and_its_traffic_both_count_against_its_conf():
 
 chk("2.4.2", "a market's Conf counts its till against it where the till cannot take the whole cargo and counts the caravans and villagers heading there, and TradeLord.log writes both for every market it priced and sums the day",
     a_markets_narrow_till_and_its_traffic_both_count_against_its_conf())
+
+
+def the_marker_prices_both_markets_it_put_first():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (marker
+            and ordered(marker, "reachable.Sort(FastestPurseFirst);",
+                        "TheMarkedTownFirst(reachable, holder);",
+                        "TheIntendedTownNext(reachable, how.Intended, holder);",
+                        "float bar = 0f;",
+                        "if (s != holder && s != how.Intended)\n"
+                        "                {\n"
+                        "                    if (TradeMath.PerDay(gold, ride) <= bar) break;",
+                        "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
+                        "if (s == how.Intended) how.IntendedRate = rate;",
+                        "how.HolderPriced = true;")
+            and marker.count("<= bar) break;") == 1
+            and marker.count("<= bar) continue;") == 1)
+
+
+chk("2.5.3", "the map marker always prices the marked market and the Sell At your goods were bought for, and stops early only past both, where the markets are still in order of purse over ride",
+    the_marker_prices_both_markets_it_put_first())
+
+
+def the_buying_orders_are_weighed_on_what_each_good_was_priced_for():
+    plans = method_body(S['Passes.cs'], "internal static List<(int units, int cost, int profit, float hauls)> AsPlans")
+    planned = method_body(S['Trading.cs'], "public bool Planned(int at, out PlannedSale plan, out Block why)")
+    scaled = method_body(S['TradeMath.cs'], "public static int Scaled(int gold, int units, int pricedFor)")
+    return (plans and planned and scaled
+            and ordered(plans, "int priced = stock[i].Plan.Priced > 0 ? stock[i].Plan.Priced : stock[i].Weighed;",
+                        "plans.Add((stock[i].Weighed, TradeMath.Scaled(stock[i].Plan.Cost, stock[i].Weighed, priced),",
+                        "TradeMath.Scaled(stock[i].Plan.Profit, stock[i].Weighed, priced), stock[i].Hauls));")
+            and "QtyUncut = row.QtyUncut, Priced = row.Quantity," in planned
+            and "internal int Priced;" in S['Rules.cs']
+            and ordered(scaled, "if (pricedFor <= 0 || units == pricedFor) return gold;",
+                        "long scaled = (long)gold * units / pricedFor;")
+            and "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);" in S['Passes.cs']
+            and "A_good_the_scan_cut_to_your_cargo_counts_at_the_profit_it_was_priced_for" in BUYPASSTESTS
+            and "A_figure_priced_for_some_units_is_scaled_to_the_units_it_is_weighed_on" in MATHTESTS)
+
+
+chk("2.5.3", "the two buying orders weigh each good on the cost and profit of the units the scan priced, scaled to the units before your cargo cut them, so a good cut to your cargo is not undervalued",
+    the_buying_orders_are_weighed_on_what_each_good_was_priced_for())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

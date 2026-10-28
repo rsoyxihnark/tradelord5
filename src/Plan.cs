@@ -29,7 +29,6 @@ namespace TradeLord
         internal float Age;
         internal int Caravans;
         internal float Trust = 1f;
-        internal Func<int, int> PaidAhead;
     }
 
     internal sealed class BuyFrom
@@ -116,8 +115,6 @@ namespace TradeLord
         }
 
         internal Settlement Here => _here;
-
-        internal bool RankByScore => _rankByScore;
 
         internal IEnumerable<BuyFrom> Markets => _from.Values;
 
@@ -347,7 +344,6 @@ namespace TradeLord
                                            leg.Age, lasts, leg.ToBuy),
                 StillComing = TradeMath.StillComing(q.Units, leg.OnTheShelfNow),
                 RunsOutInDays = runsOut,
-                SizedToCargo = sized && q.Units >= fits,
                 HeldBackBy = sized && q.Units >= fits ? Bound.Cargo : moneyCapped ? moneyBound : Bound.None,
                 Key = TradeMath.Key(profit, confidence, leg.Trust, _rankByScore, leg.Weighs, q.Units, leg.Days),
                 KeyByDenar = TradeMath.KeyByDenar(profit, confidence, leg.Trust, _rankByScore, q.BuyTotal, leg.Days),
@@ -544,7 +540,7 @@ namespace TradeLord
                     {
                         Item = item, To = to, SellQuoted = quoted, LandedAtSell = landed, Till = purse,
                         Units = units, Each = each, Weighs = each, Days = days, Held = held,
-                        Caravans = caravans, Trust = trust, PaidAhead = paidAhead
+                        Caravans = caravans, Trust = trust
                     }
                 };
             }

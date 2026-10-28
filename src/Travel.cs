@@ -134,8 +134,6 @@ namespace TradeLord
             internal float LandRatio;
             internal List<TradeMath.Run> Runs;
             internal bool Walked;
-            internal bool Guessed;
-            internal float Longer;
             internal int Hour = -1;
             internal float Days;
         }
@@ -956,7 +954,6 @@ namespace TradeLord
             _meterHour = hour;
             _partyWalks = 0;
             _pairWalks = 0;
-            _pairGuesses = 0;
             _otherWalks = 0;
             _paths = 0;
             _probes = 0;
@@ -1134,7 +1131,6 @@ namespace TradeLord
                 road.Length = dist * longer;
                 road.LandRatio = landRatio;
                 road.Runs = Unwalked(road.Length, landRatio, atSea);
-                road.Longer = longer;
             }
             return road;
         }
@@ -1160,7 +1156,6 @@ namespace TradeLord
                 road.Length = dist * longer;
                 road.LandRatio = landRatio;
                 road.Runs = Unwalked(road.Length, landRatio, false);
-                road.Longer = longer;
             }
             return road;
         }
@@ -1179,7 +1174,6 @@ namespace TradeLord
         private static readonly List<(string, string)> _wanted = new List<(string, string)>();
         private static readonly HashSet<(string, string)> _wantedHeld = new HashSet<(string, string)>();
         private static int _wantedAt;
-        private static int _pairGuesses;
 
         private static void WantThisRoadWalked((string, string) key)
         {
@@ -1388,7 +1382,7 @@ namespace TradeLord
                     _fillStep = 0;
                 }
                 if (from == to) continue;
-                if (_pairDist.TryGetValue((from.StringId, to.StringId), out Road had) && !had.Guessed) continue;
+                if (_pairDist.TryGetValue((from.StringId, to.StringId), out Road _)) continue;
                 if (cap > 0f && StraightDaysFromParty(from) + StraightDaysBetween(from, to) > cap) continue;
                 long before = Stopwatch.GetTimestamp();
                 _justWalked = false;
@@ -1607,22 +1601,6 @@ namespace TradeLord
             return _ratioHeld;
         }
 
-        private static Road TheRoadAsTheGameMeasuresIt(Settlement a, Settlement b)
-        {
-            float dist = Between(a, b, out float landRatio);
-            bool guess = landRatio >= AllOnLand && a != b;
-            float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;
-            float length = dist * longer;
-            return new Road
-            {
-                Length = length,
-                LandRatio = landRatio,
-                Runs = Unwalked(length, landRatio, false),
-                Guessed = guess,
-                Longer = longer
-            };
-        }
-
         internal static float EstimateDaysBetween(Settlement a, Settlement b, float after)
         {
             MobileParty party = MobileParty.MainParty;
@@ -1761,9 +1739,6 @@ namespace TradeLord
                    (metered ? _partyWalks : 0) + " road(s) walked from your party, " + (metered ? _pairWalks : 0) +
                    " between markets" +
                    (metered && _walkedBehind > 0 ? ", " + _walkedBehind + " of them in the background" : "") +
-                   (metered && _pairGuesses > 0
-                       ? ", " + _pairGuesses + " more taken from the game's distance"
-                       : "") +
                    (_ratios.Count > 0
                        ? ", a road the ledger has not walked counted at " +
                          TheRoughRoadTakesLongerBy().ToString("0.00", inv) + " times longer for the ground it " +

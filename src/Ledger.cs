@@ -35,7 +35,6 @@ namespace TradeLord
         public int Caravans;
 
         public float RunsOutInDays = Projection.NeverRunsOut;
-        public bool SizedToCargo;
 
         public TradeLord.Confidence.Parts Parts;
 
@@ -1822,9 +1821,6 @@ namespace TradeLord
                             " as trading on arrival leaves it alone the first time you come back"
                           : ""));
         }
-
-        private static int Pressure(Dictionary<Settlement, int> map, Settlement s) =>
-            s != null && map.TryGetValue(s, out int n) ? n : 0;
     }
 
     [HarmonyPatch(typeof(FoodConsumptionBehavior), "MakeFoodConsumption")]

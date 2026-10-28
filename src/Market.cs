@@ -230,10 +230,6 @@ namespace TradeLord
                 ? null
                 : Held(site, stocked, selling, quoted, landed, scanning: false);
 
-        internal static int OpeningOn(Ladder landing, Settlement site, int quoted) =>
-            landing == null ? quoted
-            : landing.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, landing.At(0)) : quoted;
-
         internal static int Opening(Settlement site, ItemObject item, bool selling, int quoted,
                                    int landed)
         {

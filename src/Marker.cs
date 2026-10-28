@@ -1258,9 +1258,11 @@ namespace TradeLord
             for (int at = 0; at < reachable.Count; at++)
             {
                 var (s, market, gold, ride) = reachable[at];
-                if (TradeMath.PerDay(gold, ride) <= bar) break;
-                if (s != holder && s != how.Intended &&
-                    TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;
+                if (s != holder && s != how.Intended)
+                {
+                    if (TradeMath.PerDay(gold, ride) <= bar) break;
+                    if (TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;
+                }
                 ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }
                 how.Told++;

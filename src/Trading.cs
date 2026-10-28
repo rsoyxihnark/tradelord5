@@ -3294,7 +3294,7 @@ namespace TradeLord
                 why = Block.None;
                 plan = new PlannedSale
                 {
-                    Qty = row.Shown > 0 ? row.Shown : row.Quantity, QtyUncut = row.QtyUncut,
+                    Qty = row.Shown > 0 ? row.Shown : row.Quantity, QtyUncut = row.QtyUncut, Priced = row.Quantity,
                     Profit = row.TotalProfit, Cost = row.Cost, Key = row.Key, KeyByDenar = row.KeyByDenar
                 };
                 Aim(at, row.To, row.SellPrice, rungs, till);

@@ -127,7 +127,11 @@ namespace TradeLord
         {
             var plans = new List<(int units, int cost, int profit, float hauls)>(stock == null ? 0 : stock.Count);
             for (int i = 0; stock != null && i < stock.Count; i++)
-                plans.Add((stock[i].Weighed, stock[i].Plan.Cost, stock[i].Plan.Profit, stock[i].Hauls));
+            {
+                int priced = stock[i].Plan.Priced > 0 ? stock[i].Plan.Priced : stock[i].Weighed;
+                plans.Add((stock[i].Weighed, TradeMath.Scaled(stock[i].Plan.Cost, stock[i].Weighed, priced),
+                           TradeMath.Scaled(stock[i].Plan.Profit, stock[i].Weighed, priced), stock[i].Hauls));
+            }
             return plans;
         }
     }
