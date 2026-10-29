@@ -79,8 +79,6 @@ namespace TradeLord
         {
             internal string Town;
             internal double Since;
-            internal Dictionary<string, int> Cargo;
-            internal bool Traded;
             internal int Seen;
         }
 
@@ -431,7 +429,6 @@ namespace TradeLord
                 {
                     Town = bound.StringId,
                     Since = watching ? now : double.NaN,
-                    Cargo = watching ? CargoOf(party.ItemRoster) : null,
                     Seen = hour
                 };
             }
@@ -441,33 +438,6 @@ namespace TradeLord
             foreach (KeyValuePair<string, Turn> one in _turns)
                 if (hour - one.Value.Seen > HoursATurnIsKeptUnseen) gone.Add(one.Key);
             foreach (string id in gone) _turns.Remove(id);
-        }
-
-        private static Dictionary<string, int> CargoOf(ItemRoster carried)
-        {
-            var cargo = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (int k = 0; carried != null && k < carried.Count; k++)
-            {
-                ItemObject item = carried.GetItemAtIndex(k);
-                int amount = carried.GetElementNumber(k);
-                if (item?.StringId == null || amount <= 0) continue;
-                cargo.TryGetValue(item.StringId, out int had);
-                cargo[item.StringId] = had + amount;
-            }
-            return cargo;
-        }
-
-        private static bool TheyCameOff(Dictionary<string, int> before, Dictionary<string, int> after,
-                                        Dictionary<ItemObject, int> moved)
-        {
-            if (before == null || moved.Count == 0) return false;
-            foreach (KeyValuePair<ItemObject, int> one in moved)
-            {
-                before.TryGetValue(one.Key.StringId, out int had);
-                after.TryGetValue(one.Key.StringId, out int has);
-                if ((long)has + one.Value > had) return false;
-            }
-            return true;
         }
 
         internal static void ACaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
@@ -481,12 +451,10 @@ namespace TradeLord
             foreach ((EquipmentElement element, int amount) in traded)
             {
                 ItemObject item = element.Item;
-                if (item?.ItemCategory == null || item.StringId == null || amount <= 0) continue;
+                if (item?.ItemCategory == null || item.StringId == null || amount == 0) continue;
                 moved.TryGetValue(item, out int had);
                 moved[item] = had + amount;
             }
-            bool sold = !turn.Traded && TheyCameOff(turn.Cargo, CargoOf(caravan.ItemRoster), moved);
-            turn.Traded = true;
             if (double.IsNaN(turn.Since)) return;
             double at = CampaignTime.Now.ToHours;
             float lead = (float)((at - turn.Since) / 24d);
@@ -498,6 +466,8 @@ namespace TradeLord
             foreach (KeyValuePair<ItemObject, int> one in moved)
             {
                 ItemObject item = one.Key;
+                var (units, sold) = TradeMath.WhatACaravanMoved(one.Value);
+                if (units <= 0) continue;
                 came.Add(new Came
                 {
                     At = at,
@@ -506,9 +476,9 @@ namespace TradeLord
                     Priced = TradePolicy.Priced(item),
                     Item = item.StringId,
                     Category = item.ItemCategory.StringId,
-                    Units = one.Value,
-                    Worth = TradeMath.WorthOf(one.Value, item.Value),
-                    Gold = sold ? TradeMath.WorthOf(one.Value, Priced.At(town, item, caravan, selling: true)) : 0
+                    Units = units,
+                    Worth = TradeMath.WorthOf(units, item.Value),
+                    Gold = sold ? TradeMath.WorthOf(units, Priced.At(town, item, caravan, selling: true)) : 0
                 });
             }
         }
