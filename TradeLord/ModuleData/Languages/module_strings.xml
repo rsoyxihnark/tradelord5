@@ -340,5 +340,6 @@
 		<string id="TL512" text=" | {COUNT} route(s) from {MARKET} set aside: trading on arrival leaves it alone the first time you come back"/>
 		<string id="TL513" text="TradeLord is still measuring {COUNT} road(s)"/>
 		<string id="TL514" text="The ledger fills in as the roads are measured, a little each frame, so the map never stops"/>
+		<string id="TL515" text="it would earn under a tenth a day of the best good to buy here"/>
 	</strings>
 </base>

@@ -143,6 +143,39 @@ namespace TradeLord.Tests
             float unsimulated = Confidence.Of(false, 100, 100, 100, 1, 0f, 0, -1f);
             Assert.True(unsimulated < 1f && unsimulated > 0.5f);
         }
+
+        [Fact]
+        public void No_conf_beats_the_most_its_ride_allows()
+        {
+            var rng = new System.Random(83);
+            for (int i = 0; i < 20000; i++)
+            {
+                bool sim = rng.Next(2) == 0;
+                int flat = rng.Next(-50, 500);
+                int simProfit = rng.Next(-50, 800);
+                int stock = rng.Next(-5, 300);
+                int units = rng.Next(-5, 100);
+                float days = (float)rng.NextDouble() * 40f - 2f;
+                int caravans = rng.Next(-3, 30);
+                float age = (float)rng.NextDouble() * 80f - 10f;
+                float runsOut = rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 20f;
+                float toBuy = (float)rng.NextDouble() * 5f;
+                float most = Confidence.MostItCanBe(days);
+                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age, runsOut, toBuy) <= most);
+                Assert.True(Confidence.MostItCanBe(days + 0.5f) <= most);
+            }
+        }
+
+        [Fact]
+        public void The_most_a_ride_allows_is_its_haste()
+        {
+            Assert.Equal(Confidence.Of(true, 100, 100, 0, 0, 3f, 0, -1f), Confidence.MostItCanBe(3f), 6);
+            Assert.Equal(0.5f, Confidence.MostItCanBe(3f), 6);
+            Assert.Equal(1f, Confidence.MostItCanBe(0f), 6);
+            Assert.Equal(1f, Confidence.MostItCanBe(-4f), 6);
+            Assert.Equal(1f, Confidence.MostItCanBe(float.NaN), 6);
+            Assert.Equal(0.01f, Confidence.MostItCanBe(1e9f), 6);
+        }
     }
 
     public class ItemListTests

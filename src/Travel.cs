@@ -1755,6 +1755,9 @@ namespace TradeLord
         private const double RoadsMsAScan = 20d;
         private const int RoadsLooksAFrame = 4000;
         private const int RoadsBeforeTheLedgerLooksAgain = 250;
+        private const double AScanRestsFor = 9d;
+        private static long _scanTook, _scanEnded;
+        private static bool _lookAgainOwed;
         private static long _scanRoadTicks, _scanRoadBudget;
         private static bool _scanRoads;
         private static int _walkedForTheLedger;
@@ -1847,6 +1850,8 @@ namespace TradeLord
             long inner = _frameTicks - before;
             if (inner < 0L) inner = 0L;
             _frameTicks += spent > inner ? spent - inner : 0L;
+            _scanTook = spent;
+            _scanEnded = Stopwatch.GetTimestamp();
         }
 
         internal static void FillTheRoads()
@@ -1915,6 +1920,8 @@ namespace TradeLord
         private static void TheLedgerMayLookAgain()
         {
             _walkedForTheLedger = 0;
+            _lookAgainOwed = !TradeMath.TheScanHasRested(Stopwatch.GetTimestamp() - _scanEnded, _scanTook, AScanRestsFor);
+            if (_lookAgainOwed) return;
             try
             {
                 LedgerBehavior.Instance?.MoreRoadsAreMeasuredNow();
@@ -1926,6 +1933,7 @@ namespace TradeLord
         private static void FillTheRoadsNow()
         {
             if (!OnTheMap()) return;
+            if (_lookAgainOwed) TheLedgerMayLookAgain();
             long started = Stopwatch.GetTimestamp();
             long budget = (long)(RoadsMsAFrame * Stopwatch.Frequency / 1000d);
             if (!WalkWhatTheLedgerWanted(started, budget)) return;
@@ -2055,6 +2063,9 @@ namespace TradeLord
             _ratioSeen = 0;
             _ratioFresh = -1;
             _ratioHeld = 1f;
+            _scanTook = 0L;
+            _scanEnded = 0L;
+            _lookAgainOwed = false;
         }
 
         private static float Nearest(Vec2 from, Settlement to)
@@ -2172,7 +2183,7 @@ namespace TradeLord
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void NoteHowRoughTheGuessWas(float dist, float landRatio, Road walked)
         {
-            if (++_ratioSeen % RoadRatioEveryNth != 0) return;
+            if (++_ratioSeen % RoadRatioEveryNth != 0 && _ratios.Count >= LeastRatiosToTrust) return;
             try
             {
                 TradeMath.Pace pace = PartyPace();

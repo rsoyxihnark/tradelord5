@@ -4274,5 +4274,29 @@ namespace TradeLord.Tests
             TradeMath.UnseenDraws(null, 5f, into);
             Assert.Empty(into);
         }
+
+        [Fact]
+        public void A_good_under_a_tenth_a_day_of_the_best_good_to_buy_is_left_as_thin()
+        {
+            double pottery = TradeMath.KeyByProfit(0.57f, 1f, true, 0.7f) * 117d;
+            double sheep = TradeMath.KeyByProfit(0.41f, 1f, true, 4.3f) * 8d;
+            double velvet = TradeMath.KeyByProfit(0.27f, 1f, true, 4.0f) * 252d;
+            Assert.True(TradeMath.TooThinBeside(sheep, pottery));
+            Assert.False(TradeMath.TooThinBeside(velvet, pottery));
+            Assert.False(TradeMath.TooThinBeside(pottery, pottery));
+            Assert.True(TradeMath.TooThinBeside(9.99d, 100d));
+            Assert.False(TradeMath.TooThinBeside(10d, 100d));
+            Assert.False(TradeMath.TooThinBeside(0d, 0d));
+            Assert.False(TradeMath.TooThinBeside(double.NaN, 100d));
+        }
+
+        [Fact]
+        public void The_ledger_looks_again_only_once_its_last_scan_has_rested_nine_times_as_long()
+        {
+            Assert.True(TradeMath.TheScanHasRested(0L, 0L, 9d));
+            Assert.False(TradeMath.TheScanHasRested(899L, 100L, 9d));
+            Assert.True(TradeMath.TheScanHasRested(900L, 100L, 9d));
+            Assert.True(TradeMath.TheScanHasRested(long.MaxValue / 2, 1000L, 9d));
+        }
 }
 }

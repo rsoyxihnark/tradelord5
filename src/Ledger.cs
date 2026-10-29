@@ -1324,7 +1324,7 @@ namespace TradeLord
                 float days = Travel.EstimateDaysFromParty(town);
                 if (!WithinTravelCeiling(town, days)) continue;
                 SettlementComponent market = town.SettlementComponent;
-                bool tillOpen = TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;
+                bool tillOpen = TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(town), town.IsVillage) > 0;
                 Dictionary<ItemObject, int> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;
                 for (int i = 0; i < n; i++)
                 {
@@ -1384,7 +1384,7 @@ namespace TradeLord
             var all = new List<(Settlement s, int price)>();
             foreach (Settlement s in LiveCandidates(hour))
             {
-                if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,
+                if (selling && TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s),
                                                            s.IsVillage) <= 0) continue;
                 if (!selling && !TradeMath.EnoughOnTheShelf(StockOf(s, item), item.Value,
                                                             minStock, minWorth)) continue;
@@ -1513,6 +1513,7 @@ namespace TradeLord
         private readonly Dictionary<string, (string to, int sell, int landed, float conf, float days)> _lastBest =
             new Dictionary<string, (string, int, int, float, float)>(StringComparer.Ordinal);
         private Settlement _leftFrom;
+        private (string at, int visit) _arrivalSaid;
 
         internal void TheRoutesWentStale(Settlement leaving = null)
         {
@@ -1531,7 +1532,7 @@ namespace TradeLord
             return null;
         }
 
-        private int SayWhatChangedItsMind(List<TradeRoute> kept)
+        private int SayWhatChangedItsMind(List<TradeRoute> kept, Settlement here)
         {
             bool writing = Options.Current.ExtendedDebugLogging;
             var now = new Dictionary<string, (string to, int sell, int landed, float conf, float days)>(StringComparer.Ordinal);
@@ -1561,10 +1562,51 @@ namespace TradeLord
                           ", Days " + was.days.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) +
                           " to " + route.TravelDays.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
             }
+            if (writing && here != null &&
+                (_arrivalSaid.at != here.StringId || _arrivalSaid.visit != TradeActionBehavior.VisitNumber))
+            {
+                _arrivalSaid = (here.StringId, TradeActionBehavior.VisitNumber);
+                SayWhatItLeftOnArrival(here, now, lines);
+            }
             _lastBest.Clear();
             foreach (var kv in now) _lastBest[kv.Key] = kv.Value;
             if (lines.Count > 0) Log.WriteMany(lines);
             return changed;
+        }
+
+        private void SayWhatItLeftOnArrival(Settlement here,
+                                            Dictionary<string, (string to, int sell, int landed, float conf, float days)> now,
+                                            List<string> lines)
+        {
+            string tail = "|" + here.StringId;
+            MobileParty party = MobileParty.MainParty;
+            foreach (var kv in _lastBest)
+            {
+                if (!kv.Key.EndsWith(tail, StringComparison.Ordinal) || now.ContainsKey(kv.Key)) continue;
+                string id = kv.Key.Substring(0, kv.Key.Length - tail.Length);
+                ItemObject item = null;
+                foreach (ItemObject one in Items.All)
+                    if (one.StringId == id) { item = one; break; }
+                if (item == null) continue;
+                Settlement to = Settlement.Find(kv.Value.to);
+                int carried = InAll(party?.ItemRoster, item);
+                int asks = Priced.At(here.SettlementComponent, item, party, false);
+                int quote = to == null ? 0 : Priced.At(to.SettlementComponent, item, party, true);
+                int next = quote <= 0 ? 0 : Plan.SellLadder(to, item, quote, 0)?.At(carried) ?? quote;
+                string elsewhere = null;
+                foreach (string key in now.Keys)
+                    if (key.StartsWith(id + "|", StringComparison.Ordinal)) { elsewhere = key.Substring(id.Length + 1); break; }
+                string why = elsewhere != null
+                    ? "beaten by a route from " + ((object)Settlement.Find(elsewhere)?.Name ?? elsewhere)
+                    : _hereRows.ContainsKey(item)
+                        ? "still a route here, left off the list by your cargo room or purse"
+                        : _hereWhy.TryGetValue(item, out Block said) ? said.ToString() : "no longer priced here";
+                lines.Add("the ledger listed " + Tongue.Named(item.Name, item.StringId) + " from " + here.Name +
+                          " for " + ((object)to?.Name ?? kv.Value.to) + " at " + kv.Value.sell +
+                          " at its last scan, and walking in it left it: " + why + "; " + here.Name + " asks " +
+                          asks + " for one, you carry " + carried + ", and " + ((object)to?.Name ?? kv.Value.to) +
+                          " pays " + next + " for the next one after yours");
+            }
         }
 
         internal TradeRoute HereRow(Settlement here, ItemObject item, out Block why)
@@ -1602,9 +1644,11 @@ namespace TradeLord
             Bulk.Forget();
             _scanning = true;
             Travel.OpenTheScansRoadBudget();
+            Marker.HoldThePayings();
             try { return ScanEveryRoute(); }
             finally
             {
+                Marker.LetThePayingsGo();
                 Travel.CloseTheScansRoadBudget();
                 _scanning = false;
                 Bulk.Forget();
@@ -1627,30 +1671,35 @@ namespace TradeLord
                 wanted.Add(item);
             }
             List<ItemObject> buyOnly = BuyOnlyOnTheShelf(here, locked);
+            long priming = System.Diagnostics.Stopwatch.GetTimestamp();
             PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);
+            _primeTicks = System.Diagnostics.Stopwatch.GetTimestamp() - priming;
             var hereRows = new Dictionary<ItemObject, TradeRoute>();
             var hereWhy = new Dictionary<ItemObject, Block>();
             var routes = new List<TradeRoute>();
             var setAside = new Dictionary<ItemObject, TradeRoute>();
-            for (int at = 0; at < wanted.Count + buyOnly.Count; at++)
+            for (int at = 0; here != null && at < wanted.Count + buyOnly.Count; at++)
             {
-                bool listed = at < wanted.Count;
-                ItemObject item = listed ? wanted[at] : buyOnly[at - wanted.Count];
-                var buys = listed ? EveryBuy(item) : null;
+                ItemObject item = at < wanted.Count ? wanted[at] : buyOnly[at - wanted.Count];
+                if (StockOf(here, item) <= 0) continue;
+                int price = Priced.At(here.SettlementComponent, item, party, false);
+                TradeRoute row = scan.Best(item, here, price, false, 0f, out Block why);
+                if (row == null) hereWhy[item] = why;
+                else hereRows[item] = row;
+            }
+            Dictionary<ItemObject, TradeRoute> thin = LeaveTheThinLots(hereRows, hereWhy);
+            for (int at = 0; at < wanted.Count; at++)
+            {
+                ItemObject item = wanted[at];
+                var buys = EveryBuy(item);
                 TradeRoute best = null;
                 float bar = 0f;
-                if (here != null && StockOf(here, item) > 0)
+                if (here != null && (hereRows.TryGetValue(item, out TradeRoute mine) ||
+                                     thin.TryGetValue(item, out mine)) && Lists(buys, here))
                 {
-                    int price = Priced.At(here.SettlementComponent, item, party, false);
-                    TradeRoute row = scan.Best(item, here, price, false, 0f, out Block why);
-                    if (row == null) hereWhy[item] = why;
-                    else
-                    {
-                        hereRows[item] = row;
-                        if (listed && Lists(buys, here)) { best = row; bar = scan.ScoreToBeat(row); }
-                    }
+                    best = mine;
+                    bar = scan.ScoreToBeat(mine);
                 }
-                if (!listed) continue;
                 TradeRoute aside = null;
                 foreach (var (from, buyPrice) in buys)
                 {
@@ -1666,7 +1715,7 @@ namespace TradeLord
                     bar = scan.ScoreToBeat(route);
                 }
                 if (aside != null && (best == null || scan.ScoreToBeat(aside) > bar)) setAside[item] = aside;
-                if (best != null) routes.Add(best);
+                if (best != null && !(thin.TryGetValue(item, out TradeRoute cut) && best == cut)) routes.Add(best);
             }
             routes.Sort((x, y) => y.Key.CompareTo(x.Key));
             List<TradeRoute> kept = SizeEachMarket(scan, routes, hereRows);
@@ -1702,7 +1751,7 @@ namespace TradeLord
             Travel.SpentOnAScan(took, frameBefore);
             SayWhatTheScanCost(scan, kept.Count, took);
             LedgerPanel.TheScanIsNew();
-            int changed = SayWhatChangedItsMind(kept);
+            int changed = SayWhatChangedItsMind(kept, here);
             EngineTally.Scans++;
             EngineTally.SlowestScan = Math.Max(EngineTally.SlowestScan,
                                                took * 1000d / System.Diagnostics.Stopwatch.Frequency);
@@ -1777,6 +1826,25 @@ namespace TradeLord
             return kept;
         }
 
+        private static Dictionary<ItemObject, TradeRoute> LeaveTheThinLots(Dictionary<ItemObject, TradeRoute> hereRows,
+                                                                           Dictionary<ItemObject, Block> hereWhy)
+        {
+            double best = 0d;
+            foreach (var kv in hereRows) best = Math.Max(best, WeighedADay(kv.Value));
+            var thin = new Dictionary<ItemObject, TradeRoute>();
+            foreach (var kv in hereRows)
+                if (TradeMath.TooThinBeside(WeighedADay(kv.Value), best)) thin[kv.Key] = kv.Value;
+            foreach (ItemObject item in thin.Keys)
+            {
+                hereRows.Remove(item);
+                hereWhy[item] = Block.ThinLot;
+            }
+            return thin;
+        }
+
+        private static double WeighedADay(TradeRoute route) =>
+            TradeMath.KeyByProfit(route.Confidence, route.Trust, true, route.TravelDays) * (double)route.TotalProfit;
+
         private static float Taken(TradeRoute route) =>
             route.Leg != null && route.Leg.Each > 0.01f ? route.Quantity * route.Leg.Each : 0f;
 
@@ -1806,13 +1874,19 @@ namespace TradeLord
 
         internal bool NothingFitsYourPurse { get; private set; }
 
+        private long _primeTicks;
+
+        private static string Ms(long ticks) =>
+            (ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
+                System.Globalization.CultureInfo.InvariantCulture);
+
         private void SayWhatTheScanCost(RouteScan scan, int found, long ticks)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
             Log.Write("route scan: " + found + " route(s) off " + scan.Opened +
                       " opening price(s), " + scan.ThrownAway + " of them thrown away by a later test, in " +
-                      (ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
-                          System.Globalization.CultureInfo.InvariantCulture) + " ms" +
+                      Ms(ticks) + " ms, " + Ms(_primeTicks) + " ms of it ranking the markets and " +
+                      Ms(scan.FreesTicks) + " ms working out what your cargo frees at each market" +
                       (scan.ThrownAway > 0
                           ? "; of those thrown away, " + scan.ThrownByMargin + " missed your margin, " +
                             scan.ThrownByTill + " had nothing the till could take, " + scan.ThrownByCargo +

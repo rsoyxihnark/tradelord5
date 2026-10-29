@@ -340,5 +340,6 @@
 		<string id="TL512" text=" | {MARKET} çıkışlı {COUNT} rota bir kenara kondu: varışta ticaret, oraya ilk dönüşünüzde orayı rahat bırakır"/>
 		<string id="TL513" text="TradeLord hâlâ {COUNT} yol ölçüyor"/>
 		<string id="TL514" text="Yollar ölçüldükçe defter dolar, her karede biraz, böylece harita hiç durmaz"/>
+		<string id="TL515" text="buradan alınacak en iyi malın günlük kazancının onda birini bile getirmez"/>
 	</strings>
 </base>

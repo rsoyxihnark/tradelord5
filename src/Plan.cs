@@ -63,6 +63,7 @@ namespace TradeLord
         internal int PassedOver;
         internal int CargoShut;
         internal int SetAsideRoutes;
+        internal long FreesTicks;
 
         private readonly LedgerBehavior _ledger;
         private readonly bool _passOver;
@@ -87,6 +88,9 @@ namespace TradeLord
         private readonly Dictionary<Settlement, BuyFrom> _from = new Dictionary<Settlement, BuyFrom>();
         private readonly Dictionary<ItemObject, Good> _goods = new Dictionary<ItemObject, Good>();
         private readonly Dictionary<Settlement, float> _trust = new Dictionary<Settlement, float>();
+        private readonly Dictionary<ItemObject, int> _carried = new Dictionary<ItemObject, int>();
+        private readonly Dictionary<ItemObject, List<(Settlement, int)>> _sells =
+            new Dictionary<ItemObject, List<(Settlement, int)>>();
 
         internal RouteScan(LedgerBehavior ledger, MobileParty party, Settlement here)
         {
@@ -127,11 +131,13 @@ namespace TradeLord
         {
             if (_from.TryGetValue(from, out BuyFrom at)) return at;
             at = new BuyFrom { Site = from, Here = from == _here };
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
             var freed = at.Here && _soldHere
                 ? (room: 0f, gold: 0)
                 : Guard.Read("Plan.WhatYourCargoFrees", from,
                              site => Marker.WhatYourCargoFrees(site, Options.Current.HoldCargoForBestMarket),
                              (room: 0f, gold: 0));
+            FreesTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
             long purse = (long)_purseNow + freed.gold;
             if (at.Here)
             {
@@ -155,6 +161,14 @@ namespace TradeLord
         {
             if (!_goods.TryGetValue(item, out Good good)) _goods[item] = good = TradePolicy.Describe(item);
             return good;
+        }
+
+        private int Carried(ItemObject item)
+        {
+            if (_carried.TryGetValue(item, out int units)) return units;
+            units = LedgerBehavior.InAll(_party?.ItemRoster, item);
+            _carried[item] = units;
+            return units;
         }
 
         private float TrustAt(Settlement to)
@@ -186,7 +200,7 @@ namespace TradeLord
             float toBuy = Travel.EstimateDaysFromParty(from);
             if (!at.Here && !LedgerBehavior.WithinTravelCeiling(from, toBuy)) return null;
             string id = item.StringId;
-            int held = at.Here ? LedgerBehavior.InAll(_party?.ItemRoster, item) + _books.Held(_sim, id) : 0;
+            int held = Carried(item) + (_here != null ? _books.Held(_sim, id) : 0);
             var taken = at.Here ? _books.Purchases(_sim, id) : (0, 0);
             if (at.Here && _books.Sold(_sim, id)) { why = Block.TradedHereAlready; return null; }
             int herdRoom = int.MaxValue;
@@ -226,14 +240,22 @@ namespace TradeLord
 
             TradeRoute best = null;
             float key = bar;
-            var sells = _ledger.EverySell(item);
+            bool roomAlone = false;
+            var sells = SellsOf(item);
             foreach (var (to, sellPrice) in sells)
             {
                 if (to == from) continue;
 
+                bool noPrice = _passOver &&
+                               TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin);
+                if (noPrice && LedgerBehavior.TravelCeiling(to) <= 0f)
+                {
+                    PassedOver++;
+                    continue;
+                }
                 float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                 if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;
-                if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))
+                if (noPrice)
                 {
                     PassedOver++;
                     continue;
@@ -279,7 +301,7 @@ namespace TradeLord
 
                 int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;
                 if (qtyCap <= 0) { ThrownAway++; ThrownByTill++; continue; }
-                if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; continue; }
+                if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; roomAlone = true; continue; }
 
                 float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);
                 if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; ThrownByABetterRoute++; continue; }
@@ -306,13 +328,23 @@ namespace TradeLord
                 beaten = true;
                 best = route;
             }
-            if (best == null) return null;
+            if (best == null)
+            {
+                if (roomAlone) why = Block.CarryWeight;
+                return null;
+            }
             why = Block.None;
             best.QtyUncut = Uncut(best.Leg, at.Purse);
             return best;
         }
 
         internal float ScoreToBeat(TradeRoute route) => route == null ? 0f : ScoreOf(route);
+
+        private List<(Settlement, int)> SellsOf(ItemObject item)
+        {
+            if (!_sells.TryGetValue(item, out List<(Settlement, int)> sells)) _sells[item] = sells = _ledger.EverySell(item);
+            return sells;
+        }
 
         private int Pressure(Settlement s) => s != null && _pressure.TryGetValue(s, out int n) ? n : 0;
 
@@ -504,6 +536,7 @@ namespace TradeLord
                 int landed = Forecast.WorthShiftAsItHasHeld(to, item, days);
                 Ladder ladder = SellLadder(to, item, quoted, landed);
                 int purse = TillAt(to, days);
+                if (s.Omniscient && purse <= 0) continue;
                 int drawn = held > 0 ? ladder.Through(held) : 0;
                 int bought = 0, cost = 0, sold = 0, firstSell = 0, firstPaid = 0;
                 while (bought < units)

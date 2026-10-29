@@ -49,6 +49,8 @@ namespace TradeLord
                     return Tongue.Text("{=TL384}a quest of yours may be waiting on it");
                 case Block.FoodReserve:
                     return Tongue.Text("{=TL386}your food reserve holds it back");
+                case Block.ThinLot:
+                    return Tongue.Text("{=TL515}it would earn under a tenth a day of the best good to buy here");
                 default:
                     return Tongue.Text("{=TL45}this market has nothing worth trading");
             }
