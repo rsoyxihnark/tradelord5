@@ -390,6 +390,7 @@ namespace TradeLord
             internal float RunnerUpRate;
             internal float Judged;
             internal float RunnerUpJudged;
+            internal bool OneBasis;
             internal float HolderJudged;
             internal float Bar;
             internal float Days;
@@ -439,7 +440,9 @@ namespace TradeLord
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (on) target = TheMarkFairlyWeighed(out how);
+            HoldThePayings();
+            try { if (on) target = TheMarkFairlyWeighed(out how); }
+            finally { LetThePayingsGo(); }
             how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
                        System.Diagnostics.Stopwatch.Frequency;
 
@@ -780,11 +783,15 @@ namespace TradeLord
             string next = how.RunnerUp.Name + ", the next best it priced, at " +
                           how.RunnerUpRate.ToString("0") + " profit a day for " +
                           how.RunnerUpValue + " gold";
+            string weighed = how.OneBasis
+                ? ", " + (how.Judged / TradeMath.TheMarkedTownHoldsBy).ToString("0") + " against " +
+                  how.RunnerUpJudged.ToString("0") + " once each is weighed at the Conf of selling there"
+                : "";
             if (how.HeldForASecondLook)
-                return ", and it holds the mark against " + next +
+                return ", and it holds the mark against " + next + weighed +
                        ", until another market earns more in a later hour";
             if (how.Held)
-                return ", and it holds the mark against " + next +
+                return ", and it holds the mark against " + next + weighed +
                        ", because the marker only moves for a clear gain";
             if (how.RunnerUpRate > how.Rate)
                 return ", chosen over " + next + ", because once each is weighed at the Conf of selling there it " +
@@ -943,9 +950,29 @@ namespace TradeLord
             return held;
         }
 
+        private static readonly Dictionary<(Settlement site, ItemObject item, ItemModifier kind, MobileParty party, float ride), Paying>
+            _payings = new Dictionary<(Settlement, ItemObject, ItemModifier, MobileParty, float), Paying>();
+        private static int _payingsHeld;
+
+        internal static void HoldThePayings()
+        {
+            if (_payingsHeld++ == 0) _payings.Clear();
+        }
+
+        internal static void LetThePayingsGo()
+        {
+            if (_payingsHeld > 0 && --_payingsHeld == 0) _payings.Clear();
+        }
+
         private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,
-                                                 EquipmentElement el, MobileParty party, float ride) =>
-            new Paying(site, market, el, party, ride);
+                                                 EquipmentElement el, MobileParty party, float ride)
+        {
+            if (_payingsHeld <= 0 || site == null || el.Item == null || el.IsQuestItem)
+                return new Paying(site, market, el, party, ride);
+            var key = (site, el.Item, el.ItemModifier, party, TradeMath.ARideToTheQuarterDay(ride));
+            if (!_payings.TryGetValue(key, out Paying pays)) _payings[key] = pays = new Paying(site, market, el, party, ride);
+            return pays;
+        }
 
         internal static Buyers BestBuyersOf(EquipmentElement el, int units)
         {
@@ -1267,6 +1294,7 @@ namespace TradeLord
             how.Intended = IntendedTown(cargo, reachable, party, out how.IntendedGoods);
             TheIntendedTownNext(reachable, how.Intended, holder);
             bool oneBasis = how.Intended != null && Options.Current.ConfidenceRanking;
+            how.OneBasis = oneBasis;
             var pressure = oneBasis ? LedgerBehavior.CaravanPressure() : null;
             if (ultra) how.Board = new List<Weighing>();
 
@@ -1278,7 +1306,10 @@ namespace TradeLord
                 if (s != holder && s != how.Intended)
                 {
                     if (TradeMath.PerDay(gold, ride) <= bar) break;
-                    if (TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;
+                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;
+                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;
+                    float fetches = TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride);
+                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;
                 }
                 ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }

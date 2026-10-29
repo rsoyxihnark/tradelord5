@@ -2200,6 +2200,14 @@ namespace TradeLord
             return Finite((float)(kept / over), 0f);
         }
 
+        public const double ThinLotShare = 0.1d;
+
+        public static bool TheScanHasRested(long sinceItEnded, long itTook, double restsFor) =>
+            itTook <= 0L || sinceItEnded >= itTook * restsFor;
+
+        public static bool TooThinBeside(double weighed, double best) =>
+            best > 0d && !double.IsNaN(weighed) && weighed < best * ThinLotShare;
+
         public static long WhatThisOrderBuys(IList<(int units, int cost, int profit, float hauls, float keyByProfit)> plans,
                                              int money, float room) =>
             WhatThisOrderBuys(plans, money, room, out _);

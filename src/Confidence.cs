@@ -67,14 +67,25 @@ namespace TradeLord
             if (stock > 0 && units > 0)
                 depth = Clamp(stock / (units * 1.5f));
 
-            float haste = 1f / (1f + Math.Max(travelDays, 0f) / 3f);
+            float haste = Haste(travelDays);
             float quiet = runsOutInDays >= 0f
                 ? Holds(runsOutInDays, daysToTheBuyTown)
                 : 1f / (1f + Math.Max(caravans, 0) * 0.15f);
             float fresh = dataAgeDays < 0f ? 1f : 1f / (1f + dataAgeDays / 5f);
 
             float c = resilience * depth * haste * quiet * fresh;
-            return c < 0.01f ? 0.01f : (c > 1f ? 1f : c);
+            return c < Least ? Least : (c > 1f ? 1f : c);
+        }
+
+        private const float Least = 0.01f;
+
+        private static float Haste(float travelDays) => 1f / (1f + Math.Max(travelDays, 0f) / 3f);
+
+        public static float MostItCanBe(float travelDays)
+        {
+            if (float.IsNaN(travelDays)) return 1f;
+            float haste = Haste(travelDays);
+            return haste < Least ? Least : (haste > 1f ? 1f : haste);
         }
 
         public struct Parts
@@ -94,7 +105,7 @@ namespace TradeLord
             Parts p;
             p.Resilience = simulated && flatProfit > 0 ? Clamp((float)simulatedProfit / flatProfit) : Unsimulated;
             p.Depth = stock > 0 && units > 0 ? Clamp(stock / (units * 1.5f)) : 1f;
-            p.Haste = 1f / (1f + Math.Max(travelDays, 0f) / 3f);
+            p.Haste = Haste(travelDays);
             p.Quiet = runsOutInDays >= 0f
                 ? Holds(runsOutInDays, daysToTheBuyTown)
                 : 1f / (1f + Math.Max(caravans, 0) * 0.15f);

@@ -357,6 +357,12 @@ SHARED_PASS_RULES = {
     "WhatTheMarkKeeps(": ('Passes.cs', "internal static ForTheMark[] WhatTheMarkKeeps"),
 }
 
+def the_scan_reads_each_goods_sell_list_once():
+    return ("var sells = SellsOf(item);" in method_body(S['Plan.cs'], "internal TradeRoute Best(ItemObject item, Settlement from, int buyPrice")
+            and "if (!_sells.TryGetValue(item, out List<(Settlement, int)> sells)) _sells[item] = sells = _ledger.EverySell(item);" in
+                method_body(S['Plan.cs'], "private List<(Settlement, int)> SellsOf(ItemObject item)")
+            and S['Plan.cs'].count("_ledger.EverySell(item)") == 1)
+
 def route_scan():
     return "\n".join([method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()"),
                       method_body(S['Plan.cs'], "internal TradeRoute Best(ItemObject item, Settlement from, int buyPrice"),
@@ -584,8 +590,8 @@ def every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan():
             and "MarketRank.Keep(sells[i]" not in prime
             and "public List<(Settlement town, int price)> EverySell(ItemObject item) =>\n"
                 "            TakeN(TopMarkets(item, true), int.MaxValue);" in l
-            and "var sells = _ledger.EverySell(item);" in scan
-            and "var buys = listed ? EveryBuy(item) : null;" in scan
+            and the_scan_reads_each_goods_sell_list_once()
+            and "var buys = EveryBuy(item);" in scan
             and "ledger.TopSell(item, MarketRank.TopCacheSize);" in S['TooltipPatches.cs']
             and "var sells = ledger.EverySell(item);" in best_sale()
             and ordered(scan, "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);",
@@ -602,7 +608,7 @@ def every_market_a_good_could_be_bought_at_is_offered_to_the_route_scan():
             and "buys[i].Add(new Reach<Settlement>" in prime
             and "public List<(Settlement town, int price)> EveryBuy(ItemObject item) =>\n"
                 "            TakeN(TopMarkets(item, false), int.MaxValue);" in l
-            and "var buys = listed ? EveryBuy(item) : null;" in scan
+            and "var buys = EveryBuy(item);" in scan
             and "TopBuy(" not in scan
             and "ledger.TopBuy(item, MarketRank.TopCacheSize);" in S['TooltipPatches.cs']
             and "public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));" in l)
@@ -618,7 +624,7 @@ def a_route_scan_prices_each_town_once_for_every_good_it_wants():
             and "_marketCache[(item.StringId, false)] = (Freshness.At(hour), kind, Settled(buys[i], false));" in prime
             and "PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);" in scan
             and scan.find("wanted.Add(item);") < scan.find("PrimeLiveRankings(wanted,")
-            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = listed ? EveryBuy(item) : null;"))
+            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = EveryBuy(item);"))
 
 def a_language_file_that_could_not_be_read_is_tried_again():
     said = method_body(S['Tongue.cs'], "private static bool Ready")
@@ -2419,8 +2425,9 @@ chk("1.5.0", "caravan pressure is counted once for each weighing, by the engine 
     "_pressure = LedgerBehavior.CaravanPressure();" in S['Plan.cs'] and
     S['Plan.cs'].count("LedgerBehavior.CaravanPressure()") == 2)
 chk("1.5.0", "every confidence factor is a fraction of one",
-    "return c < 0.01f ? 0.01f : (c > 1f ? 1f : c);" in
-    method_body(S['Confidence.cs'], "public static float Of(bool simulated"))
+    "return c < Least ? Least : (c > 1f ? 1f : c);" in
+    method_body(S['Confidence.cs'], "public static float Of(bool simulated") and
+    "private const float Least = 0.01f;" in S['Confidence.cs'])
 
 chk("1.5.0", "one place decides which category policy governs an item",
     S['Rules.cs'].count("internal static int PolicyFor(in Good good, Options s)") == 1 and
@@ -4614,15 +4621,15 @@ chk("1.14.2", "the ladders are dropped when a scan starts, given back when it fi
                                              "internal static class Priced"),
                                      "internal static void Forget()"))
 
-chk("1.14.3", "with Live world prices on, a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
-    (lambda body: "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold," in body
+chk("1.14.3", "with Live world prices on, a market whose purse could not pay even once it refills is no destination in any list the mod ranks, not just the route scan",
+    (lambda body: "if (selling && TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s)," in body
               and "s.IsVillage) <= 0) continue;" in body
-              and ordered(body, "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,",
+              and ordered(body, "if (selling && TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s),",
                           "int price = Priced.At(s.SettlementComponent,"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     "row = ledger == null ? null : ledger.HereRow(_pass.Site, item, out why);" in planned() and
     "var sells = ledger.EverySell(item);" in best_sale() and
-    "var sells = _ledger.EverySell(item);" in route_scan() and
+    the_scan_reads_each_goods_sell_list_once() and
     "Settlement where = Marker.HoldFor(_plan[at].EquipmentElement, YoursToSell(at), _pass.Site," in
         sell_pass() and
     "purse = PurseOf(s, ride);" in method_body(S['Marker.cs'], "private static bool InReach") and
@@ -5103,7 +5110,9 @@ def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
             and "alreadyHeld" not in S['Trading.cs'] + S['Passes.cs']
             and "public int Carried(int at) => LedgerBehavior.InAll(_pass.Party.ItemRoster, Item(at));" in buy
             and "int held = market.Carried(at) + books.Held(sim, good.Id);" in buy
-            and "int held = at.Here ? LedgerBehavior.InAll(_party?.ItemRoster, item) + _books.Held(_sim, id) : 0;" in S['Plan.cs']
+            and "int held = Carried(item) + (_here != null ? _books.Held(_sim, id) : 0);" in S['Plan.cs']
+            and "units = LedgerBehavior.InAll(_party?.ItemRoster, item);" in method_body(S['Plan.cs'], "private int Carried(ItemObject item)")
+            and "var scan = new RouteScan(this, party, party?.CurrentSettlement);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()")
             and "int held = market.Carried(picked.At) + books.Held(sim, good.Id);" in buy
             and "Carried" not in method_body(S['Passes.cs'], "internal struct Pick")
             and ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
@@ -10150,7 +10159,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 35
+            and ALL.count("Tongue.Named(") == 36
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -10625,7 +10634,7 @@ def a_village_keeps_the_coin_that_keeps_its_shop_open():
                           and "settlement.IsVillage) < price) break;" in herd)
                 (method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
             and "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in route_scan()
-            and "TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;" in ledger
+            and "TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(town), town.IsVillage) > 0;" in ledger
             and "? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(s, days), s.IsVillage)" in
                 between(S['Marker.cs'], "internal static int PurseOf(Settlement s, float days) =>", ";")
             and "? TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s), s.IsVillage)" in
@@ -14557,7 +14566,9 @@ def picking_a_buyer_and_the_route_scan_are_timed_with_the_fine_clock():
             and ordered(scan, "long started = System.Diagnostics.Stopwatch.GetTimestamp();",
                         "long took = System.Diagnostics.Stopwatch.GetTimestamp() - started;",
                         "SayWhatTheScanCost(scan, kept.Count, took);")
-            and "(ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString(\"0.0\"," in cost
+            and "Ms(ticks) + \" ms, \" + Ms(_primeTicks) + \" ms of it ranking the markets and \" +" in cost
+            and "(ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString(\"0.0\"," in
+                between(S['Ledger.cs'], "private static string Ms(long ticks) =>", ";")
             and ordered(method_body(road, "private static Road RoadBetween(Settlement a, Settlement b)"),
                         "long started = StartAWalk();", 'StopTheMeter(started, ref _pairWalks, "a road between markets", road);')
             and "private static double MsOf(long ticks) => ticks * 1000d / Stopwatch.Frequency;" in road
@@ -18134,8 +18145,13 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
                         '_passOver = Guard.Read("Scan.PricedAsTheGame", 0, none => Priced.PricedAsTheGameItself(), false);',
                         "_safety = TradePolicy.ResaleSafety();")
             and ordered(scan,
-                        "if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))",
+                        "bool noPrice = _passOver &&",
+                        "TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin);",
+                        "if (noPrice && LedgerBehavior.TravelCeiling(to) <= 0f)",
                         "PassedOver++;",
+                        "float soonest = toBuy + Travel.StraightDaysBetween(from, to);",
+                        "if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;",
+                        "if (noPrice)",
                         "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))",
                         "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
                         "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
@@ -18145,9 +18161,14 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
                         "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);")
             and "SayWhatTheScanCost(scan, kept.Count, took);" in scan
-            and scan.count("PassedOver++;") == 4
+            and scan.count("PassedOver++;") == 5
+            and scan.count("if (noPrice") == 2
+            and between(scan, "if (noPrice && LedgerBehavior.TravelCeiling(to) <= 0f)",
+                        "float soonest = toBuy + Travel.StraightDaysBetween(from, to);").count("PassedOver++;") == 1
+            and between(scan, "if (noPrice)\n",
+                        "if (_passOver && TradeMath.NoRoadCouldMakeIt(").count("PassedOver++;") == 1
             and scan.count("if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))") == 1
-            and scan.count("if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))") == 1
+            and scan.count("TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin)") == 1
             and between(scan, "stocked, days, beaten, key, _safety))",
                         "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);").count("PassedOver++;") == 2
             and ordered(between(scan, "stocked, days, beaten, key, _safety))",
@@ -20601,7 +20622,7 @@ def the_ledger_sizes_each_route_to_the_room_your_cargo_will_have():
                         "at.Room = _roomNow + freed.room;")
             and ordered(scan, "int fits = TradeMath.UnitsThatFit(at.Room, each);",
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
-                        "if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; continue; }",
+                        "if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; roomAlone = true; continue; }",
                         "TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);",
                         "int units = Math.Min(leg.Units, fits);",
                         "RouteQuote q = Bulk.Walk(leg.From, leg.To, leg.Item, units, leg.Till, spendCap,",
@@ -20850,7 +20871,7 @@ def one_engine_prices_every_unit_as_the_market_would():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()")
     return (best and sized and scan
             and "int price = Priced.At(here.SettlementComponent, item, party, false);" in scan
-            and "var sells = _ledger.EverySell(item);" in best
+            and the_scan_reads_each_goods_sell_list_once()
             and ordered(best, "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);",
                         "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);")
             and "RouteQuote q = Bulk.Walk(leg.From, leg.To, leg.Item, units, leg.Till, spendCap," in sized
@@ -20879,7 +20900,7 @@ def one_engine_sizes_every_good_to_what_you_may_take():
     best, sized = plan_best(), plan_sized()
     ctor = method_body(S['Plan.cs'], "internal RouteScan(LedgerBehavior ledger, MobileParty party, Settlement here)")
     return (best and sized and ctor
-            and ordered(best, "int held = at.Here ? LedgerBehavior.InAll(_party?.ItemRoster, item) + _books.Held(_sim, id) : 0;",
+            and ordered(best, "int held = Carried(item) + (_here != null ? _books.Held(_sim, id) : 0);",
                         "herdRoom = at.Here ? _herdRoom - _books.HerdTaken(_sim) : _herdRoom;",
                         "if (at.Purse <= 0) { why = Block.BudgetSpent; return null; }",
                         "int fits = TradeMath.UnitsThatFit(at.Room, each);",
@@ -21140,13 +21161,13 @@ chk("2.1.0", "Hold cargo for the best market and the TradeLord ledger's cargo ro
 
 
 def the_log_says_when_the_ledger_changes_its_mind():
-    said = method_body(S['Ledger.cs'], "private int SayWhatChangedItsMind(List<TradeRoute> kept)")
+    said = method_body(S['Ledger.cs'], "private int SayWhatChangedItsMind(List<TradeRoute> kept, Settlement here)")
     return (said
             and "bool writing = Options.Current.ExtendedDebugLogging;" in said
             and ordered(said, "if (!_lastBest.TryGetValue(key, out var was) || was.to == mine.Item1) continue;",
                         "changed++;", "if (!writing) continue;", '"ledger changed its mind on "',
                         '", Conf " + Scoring.Share(was.conf) + " to " + Scoring.Share(route.Confidence) +')
-            and "int changed = SayWhatChangedItsMind(kept);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()"))
+            and "int changed = SayWhatChangedItsMind(kept, here);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()"))
 
 
 chk("2.1.0", "with Enable extended debug logging on, TradeLord.log says when the TradeLord ledger changes where a good sells best, and what moved",
@@ -21457,9 +21478,10 @@ def a_sell_market_is_passed_over_before_its_road_is_walked():
             and "if (!beaten || quotedSell <= 0 || stocked <= 0 || !(soonest >= 0f)) return false;" in S['TradeMath.cs']
             and "return upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, soonest) <= bestKey;" in S['TradeMath.cs']
             and ordered(best,
+                        "TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin);",
                         "float soonest = toBuy + Travel.StraightDaysBetween(from, to);",
                         "if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;",
-                        "if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))",
+                        "if (noPrice)",
                         "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
@@ -21487,7 +21509,10 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "if (s != holder && s != how.Intended)\n"
                         "                {\n"
                         "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
-                        "                    if (TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;\n"
+                        "                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;\n"
+                        "                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;\n"
+                        "                    float fetches = TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride);\n"
+                        "                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;\n"
                         "                }\n"
                         "                ride = Travel.EstimateDaysFromParty(s);\n"
                         "                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }\n"
@@ -21516,7 +21541,10 @@ def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
             and "if (s != holder && s != how.Intended)\n"
                 "                {\n"
                 "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
-                "                    if (TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;\n"
+                "                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;\n"
+                "                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;\n"
+                "                    float fetches = TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride);\n"
+                "                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;\n"
                 "                }" in best
             and best.count("<= bar) break;") == 1
             and '" left unpriced once no price they could pay would beat "' in
@@ -21856,7 +21884,7 @@ def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_
                         "float at = TradeMath.Quantile(seen, RoadRatioShare);",
                         "_ratioHeld = float.IsNaN(at) || at < 1f ? 1f : at;")
             and ordered(method_body(tr, "private static void NoteHowRoughTheGuessWas"),
-                        "if (++_ratioSeen % RoadRatioEveryNth != 0) return;",
+                        "if (++_ratioSeen % RoadRatioEveryNth != 0 && _ratios.Count >= LeastRatiosToTrust) return;",
                         "Runs = Unwalked(dist, landRatio, false)",
                         "TradeMath.HowMuchLongerTheRideIs(Ride(rough, pace, _moment, 0d, false, null),",
                         "Ride(walked, pace, _moment, 0d, false, null));")
@@ -22070,7 +22098,8 @@ def the_marker_prices_both_markets_it_put_first():
                         "if (s == how.Intended) how.IntendedRate = rate;",
                         "how.HolderPriced = true;")
             and marker.count("<= bar) break;") == 1
-            and marker.count("<= bar) continue;") == 1)
+            and marker.count("if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;") == 1
+            and marker.count("<= how.RunnerUpJudged) continue;") == 2)
 
 
 chk("2.5.3", "the map marker always prices the marked market and the Sell At your goods were bought for, and stops early only past both, where the markets are still in order of purse over ride",
@@ -22569,6 +22598,209 @@ def count_what_is_on_its_way_counts_caravans_yet_to_choose_the_market():
 
 chk("2.7.4", "Count what is on its way to a market counts the caravans yet to choose that market, from what caravans sold and bought there after choosing it while you watched",
     count_what_is_on_its_way_counts_caravans_yet_to_choose_the_market())
+
+
+
+def the_ledger_counts_what_you_carry_in_every_route():
+    best = plan_best()
+    return (best
+            and "int held = Carried(item) + (_here != null ? _books.Held(_sim, id) : 0);" in best
+            and "int held = at.Here ?" not in S['Plan.cs']
+            and ordered(best, "int held = Carried(item) + (_here != null ? _books.Held(_sim, id) : 0);",
+                        "int caps = TradeRules.UnitsTheCapsAllow(good, openingBuy, taken, held, _shareCap, s);",
+                        "Shelf = shelf, OnTheShelfNow = onTheShelfNow, Held = held,")
+            and ordered(method_body(S['Plan.cs'], "private int Carried(ItemObject item)"),
+                        "if (_carried.TryGetValue(item, out int units)) return units;",
+                        "units = LedgerBehavior.InAll(_party?.ItemRoster, item);",
+                        "_carried[item] = units;")
+            and "int sellPrice = sell.At(u + Math.Max(0, sellFrom));" in method_body(S['Market.cs'], "internal static RouteQuote Walk"))
+
+
+chk("2.7.5", "the TradeLord ledger counts what you already carry of a good in every route it offers, not only in routes out of the market you stand in, so the buying pass never refuses a route the ledger offered for what you carry",
+    the_ledger_counts_what_you_carry_in_every_route())
+
+
+def a_good_left_for_want_of_room_says_so():
+    best = plan_best()
+    return (best
+            and ordered(best, "bool roomAlone = false;",
+                        "if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; roomAlone = true; continue; }",
+                        "if (best == null)", "if (roomAlone) why = Block.CarryWeight;\n                return null;",
+                        "why = Block.None;")
+            and best.count("roomAlone") == 3)
+
+
+chk("2.7.5", "a good the route scan leaves only because your cargo has no room for it says so, rather than that nowhere in reach would buy it",
+    a_good_left_for_want_of_room_says_so())
+
+
+def a_thin_good_is_left_in_the_ledger_and_the_buying_pass_alike():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()")
+    thin = method_body(S['Ledger.cs'], "private static Dictionary<ItemObject, TradeRoute> LeaveTheThinLots(")
+    said = {path: spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())}
+    return (scan and thin
+            and ordered(scan, "for (int at = 0; here != null && at < wanted.Count + buyOnly.Count; at++)",
+                        "TradeRoute row = scan.Best(item, here, price, false, 0f, out Block why);",
+                        "Dictionary<ItemObject, TradeRoute> thin = LeaveTheThinLots(hereRows, hereWhy);",
+                        "for (int at = 0; at < wanted.Count; at++)",
+                        "var buys = EveryBuy(item);",
+                        "if (here != null && (hereRows.TryGetValue(item, out TradeRoute mine) ||",
+                        "thin.TryGetValue(item, out mine)) && Lists(buys, here))",
+                        "TradeRoute route = scan.Best(item, from, buyPrice, best != null, bar, out _);",
+                        "if (best != null && !(thin.TryGetValue(item, out TradeRoute cut) && best == cut)) routes.Add(best);")
+            and scan.count("scan.Best(item, here,") == 1
+            and ordered(thin, "foreach (var kv in hereRows) best = Math.Max(best, WeighedADay(kv.Value));",
+                        "if (TradeMath.TooThinBeside(WeighedADay(kv.Value), best)) thin[kv.Key] = kv.Value;",
+                        "foreach (ItemObject item in thin.Keys)", "hereRows.Remove(item);", "hereWhy[item] = Block.ThinLot;",
+                        "return thin;")
+            and "TradeMath.KeyByProfit(route.Confidence, route.Trust, true, route.TravelDays) * (double)route.TotalProfit;" in S['Ledger.cs']
+            and "public const double ThinLotShare = 0.1d;" in S['TradeMath.cs']
+            and "best > 0d && !double.IsNaN(weighed) && weighed < best * ThinLotShare;" in S['TradeMath.cs']
+            and "QuestGoods, GrainSwitch, BuyerTillEmpty, ThinLot\n" in S['Rules.cs']
+            and ordered(S['Reasons.cs'], "case Block.ThinLot:", '"{=TL515}it would earn under a tenth a day of the best good to buy here"')
+            and all('TL515' in one for one in said.values())
+            and "if (_hereWhy.TryGetValue(item, out Block said)) why = said;" in method_body(S['Ledger.cs'], "internal TradeRoute HereRow(")
+            and "A_good_under_a_tenth_a_day_of_the_best_good_to_buy_is_left_as_thin" in MATHTESTS)
+
+
+chk("2.7.5", "TradeLord leaves a good that would earn under a tenth a day of the best good to buy at that market, once each is weighed at the Conf of selling there, in the ledger and the buying pass alike, and says why in every language",
+    a_thin_good_is_left_in_the_ledger_and_the_buying_pass_alike())
+
+
+def the_log_says_why_a_listed_good_was_left_on_arrival():
+    said = method_body(S['Ledger.cs'], "private int SayWhatChangedItsMind(List<TradeRoute> kept, Settlement here)")
+    left = method_body(S['Ledger.cs'], "private void SayWhatItLeftOnArrival(")
+    return (said and left
+            and ordered(said, "if (writing && here != null &&",
+                        "(_arrivalSaid.at != here.StringId || _arrivalSaid.visit != TradeActionBehavior.VisitNumber))",
+                        "_arrivalSaid = (here.StringId, TradeActionBehavior.VisitNumber);",
+                        "SayWhatItLeftOnArrival(here, now, lines);",
+                        "_lastBest.Clear();")
+            and ordered(left, 'string tail = "|" + here.StringId;',
+                        "if (!kv.Key.EndsWith(tail, StringComparison.Ordinal) || now.ContainsKey(kv.Key)) continue;",
+                        "int carried = InAll(party?.ItemRoster, item);",
+                        "int asks = Priced.At(here.SettlementComponent, item, party, false);",
+                        "int next = quote <= 0 ? 0 : Plan.SellLadder(to, item, quote, 0)?.At(carried) ?? quote;",
+                        'if (key.StartsWith(id + "|", StringComparison.Ordinal)) { elsewhere = key.Substring(id.Length + 1); break; }',
+                        '"beaten by a route from "',
+                        '"the ledger listed "', '" at its last scan, and walking in it left it: "',
+                        '" pays " + next + " for the next one after yours"')
+            and ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()"),
+                        "_hereWhy.Clear();", "int changed = SayWhatChangedItsMind(kept, here);"))
+
+
+chk("2.7.5", "with Enable extended debug logging on, TradeLord.log says, as the ledger first scans a market you walk into, why it left a good it had listed from there, with the price there, what you carry and what the Sell At pays after yours",
+    the_log_says_why_a_listed_good_was_left_on_arrival())
+
+
+def a_purse_that_refills_by_your_arrival_lets_a_town_into_the_lists():
+    l = S['Ledger.cs']
+    prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
+    live = method_body(l, "private List<(Settlement, int)> TopLive")
+    return (prime and live
+            and "bool tillOpen = TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(town), town.IsVillage) > 0;" in prime
+            and "market.Gold" not in prime
+            and "if (selling && TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s)," in live
+            and ".Gold" not in live
+            and "return Math.Max(gold, WouldHold(site, gold));" in method_body(S['Forecast.cs'], "internal static int TillAtMost(")
+            and "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in plan_best()
+            and ordered(method_body(S['Plan.cs'], "internal static TradeRoute BestSale("),
+                        "int purse = TillAt(to, days);", "if (s.Omniscient && purse <= 0) continue;",
+                        "if (purse > 0 && (long)drawn + sold + price > purse) break;"))
+
+
+chk("2.7.5", "a town whose purse is empty now but will refill by the time you could get there is weighed as a Sell At, and the route scan still holds it to what its purse will hold when you arrive",
+    a_purse_that_refills_by_your_arrival_lets_a_town_into_the_lists())
+
+
+def the_rough_road_is_learned_from_the_first_roads_walked():
+    note = method_body(S['Travel.cs'], "private static void NoteHowRoughTheGuessWas")
+    return (note
+            and note.find("if (++_ratioSeen % RoadRatioEveryNth != 0 && _ratios.Count >= LeastRatiosToTrust) return;") == note.find("if (")
+            and "private const int LeastRatiosToTrust = 20;" in S['Travel.cs']
+            and "private const int RoadRatioEveryNth = 16;" in S['Travel.cs'])
+
+
+chk("2.7.5", "how much longer a road not yet walked takes is learned from every road walked until twenty are measured, then from every sixteenth, so a road not yet walked is never timed as if its ground were flat",
+    the_rough_road_is_learned_from_the_first_roads_walked())
+
+
+def the_marker_says_the_weighed_figures_it_held_on():
+    nb = method_body(S['Marker.cs'], "private static string TheNextBest(")
+    return (nb
+            and ordered(nb, "string weighed = how.OneBasis",
+                        '? ", " + (how.Judged / TradeMath.TheMarkedTownHoldsBy).ToString("0") + " against " +',
+                        'how.RunnerUpJudged.ToString("0") + " once each is weighed at the Conf of selling there"',
+                        ': "";',
+                        "if (how.HeldForASecondLook)", '", until another market earns more in a later hour";',
+                        "if (how.Held)", '", because the marker only moves for a clear gain";')
+            and nb.count('", and it holds the mark against " + next + weighed +') == 2
+            and "how.Judged = how.HolderJudged;" in method_body(S['Marker.cs'], "private static void TheHolderStays(")
+            and ordered(S['Marker.cs'], "bool oneBasis = how.Intended != null && Options.Current.ConfidenceRanking;",
+                        "how.OneBasis = oneBasis;")
+            and "float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);" in S['Marker.cs'])
+
+
+chk("2.7.5", "when the map marker holds its mark, TradeLord.log writes both markets' profit a day as weighed at the Conf of selling there, the held one without its lead",
+    the_marker_says_the_weighed_figures_it_held_on())
+
+
+def a_scan_and_a_weighing_price_each_offer_once_and_skip_what_cannot_win():
+    m = S['Marker.cs']
+    pays = method_body(m, "private static Paying WhatThatMarketPays(")
+    update = method_body(m, "internal static void Update")
+    scanning = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
+    paying = method_body(m, "private int Next()")
+    most = method_body(S['Confidence.cs'], "public static float MostItCanBe(float travelDays)")
+    return (pays and update and scanning and paying and most
+            and ordered(pays, "if (_payingsHeld <= 0 || site == null || el.Item == null || el.IsQuestItem)",
+                        "return new Paying(site, market, el, party, ride);",
+                        "var key = (site, el.Item, el.ItemModifier, party, TradeMath.ARideToTheQuarterDay(ride));",
+                        "if (!_payings.TryGetValue(key, out Paying pays)) _payings[key] = pays = new Paying(site, market, el, party, ride);")
+            and "if (_payingsHeld++ == 0) _payings.Clear();" in method_body(m, "internal static void HoldThePayings()")
+            and "if (_payingsHeld > 0 && --_payingsHeld == 0) _payings.Clear();" in
+                method_body(m, "internal static void LetThePayingsGo()")
+            and ordered(update, "HoldThePayings();", "try { if (on) target = TheMarkFairlyWeighed(out how); }",
+                        "finally { LetThePayingsGo(); }")
+            and ordered(scanning, "Marker.HoldThePayings();", "try { return ScanEveryRoute(); }",
+                        "finally", "Marker.LetThePayingsGo();", "Travel.CloseTheScansRoadBudget();")
+            and m.count("new Paying(") == 2
+            and paying.count("_ride") == 1
+            and "Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride)" in paying
+            and "var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ARideToTheQuarterDay(withinDays));" in
+                method_body(S['Forecast.cs'], "private static int PriceShift(")
+            and ordered(most, "if (float.IsNaN(travelDays)) return 1f;", "float haste = Haste(travelDays);",
+                        "return haste < Least ? Least : (haste > 1f ? 1f : haste);")
+            and S['Confidence.cs'].count("Haste(travelDays)") == 3
+            and all(one in ROUTETESTS for one in ("No_conf_beats_the_most_its_ride_allows",
+                                                  "The_most_a_ride_allows_is_its_haste")))
+
+
+chk("2.7.5", "a route scan and a map marker weighing work out each market's offer for a good once per quarter day of ride, and the marker leaves unpriced a market that could be neither its best nor its next best",
+    a_scan_and_a_weighing_price_each_offer_once_and_skip_what_cannot_win())
+
+
+def the_ledger_rests_between_looks_while_roads_fill():
+    t = S['Travel.cs']
+    look = method_body(t, "private static void TheLedgerMayLookAgain()")
+    fill = method_body(t, "private static void FillTheRoadsNow()")
+    spent = method_body(t, "internal static void SpentOnAScan(long spent, long before)")
+    return (look and fill and spent
+            and ordered(look, "_walkedForTheLedger = 0;",
+                        "_lookAgainOwed = !TradeMath.TheScanHasRested(Stopwatch.GetTimestamp() - _scanEnded, _scanTook, AScanRestsFor);",
+                        "if (_lookAgainOwed) return;", "LedgerBehavior.Instance?.MoreRoadsAreMeasuredNow();",
+                        "LedgerPanel.TheScanIsNew();")
+            and ordered(fill, "if (!OnTheMap()) return;", "if (_lookAgainOwed) TheLedgerMayLookAgain();",
+                        "if (!WalkWhatTheLedgerWanted(started, budget)) return;")
+            and ordered(spent, "_scanTook = spent;", "_scanEnded = Stopwatch.GetTimestamp();")
+            and "private const double AScanRestsFor = 9d;" in t
+            and "itTook <= 0L || sinceItEnded >= itTook * restsFor;" in S['TradeMath.cs']
+            and "Travel.SpentOnAScan(took, frameBefore);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()")
+            and "The_ledger_looks_again_only_once_its_last_scan_has_rested_nine_times_as_long" in MATHTESTS)
+
+
+chk("2.7.5", "while roads are measured the ledger looks again only once its last scan has rested nine times as long as it took, and a look put off is taken as soon as it may be, so filling roads never stalls the map",
+    the_ledger_rests_between_looks_while_roads_fill())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

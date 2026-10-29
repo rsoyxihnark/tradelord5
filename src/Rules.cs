@@ -9,7 +9,7 @@ namespace TradeLord
         MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
         ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable,
-        QuestGoods, GrainSwitch, BuyerTillEmpty
+        QuestGoods, GrainSwitch, BuyerTillEmpty, ThinLot
     }
 
     internal struct Good

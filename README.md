@@ -122,6 +122,8 @@
 - ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have lowered it
 - ✅ It buys first what the TradeLord ledger offers at that market, then the good that makes the most profit a day for each unit of weight it carries, unless buying by profit a day for each denar would earn more a day at the Conf of selling there
 - ✅ It buys each good up to the Qty the TradeLord ledger shows, for the Sell At the TradeLord ledger shows
+- ✅ It leaves a good that would earn under a tenth a day of the best good to buy there, weighed at the Conf of selling there, so no crumbs ride days for a few denars
+- ✅ The TradeLord ledger counts what you already carry of a good in every route, so a market never refuses a good the ledger offered there
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
 - ✅ Where the TradeLord ledger expects more profit from a market's routes than that, it may spend up to that profit there

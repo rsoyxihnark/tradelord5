@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.7.5
+
+- Fixed the TradeLord ledger offering a good that the market then refused, because it left out the same good already in your cargo
+- Fixed a good left only for lack of cargo room being reported as having nowhere in reach to resell it
+- TradeLord no longer buys a good that earns under a tenth a day of the best good to buy at that market, weighed at the Conf of selling there
+- Fixed a town whose purse is empty now never being weighed as a Sell At, even when it refills before you could get there
+- Fixed a road not yet walked being timed as if its ground were flat until hundreds of other roads had been measured
+- Fixed the campaign map stalling again and again while the TradeLord ledger measures roads with Town travel ceiling off
+- Fixed the route scan and the map marker being slow with Town travel ceiling off
+- With Enable extended debug logging on, TradeLord.log now says why a good the TradeLord ledger listed was left when you walked in
+- With Enable extended debug logging on, TradeLord.log now says what both markets earn at their Conf when the map marker holds its mark
+- With Enable extended debug logging on, TradeLord.log now says how long the route scan spent ranking markets and on what your cargo frees
+
 ## 2.7.4
 
 - Fixed TradeLord expecting too much for goods it carries a day or more to a town that caravans will choose and restock before you arrive
