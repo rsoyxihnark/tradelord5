@@ -4298,5 +4298,15 @@ namespace TradeLord.Tests
             Assert.True(TradeMath.TheScanHasRested(900L, 100L, 9d));
             Assert.True(TradeMath.TheScanHasRested(long.MaxValue / 2, 1000L, 9d));
         }
+
+        [Fact]
+        public void A_caravan_sale_comes_as_more_and_a_caravan_purchase_as_less()
+        {
+            Assert.Equal((12, true), TradeMath.WhatACaravanMoved(12));
+            Assert.Equal((7, false), TradeMath.WhatACaravanMoved(-7));
+            Assert.Equal((0, false), TradeMath.WhatACaravanMoved(0));
+            Assert.Equal((0, false), TradeMath.WhatACaravanMoved(int.MinValue));
+            Assert.Equal((int.MaxValue, false), TradeMath.WhatACaravanMoved(-int.MaxValue));
+        }
 }
 }

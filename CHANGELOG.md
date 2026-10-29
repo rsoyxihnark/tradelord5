@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.7.6
+
+- Fixed Count what is on its way to a market leaving out what caravans that have not chosen a market yet will buy there
+- Fixed Hold cargo for the best market selling a good, in the market the map marker sent you to, far below what its own Sell At pays
+
 ## 2.7.5
 
 - Fixed the TradeLord ledger offering a good that the market then refused, because it left out the same good already in your cargo

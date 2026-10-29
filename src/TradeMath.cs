@@ -2202,6 +2202,9 @@ namespace TradeLord
 
         public const double ThinLotShare = 0.1d;
 
+        public static (int units, bool sold) WhatACaravanMoved(int amount) =>
+            amount > 0 ? (amount, true) : amount < 0 && amount != int.MinValue ? (-amount, false) : (0, false);
+
         public static bool TheScanHasRested(long sinceItEnded, long itTook, double restsFor) =>
             itTook <= 0L || sinceItEnded >= itTook * restsFor;
 

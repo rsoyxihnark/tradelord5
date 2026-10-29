@@ -894,7 +894,7 @@ namespace TradeLord
             switch (why)
             {
                 case NoHold.MarkedMarket:
-                    return ", in the marked market, where Hold cargo for the best market holds nothing back";
+                    return ", in the marked market, with no Sell At of its own for Hold cargo for the best market to keep it for";
                 case NoHold.ItsSellAt:
                     return ", in the Sell At it was bought for, where Hold cargo for the best market holds nothing back";
                 case NoHold.OutOfReach:

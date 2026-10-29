@@ -223,6 +223,7 @@ namespace TradeLord
 
         private static string _walkedInto;
         private static string _markedOnTheWayIn;
+        private static string _keptForItsSellAt;
 
         private static int _hour = -1;
         private static Vec2 _at;
@@ -307,6 +308,7 @@ namespace TradeLord
             _owedAFairLook.Clear();
             _walkedInto = null;
             _markedOnTheWayIn = null;
+            _keptForItsSellAt = null;
             _hour = -1;
             _markedId = null;
             _markedValue = 0L;
@@ -411,6 +413,7 @@ namespace TradeLord
             internal int Shut;
             internal int AtWar;
             internal Settlement CameBackTo;
+            internal Settlement KeptFor;
             internal Settlement Afresh;
             internal Settlement Unheld;
             internal List<string> Compared;
@@ -742,6 +745,9 @@ namespace TradeLord
         private const string TheMarketLeftAlone =
             "the market TradeLord last traded at, until you come back to it";
 
+        private const string TheMarketThatKept =
+            "where Hold cargo for the best market kept your goods for the Sell At they were bought for, until you walk into another market";
+
         private static string Why(in Reckoning how)
         {
             if (how.Carried == 0) return "nothing in your cargo is yours to sell";
@@ -758,6 +764,9 @@ namespace TradeLord
                            : "") +
                        (how.CameBackTo != null
                            ? ", and it leaves out " + how.CameBackTo.Name + ", " + TheMarketLeftAlone
+                           : "") +
+                       (how.KeptFor != null
+                           ? ", and it leaves out " + how.KeptFor.Name + ", " + TheMarketThatKept
                            : "");
             return how.Kinds + " of the " + how.Carried + " good(s) you carry clear Minimum profit " +
                    "margin there, " + how.Units + " unit(s) for " + how.Value + " gold, " +
@@ -878,6 +887,9 @@ namespace TradeLord
                          " under siege, raided or shut, " + how.AtWar + " at war with you" +
                          (how.CameBackTo != null
                              ? ", and " + how.CameBackTo.Name + ", " + TheMarketLeftAlone
+                             : "") +
+                         (how.KeptFor != null
+                             ? ", and " + how.KeptFor.Name + ", " + TheMarketThatKept
                              : ""));
             }
             if (said.Count > 0) Log.WriteMany(said);
@@ -1268,6 +1280,7 @@ namespace TradeLord
                 if (TradeActionBehavior.StillTheSameArrival(s)) continue;
                 if (!TradeActionBehavior.IsMarket(s)) continue;
                 if (TradeActionBehavior.MarkerLeavesItOut(s)) { how.CameBackTo = s; continue; }
+                if (s.StringId == _keptForItsSellAt) { how.KeptFor = s; continue; }
                 if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s))
                 { how.AtWar++; continue; }
@@ -1448,6 +1461,9 @@ namespace TradeLord
             if (!TradeActionBehavior.IsMarket(holder)) return holder.Name + " is a market TradeLord is set not to trade with";
             if (TradeActionBehavior.MarkerLeavesItOut(holder))
                 return "TradeLord traded at " + holder.Name + " and leaves it out until you come back to it";
+            if (holder.StringId == _keptForItsSellAt)
+                return "Hold cargo for the best market kept your goods at " + holder.Name +
+                       " for the Sell At they were bought for, and the marker leaves it out until you walk into another market";
             if (holder.IsUnderSiege)
             {
                 MobileParty besieger = holder.SiegeEvent?.BesiegerCamp?.LeaderParty;
@@ -1473,12 +1489,14 @@ namespace TradeLord
 
         internal static void NoteTheWalkIn(Settlement at)
         {
+            if (at?.StringId != _keptForItsSellAt) _keptForItsSellAt = null;
             _walkedInto = at?.StringId;
             _markedOnTheWayIn = _picked?.StringId;
         }
 
         internal static void NoteALoadInside(Settlement at)
         {
+            _keptForItsSellAt = null;
             _walkedInto = at?.StringId;
             _markedOnTheWayIn = at?.StringId;
         }
@@ -1503,13 +1521,14 @@ namespace TradeLord
             boughtFor = false;
             why = NoHold.NoMarket;
             if (el.Item == null || rideTo == null) return null;
-            if (InTheMarkedMarket(here)) { why = NoHold.MarkedMarket; return null; }
+            bool marked = InTheMarkedMarket(here);
             Settlement meant = BoughtFor(el.Item);
             if (meant != null && meant == here) { why = NoHold.ItsSellAt; return null; }
+            if (marked && meant == null) { why = NoHold.MarkedMarket; return null; }
             float meantRide = 0f, markRide = 0f;
             int meantPurse = 0, markPurse = 0;
             bool meantHolds = meant != null && MayHoldFor(meant) && InReach(meant, rideTo, out meantRide, out meantPurse);
-            Settlement mark = TheMarkToHoldFor(here);
+            Settlement mark = marked ? null : TheMarkToHoldFor(here);
             bool markHolds = mark != null && mark != meant && InReach(mark, rideTo, out markRide, out markPurse);
             long meantPays = 0L, markPays = 0L;
             if (meantHolds && markHolds)
@@ -1519,6 +1538,7 @@ namespace TradeLord
             }
             if (TradeRules.HoldForTheSellAt(meantHolds, markHolds, meantPays, markPays))
             {
+                if (marked && here == MobileParty.MainParty?.CurrentSettlement) _keptForItsSellAt = here.StringId;
                 ride = meantRide;
                 purse = meantPurse;
                 boughtFor = true;

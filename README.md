@@ -134,7 +134,7 @@
 - ✅ Holds a good for the Sell At it was bought for, or the market marked on your map where that pays more for it, rather than selling it one town short for much less
 - ✅ Hold cargo for the best market sells such a good on the way only for at least 75% of what that market pays
 - ✅ Hold cargo for the best market holds only as many as that market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
-- ✅ Hold cargo for the best market holds nothing in the marked market itself, and holds a good for its Sell At even while Auto-mark best sell market on map is off
+- ✅ In the marked market itself, Hold cargo for the best market holds a good only for the Sell At it was bought for, and it holds for a Sell At even while Auto-mark best sell market on map is off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ What you never bought, loot included, is sold first and what you bought after it, so the merchant's gold goes to the loot first
 - ✅ It buys only once both are sold, so the cargo room and gold they free go straight into what it buys
