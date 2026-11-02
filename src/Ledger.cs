@@ -1481,6 +1481,7 @@ namespace TradeLord
                 else Freshness.Taken(ref _routeStamp, hour);
                 _lastScan = (new List<TradeRoute>(_routes), hour, Hero.MainHero?.Gold ?? 0, Marker.WhatYouHoldNow(),
                              Freshness.At(Stamp.Timeless));
+                _lastScanVisit = TradeActionBehavior.VisitNumber;
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }
@@ -1490,6 +1491,19 @@ namespace TradeLord
 
         internal (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings)
             LastScan => _lastScan;
+
+        private int _lastScanVisit = -1;
+
+        internal bool KeepsItsScanOnLeaving(Settlement leaving)
+        {
+            if (_lastScanVisit != TradeActionBehavior.VisitNumber || !LastScanStillServes(Marker.WhatYouHoldNow()))
+                return false;
+            if (Options.Current.ExtendedDebugLogging)
+                Log.Write("ledger kept its route scan on leaving " + leaving?.Name + ": nothing it was sized on " +
+                          "changed since it scanned there");
+            _leftFrom = null;
+            return true;
+        }
 
         internal bool LastScanStillServes(List<(string good, int amount, bool food)> cargoNow) =>
             _lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&
@@ -1693,6 +1707,7 @@ namespace TradeLord
             long frameBefore = Travel.FrameTicksSoFar();
             MobileParty party = MobileParty.MainParty;
             var scan = new RouteScan(this, party, party?.CurrentSettlement);
+            long listing = scan.Now();
             Settlement here = scan.Here;
             ISet<string> locked = TradePolicy.LockedKeys();
             var wanted = new List<ItemObject>();
@@ -1703,9 +1718,11 @@ namespace TradeLord
                 wanted.Add(item);
             }
             List<ItemObject> buyOnly = BuyOnlyOnTheShelf(here, locked);
+            scan.ListTicks = scan.Now() - listing;
             long priming = System.Diagnostics.Stopwatch.GetTimestamp();
             PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);
             _primeTicks = System.Diagnostics.Stopwatch.GetTimestamp() - priming;
+            long pricingHere = scan.Now();
             var hereRows = new Dictionary<ItemObject, TradeRoute>();
             var hereWhy = new Dictionary<ItemObject, Block>();
             var routes = new List<TradeRoute>();
@@ -1720,6 +1737,8 @@ namespace TradeLord
                 else hereRows[item] = row;
             }
             Dictionary<ItemObject, TradeRoute> thin = LeaveTheThinLots(hereRows, hereWhy);
+            scan.HereTicks = scan.Now() - pricingHere;
+            long pricingOthers = scan.Now();
             for (int at = 0; at < wanted.Count; at++)
             {
                 ItemObject item = wanted[at];
@@ -1750,7 +1769,10 @@ namespace TradeLord
                 if (best != null && !(thin.TryGetValue(item, out TradeRoute cut) && best == cut)) routes.Add(best);
             }
             routes.Sort((x, y) => y.Key.CompareTo(x.Key));
+            scan.OtherTicks = scan.Now() - pricingOthers;
+            long sizing = scan.Now();
             List<TradeRoute> kept = SizeEachMarket(scan, routes, hereRows);
+            scan.SizeTicks = scan.Now() - sizing;
             int byCargo = 0, byPurse = 0, byLimit = 0;
             foreach (TradeRoute route in kept)
             {
@@ -1939,6 +1961,17 @@ namespace TradeLord
                           ? "; " + SetAsideRoutes + " set aside from " + SetAsideFrom?.Name +
                             " as trading on arrival leaves it alone the first time you come back"
                           : ""));
+            long rest = ticks - scan.SetUpTicks - scan.ListTicks - _primeTicks - scan.HereTicks - scan.OtherTicks -
+                        scan.SizeTicks;
+            Log.Write("route scan steps: " + Ms(scan.SetUpTicks) + " ms reading the caravans and your party, " +
+                      Ms(scan.ListTicks) + " ms listing the goods to price, " + Ms(scan.HereTicks) +
+                      " ms pricing what this market sells and " + Ms(scan.OtherTicks) +
+                      " ms pricing what every other market sells, " + Ms(scan.SizeTicks) +
+                      " ms sizing what each market keeps, and " + Ms(rest) + " ms on the rest; inside the " +
+                      "pricing, " + Ms(scan.BuySideTicks) + " ms on the buy side, " + Ms(scan.RoadTicks) +
+                      " ms timing the roads between markets, " + Ms(scan.LandingTicks) +
+                      " ms on what lands and each till on arrival and " + Ms(scan.PriceTicks) +
+                      " ms on opening prices and sizing routes");
         }
     }
 

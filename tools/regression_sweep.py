@@ -20460,8 +20460,9 @@ def a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for
     tr = S['Travel.cs']
     stand = method_body(tr, "private static void StandWhereYouAre")
     pair = method_body(tr, "internal static float EstimateDaysBetween")
+    stood = stand[stand.find("if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;"):]
     return (stand and pair
-            and ordered(stand, "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;",
+            and ordered(stood, "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;",
                         "if (at.DistanceSquared(_partyAt) > StoodStill)", "_partyDist.Clear();",
                         "_unwalkable.Clear();", "_speedHour = -1;", "_moment = CampaignTime.Now;")
             and "float days = RideBetween(PairRoad(a, b), after, true);" in pair
@@ -22982,7 +22983,7 @@ def the_ledger_scans_once_as_you_leave_a_market_so_the_marker_weighs_what_you_ca
                         "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);",
                         'Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));',
                         "if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);",
-                        "if (HasAMarket(settlement) && Options.Current.MarkBestSellTownOnMap)",
+                        "if (HasAMarket(settlement) && Options.Current.MarkBestSellTownOnMap &&",
                         'Guard.Run("Action.RescanOnLeaving", () => LedgerBehavior.Instance?.BestRoutes(int.MaxValue));',
                         'Guard.Run("Action.OnSettlementLeft", Marker.Update);')
             and left.count("BestRoutes(") == 1
@@ -23073,6 +23074,136 @@ def wages_paid_on_the_road_never_retire_the_route_scan():
 
 chk("2.8.3", "the wages your party is paid on the road never make the map marker let go of a Buy From partway through the ride, only a purse fallen by more than a tenth and those wages does",
     wages_paid_on_the_road_never_retire_the_route_scan())
+
+
+def a_party_falling_into_or_out_of_disorder_times_its_rides_again_within_the_hour():
+    stand = method_body(S['Travel.cs'], "private static void StandWhereYouAre")
+    return (stand
+            and "private static bool _partySlow;" in S['Travel.cs']
+            and ordered(stand, "int hour = (int)CampaignTime.Now.ToHours;",
+                        "bool slow = party.IsDisorganized;",
+                        "if (slow != _partySlow)",
+                        "_partySlow = slow;",
+                        "_partyHour = -1;",
+                        "_speedHour = -1;",
+                        "foreach (Road road in _partyDist.Values) road.Hour = -1;",
+                        "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;",
+                        "_moment = CampaignTime.Now;"))
+
+
+chk("2.8.6", "a party that falls Disorganized, or stops being Disorganized, within the hour has its rides from where it stands and between markets timed again at the pace it now has",
+    a_party_falling_into_or_out_of_disorder_times_its_rides_again_within_the_hour())
+
+
+def the_ride_check_says_what_purse_the_town_was_said_to_hold_and_what_it_held():
+    rc = S['RideCheck.cs']
+    off = method_body(rc, "private static void SetOff")
+    reached = method_body(rc, "private static void Reached")
+    return (off and reached
+            and "internal static bool Writing => Options.Current.ExtendedDebugLogging;" in rc
+            and ordered(off, "_ride = new Open",
+                        "if (Options.Current.Omniscient && Forecast.On && to.IsTown && to.SettlementComponent != null)",
+                        "_ride.TillSaid = true;",
+                        "_ride.TillThen = to.SettlementComponent.Gold;",
+                        "_ride.TillDraw = Forecast.TillPaysOutBefore(to, said.Days);",
+                        "_ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);",
+                        "_riding = true;")
+            and ordered(reached, "if (at != _ride.To || !Writing) return;",
+                        "if (_ride.TillSaid && at.SettlementComponent != null)",
+                        "int holds = at.SettlementComponent.Gold;",
+                        "int missed = holds - _ride.TillOnArrival;",
+                        '"  purse: it held "',
+                        '"  left out: "')
+            and "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in S['Plan.cs'])
+
+
+chk("2.8.6", "with extended debug logging on, the ride check says what purse TradeLord said a town would hold when you got there, what its sellers on the road would draw, and what it held",
+    the_ride_check_says_what_purse_the_town_was_said_to_hold_and_what_it_held())
+
+
+def the_route_scan_times_each_of_its_steps_only_with_extended_debug_logging_on():
+    plan = S['Plan.cs']
+    ctor = method_body(plan, "internal RouteScan(LedgerBehavior ledger, MobileParty party, Settlement here)")
+    best = method_body(plan, "internal TradeRoute Best(")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()")
+    said = method_body(S['Ledger.cs'], "private void SayWhatTheScanCost")
+    return (ctor and best and scan and said
+            and "internal long Now() => _timed ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;" in plan
+            and "private readonly bool _timed;" in plan
+            and ordered(ctor, "_timed = Options.Current.ExtendedDebugLogging;", "long setUp = Now();",
+                        "_ledger = ledger;", "SetUpTicks = Now() - setUp;")
+            and ordered(best, "BuyFrom at = At(from);", "long buying = Now();",
+                        "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);",
+                        "BuySideTicks += Now() - buying;\n            buying = Now();",
+                        "BuySideTicks += Now() - buying;\n            if (stocked <= 0) { why = Block.NoStock; return null; }",
+                        "long road = Now();",
+                        "// Intended-Behavior: Days runs",
+                        "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
+                        "RoadTicks += Now() - road;",
+                        "long landing = Now();",
+                        "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
+                        "LandingTicks += Now() - landing;",
+                        "long tilling = Now();",
+                        "LandingTicks += Now() - tilling;",
+                        "long pricing = Now();",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
+                        "PriceTicks += Now() - pricing;",
+                        "long sizing = Now();",
+                        "TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);",
+                        "PriceTicks += Now() - sizing;")
+            and best.count("BuySideTicks += Now() - buying;") == 2
+            and "System.Diagnostics.Stopwatch.GetTimestamp()" not in best
+            and ordered(scan, "var scan = new RouteScan(this, party, party?.CurrentSettlement);",
+                        "long listing = scan.Now();",
+                        "List<ItemObject> buyOnly = BuyOnlyOnTheShelf(here, locked);",
+                        "scan.ListTicks = scan.Now() - listing;",
+                        "_primeTicks = System.Diagnostics.Stopwatch.GetTimestamp() - priming;",
+                        "long pricingHere = scan.Now();",
+                        "Dictionary<ItemObject, TradeRoute> thin = LeaveTheThinLots(hereRows, hereWhy);",
+                        "scan.HereTicks = scan.Now() - pricingHere;",
+                        "long pricingOthers = scan.Now();",
+                        "routes.Sort((x, y) => y.Key.CompareTo(x.Key));",
+                        "scan.OtherTicks = scan.Now() - pricingOthers;",
+                        "long sizing = scan.Now();",
+                        "List<TradeRoute> kept = SizeEachMarket(scan, routes, hereRows);",
+                        "scan.SizeTicks = scan.Now() - sizing;",
+                        "SayWhatTheScanCost(scan, kept.Count, took);")
+            and ordered(said, "if (!Options.Current.ExtendedDebugLogging) return;",
+                        '"route scan: "',
+                        "long rest = ticks - scan.SetUpTicks - scan.ListTicks - _primeTicks - scan.HereTicks - scan.OtherTicks -",
+                        "scan.SizeTicks;",
+                        '"route scan steps: "',
+                        "Ms(rest)", "Ms(scan.BuySideTicks)", "Ms(scan.RoadTicks)", "Ms(scan.LandingTicks)",
+                        "Ms(scan.PriceTicks)"))
+
+
+chk("2.8.6", "with extended debug logging on, the route scan says how long it spent on each of its steps, the roads, what lands, each till on arrival and the opening prices among them, and times nothing with it off",
+    the_route_scan_times_each_of_its_steps_only_with_extended_debug_logging_on())
+
+
+def leaving_a_market_keeps_the_route_scan_made_there_while_nothing_it_was_sized_on_changed():
+    left = method_body(S['Trading.cs'], "private void OnSettlementLeft")
+    best = method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes(int top)")
+    keeps = method_body(S['Ledger.cs'], "internal bool KeepsItsScanOnLeaving(Settlement leaving)")
+    return (left and best and keeps
+            and ordered(left, "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);",
+                        "if (HasAMarket(settlement) && Options.Current.MarkBestSellTownOnMap &&",
+                        '!Guard.Read("Action.KeepTheScanOnLeaving", settlement,',
+                        "s => LedgerBehavior.Instance?.KeepsItsScanOnLeaving(s) == true, false))",
+                        'Guard.Run("Action.RescanOnLeaving", () => LedgerBehavior.Instance?.BestRoutes(int.MaxValue));',
+                        'Guard.Run("Action.OnSettlementLeft", Marker.Update);')
+            and "private int _lastScanVisit = -1;" in S['Ledger.cs']
+            and ordered(best, "_routes = ScanRoutes();", "_lastScan = (new List<TradeRoute>(_routes),",
+                        "_lastScanVisit = TradeActionBehavior.VisitNumber;", "return _routes.Count <= top")
+            and ordered(keeps,
+                        "if (_lastScanVisit != TradeActionBehavior.VisitNumber || !LastScanStillServes(Marker.WhatYouHoldNow()))",
+                        "return false;", "_leftFrom = null;", "return true;")
+            and sum(S[f].count("KeepsItsScanOnLeaving(") for f in S) == 2
+            and sum(S[f].count("_lastScanVisit = ") for f in S) == 2)
+
+
+chk("2.8.6", "leaving a market keeps the route scan the TradeLord ledger made there this visit while your cargo, purse and settings still match it, and scans again the moment any of them changed",
+    leaving_a_market_keeps_the_route_scan_made_there_while_nothing_it_was_sized_on_changed())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

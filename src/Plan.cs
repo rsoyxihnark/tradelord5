@@ -64,6 +64,18 @@ namespace TradeLord
         internal int CargoShut;
         internal int SetAsideRoutes;
         internal long FreesTicks;
+        internal long SetUpTicks;
+        internal long ListTicks;
+        internal long HereTicks;
+        internal long OtherTicks;
+        internal long SizeTicks;
+        internal long BuySideTicks;
+        internal long RoadTicks;
+        internal long LandingTicks;
+        internal long PriceTicks;
+        private readonly bool _timed;
+
+        internal long Now() => _timed ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
 
         private readonly LedgerBehavior _ledger;
         private readonly bool _passOver;
@@ -94,6 +106,8 @@ namespace TradeLord
 
         internal RouteScan(LedgerBehavior ledger, MobileParty party, Settlement here)
         {
+            _timed = Options.Current.ExtendedDebugLogging;
+            long setUp = Now();
             _ledger = ledger;
             _party = party;
             _here = here?.SettlementComponent != null ? here : null;
@@ -116,6 +130,7 @@ namespace TradeLord
             _herdRoom = party == null ? 0 : Drove.RoomForLivestock(party);
             _herdWeight = TradeMath.HerdWeight(capacity * Options.Current.MaxCargoShare,
                                                party == null ? 0 : Drove.DrivenNow(party), _herdRoom);
+            SetUpTicks = Now() - setUp;
         }
 
         internal Settlement Here => _here;
@@ -195,6 +210,7 @@ namespace TradeLord
             why = Block.NoResaleMarket;
             if (item == null || from == null || buyPrice <= 0) { why = Block.NoStock; return null; }
             BuyFrom at = At(from);
+            long buying = Now();
             Good good = GoodOf(item);
             float each = Carry.Weighs(item);
             float toBuy = Travel.EstimateDaysFromParty(from);
@@ -213,6 +229,8 @@ namespace TradeLord
             int fits = TradeMath.UnitsThatFit(at.Room, each);
             int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);
             int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
+            BuySideTicks += Now() - buying;
+            buying = Now();
             Options s = Options.Current;
             int caps = TradeRules.UnitsTheCapsAllow(good, openingBuy, taken, held, _shareCap, s);
             if (caps <= 0)
@@ -234,6 +252,7 @@ namespace TradeLord
                             Forecast.UnitsLeaving(from, item, toBuy));
                 stocked = Math.Min(stocked, shelf);
             }
+            BuySideTicks += Now() - buying;
             if (stocked <= 0) { why = Block.NoStock; return null; }
             int valueCap = s.BuyValueCapPerItem > 0 ? Math.Max(0, s.BuyValueCapPerItem - taken.Item2) : 0;
             float weighs = each > 0.01f ? each : good.IsLivestock ? _herdWeight : each;
@@ -266,12 +285,16 @@ namespace TradeLord
                     continue;
                 }
 
+                long road = Now();
                 // Intended-Behavior: Days runs from where your party stands to Buy From and on to Sell At, as the developer chose; it is not to be raised again.
                 float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);
+                RoadTicks += Now() - road;
                 if (TradeMath.OutOfReach(days)) continue;
                 if (!LedgerBehavior.WithinTravelCeiling(to, days)) continue;
 
+                long landing = Now();
                 int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);
+                LandingTicks += Now() - landing;
                 if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,
                                                                       stocked, days, beaten, key, _safety))
                 {
@@ -290,11 +313,15 @@ namespace TradeLord
                 int till = 0;
                 if (s.Omniscient)
                 {
+                    long tilling = Now();
                     till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);
+                    LandingTicks += Now() - tilling;
                     if (till <= 0) continue;
                 }
 
+                long pricing = Now();
                 int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
+                PriceTicks += Now() - pricing;
                 Opened++;
                 float realizable = TradePolicy.Realizable(openingSell);
                 if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }
@@ -319,7 +346,9 @@ namespace TradeLord
                     Caravans = Takers(from) + Pressure(to),
                     Trust = TrustAt(to)
                 };
+                long sizing = Now();
                 TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);
+                PriceTicks += Now() - sizing;
                 if (route == null) continue;
                 float score = ScoreOf(route);
                 if (beaten && score <= key) continue;

@@ -65,6 +65,10 @@ namespace TradeLord
             internal float SlowestSeen;
             internal float QuickestSeen;
             internal double SlowestAt;
+            internal bool TillSaid;
+            internal int TillThen;
+            internal int TillDraw;
+            internal int TillOnArrival;
         }
 
         private struct Followed
@@ -173,6 +177,13 @@ namespace TradeLord
                 Carried = Travel.WhatCarriesYou(MobileParty.MainParty),
                 SlowestSeen = float.MaxValue
             };
+            if (Options.Current.Omniscient && Forecast.On && to.IsTown && to.SettlementComponent != null)
+            {
+                _ride.TillSaid = true;
+                _ride.TillThen = to.SettlementComponent.Gold;
+                _ride.TillDraw = Forecast.TillPaysOutBefore(to, said.Days);
+                _ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);
+            }
             _riding = true;
             Log.Write("ride check: set off for " + Tongue.Named(to.Name, to.StringId) + "; TradeLord says " +
                       Hours(said.Days * 24f) + " h, " + Hours(said.Night) + " h of it at night, over a road of " +
@@ -261,6 +272,16 @@ namespace TradeLord
                           Figure(_ride.Ceiling) + " days; TradeLord said " + Figure(said.Days) +
                           " days and the ride on the move took " + Figure(tookDays) +
                           (overCeiling ? ", past the ceiling TradeLord kept it under" : ""));
+            }
+            if (_ride.TillSaid && at.SettlementComponent != null)
+            {
+                int holds = at.SettlementComponent.Gold;
+                int missed = holds - _ride.TillOnArrival;
+                lines.Add("  purse: it held " + _ride.TillThen + " when you set off; TradeLord said the sellers " +
+                          "already on the road would draw " + _ride.TillDraw + " of it before you got there and " +
+                          "it would hold " + _ride.TillOnArrival + ", and it holds " + holds + ", " +
+                          (missed == 0 ? "exactly what it said" : Math.Abs(missed) + (missed > 0 ? " more" : " less") +
+                                                                   " than it said"));
             }
             if (_ride.Standing > StoodStill || _ride.Fought)
                 lines.Add("  left out: " + Hours((float)_ride.Standing) + " h standing still" +
