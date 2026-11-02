@@ -597,7 +597,10 @@ namespace TradeLord
 
             int age = (int)CampaignTime.Now.ToHours - scan.hour;
             bool atConf = Options.Current.ConfidenceRanking;
+            var cargo = WhatYouCarryToSell(party);
+            var pressure = atConf && cargo.Count > 0 ? LedgerBehavior.CaravanPressure() : null;
             var rides = new Dictionary<Settlement, float>();
+            var sold = new Dictionary<string, (float rate, float earned)>(System.StringComparer.Ordinal);
             var rows = new List<(string from, string to, float profit, float days)>();
             var own = new List<(string from, string to, float profit, float days)>();
             foreach (TradeRoute r in scan.rows)
@@ -605,22 +608,26 @@ namespace TradeLord
                 if (r?.From == null || r.To == null || r.Leg == null || r.TotalProfit <= 0) continue;
                 if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;
                 if (!rides.TryGetValue(r.From, out float ride))
+                {
                     rides[r.From] = ride = r.From == target ? how.Days : ARideToBuyFrom(r.From, party);
+                    if (ride >= 0f)
+                        sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure, scan.hold);
+                }
                 if (ride < 0f) continue;
                 float days = Marks.RetimedDays(ride, r.TravelDays, r.Leg.ToBuy);
                 if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(r.To, days)) continue;
                 float profit = atConf ? r.TotalProfit * r.Confidence * r.Trust : r.TotalProfit;
                 (r.From == target ? own : rows).Add((r.From.StringId, r.To.StringId, profit, days));
             }
-            var best = Marks.BestBuyFrom(rows, _buyMark?.StringId);
+            var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);
             if (best.from == null)
                 return NoBuyFrom(target, "reach", "the TradeLord ledger has no route left that starts in reach");
 
-            float conf = target == null ? 1f : AtTheConfOfSelling(target, how);
-            float sellRate = target == null ? 0f : how.Rate * conf;
-            float sellEarned = target == null ? 0f : (how.Value - how.Cost) * conf;
-            var mine = Marks.BestBuyFrom(own, null);
-            float sell = Marks.SellSideWithItsOwnRoute(sellRate, sellEarned, mine.profit, mine.days);
+            if (target != null && !sold.ContainsKey(target.StringId))
+                sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure, scan.hold);
+            float sellRate = target == null ? 0f : sold[target.StringId].rate;
+            var mine = Marks.BestPlaceToGo(own, sold, null);
+            float sell = mine.from != null && mine.rate > sellRate ? mine.rate : sellRate;
             Settlement from = Settlement.Find(best.from);
             Settlement to = Settlement.Find(best.to);
             string weighed = atConf ? " at their Conf" : "";
@@ -633,7 +640,8 @@ namespace TradeLord
                     ? "no route the TradeLord ledger found is worth showing"
                     : "selling what you carry there earns " + sell.ToString("0") + " a day" + weighed + " against " +
                       best.rate.ToString("0") + " for the TradeLord ledger's route from " +
-                      ((object)from?.Name ?? best.from));
+                      ((object)from?.Name ?? best.from) +
+                      (best.sold > 0f ? " counted with what you carry would fetch there" : ""));
 
             Settlement was = _buyMark;
             Settlement wasTo = _buyTo;
@@ -642,8 +650,11 @@ namespace TradeLord
             if (was == from && wasTo == to) return null;
             return "map marker moved to " + from.Name + (was != null && was != from ? " from " + was.Name : "") +
                    ", the Buy From of the TradeLord ledger's best route: " + best.rows + " good(s) for " +
-                   ((object)to?.Name ?? best.to) + ", " + best.profit.ToString("0") + " profit" + weighed + " over " +
-                   best.days.ToString("0.0", CultureInfo.InvariantCulture) + " day(s), so " +
+                   ((object)to?.Name ?? best.to) + ", " + best.profit.ToString("0") + " profit" + weighed +
+                   (best.sold > 0f
+                       ? " and " + best.sold.ToString("0") + " more from selling what you carry there"
+                       : "") +
+                   " over " + best.days.ToString("0.0", CultureInfo.InvariantCulture) + " day(s), so " +
                    best.rate.ToString("0") + " profit a day, " + selling +
                    (target == null ? "" : "; the market it would sell your cargo at is still " + target.Name) +
                    "; the route scan is " + age + " hour(s) old";
@@ -662,19 +673,34 @@ namespace TradeLord
             return TradeMath.OutOfReach(ride) || !LedgerBehavior.WithinTravelCeiling(s, ride) ? -1f : ride;
         }
 
-        private static float AtTheConfOfSelling(Settlement s, in Reckoning how)
+        private static (float rate, float earned) WhatYourCargoEarnsThere(
+            Settlement s, float ride, MobileParty party,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+            Dictionary<Settlement, int> pressure, float holdShare)
         {
-            if (!Options.Current.ConfidenceRanking) return 1f;
-            MobileParty party = MobileParty.MainParty;
-            var cargo = party == null ? null : WhatYouCarryToSell(party);
-            if (cargo == null || cargo.Count == 0) return 1f;
-            var pressure = LedgerBehavior.CaravanPressure();
+            SettlementComponent market = s?.SettlementComponent;
+            if (market == null || cargo == null || cargo.Count == 0 || TradeMath.OutOfReach(ride)) return (0f, 0f);
+            int purse = PurseOf(s, ride);
+            if (purse <= 0) return (0f, 0f);
+            Takings took = WhatItWouldFetch(s, market, party, ride, cargo, purse, null,
+                                            WhatTheMarkWouldKeep(s, ride, cargo, holdShare), holdShare);
+            if (took.Value <= 0L) return (0f, 0f);
+            float earned = (took.Value > purse ? purse : took.Value) - took.Cost;
+            if (!(earned > 0f)) return (0f, 0f);
+            float conf = AtTheConfOfSelling(s, ride, took.PurseCapped ? purse : 0, party, cargo, pressure);
+            return (TradeMath.PerDay(earned, ride) * conf, earned * conf);
+        }
+
+        private static float AtTheConfOfSelling(Settlement s, float ride, int till, MobileParty party,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+            Dictionary<Settlement, int> pressure)
+        {
+            if (!Options.Current.ConfidenceRanking || cargo == null || cargo.Count == 0) return 1f;
             int caravans = pressure != null && pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;
-            int till = how.PurseCapped ? how.Purse : 0;
-            long worthThere = how.PurseCapped
-                ? WhatItWouldFetch(s, s.SettlementComponent, party, how.Days, cargo, int.MaxValue, null).Value
+            long worthThere = till > 0
+                ? WhatItWouldFetch(s, s.SettlementComponent, party, ride, cargo, int.MaxValue, null).Value
                 : 1L;
-            return Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, how.Days, true, caravans, till, worthThere,
+            return Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till, worthThere,
                                  out _, out _);
         }
 

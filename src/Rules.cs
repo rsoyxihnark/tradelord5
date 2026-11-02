@@ -245,6 +245,14 @@ namespace TradeLord
         internal static (string from, string to, float profit, float days, float rate, int rows) BestBuyFrom(
             IList<(string from, string to, float profit, float days)> rows, string shownFrom)
         {
+            var best = BestPlaceToGo(rows, null, shownFrom);
+            return (best.from, best.to, best.profit, best.days, best.rate, best.rows);
+        }
+
+        internal static (string from, string to, float profit, float sold, float days, float rate, int rows) BestPlaceToGo(
+            IList<(string from, string to, float profit, float days)> rows,
+            IDictionary<string, (float rate, float earned)> soldThere, string shownFrom)
+        {
             var order = new List<(string from, string to)>();
             var groups = new Dictionary<(string from, string to), (float profit, float days, int rows)>();
             for (int i = 0; rows != null && i < rows.Count; i++)
@@ -260,16 +268,19 @@ namespace TradeLord
                 }
                 groups[key] = (group.profit + profit, Math.Max(group.days, days), group.rows + 1);
             }
-            (string from, string to, float profit, float days, float rate, int rows) best = (null, null, 0f, 0f, 0f, 0);
+            (string from, string to, float profit, float sold, float days, float rate, int rows) best =
+                (null, null, 0f, 0f, 0f, 0f, 0);
             float bar = 0f;
             foreach (var key in order)
             {
                 var group = groups[key];
-                float rate = TradeMath.PerDay(group.profit, group.days);
+                (float rate, float earned) sold = default;
+                if (soldThere != null) soldThere.TryGetValue(key.from, out sold);
+                float rate = SellSideWithItsOwnRoute(sold.rate, sold.earned, group.profit, group.days);
                 float weighed = TradeMath.RateTheMarkHolds(rate, key.from == shownFrom);
                 if (!(weighed > bar)) continue;
                 bar = weighed;
-                best = (key.from, key.to, group.profit, group.days, rate, group.rows);
+                best = (key.from, key.to, group.profit, sold.earned > 0f ? sold.earned : 0f, group.days, rate, group.rows);
             }
             return best;
         }

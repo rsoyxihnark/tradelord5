@@ -181,6 +181,68 @@ namespace TradeLord.Tests
             Assert.Equal(2f, Marks.RetimedDays(2f, float.PositiveInfinity, float.PositiveInfinity));
         }
 
+        private static Dictionary<string, (float rate, float earned)> Sold(
+            params (string town, float rate, float earned)[] sold)
+        {
+            var there = new Dictionary<string, (float rate, float earned)>(StringComparer.Ordinal);
+            foreach (var (town, rate, earned) in sold) there[town] = (rate, earned);
+            return there;
+        }
+
+        [Fact]
+        public void A_town_that_takes_your_cargo_and_starts_a_route_is_weighed_on_both()
+        {
+            var rows = Rows(("town_b", "town_x", 110f, 1f));
+            var both = Marks.BestPlaceToGo(rows, Sold(("town_b", 90f, 90f)), null);
+            Assert.Equal("town_b", both.from);
+            Assert.Equal(110f, both.profit);
+            Assert.Equal(90f, both.sold);
+            Assert.Equal(200f, both.rate);
+            Assert.True(Marks.ShowsTheBuyTown(both.rate, 100f, false));
+            Assert.False(Marks.ShowsTheBuyTown(Marks.BestPlaceToGo(rows, null, null).rate, 100f, false));
+        }
+
+        [Fact]
+        public void The_sell_mark_and_a_buy_town_are_weighed_by_one_rule()
+        {
+            var sold = Sold(("town_m", 100f, 100f), ("town_b", 90f, 90f));
+            var mark = Marks.BestPlaceToGo(Rows(("town_m", "town_x", 110f, 1f)), sold, null);
+            var other = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 110f, 1f)), sold, null);
+            Assert.Equal(210f, mark.rate);
+            Assert.Equal(200f, other.rate);
+            Assert.Equal(Marks.SellSideWithItsOwnRoute(100f, 100f, 110f, 1f), mark.rate);
+            Assert.Equal(Marks.SellSideWithItsOwnRoute(90f, 90f, 110f, 1f), other.rate);
+        }
+
+        [Fact]
+        public void What_your_cargo_fetches_in_a_town_counts_once_however_many_goods_start_there()
+        {
+            var best = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 100f, 2f), ("town_b", "town_x", 100f, 2f)),
+                                           Sold(("town_b", 50f, 100f)), null);
+            Assert.Equal(200f, best.profit);
+            Assert.Equal(100f, best.sold);
+            Assert.Equal(150f, best.rate);
+            Assert.Equal(2, best.rows);
+        }
+
+        [Fact]
+        public void A_town_never_scores_under_what_your_cargo_alone_earns_there()
+        {
+            var best = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 10f, 10f)), Sold(("town_b", 80f, 80f)), null);
+            Assert.Equal(80f, best.rate);
+        }
+
+        [Fact]
+        public void With_nothing_sold_anywhere_towns_rank_by_their_routes_alone()
+        {
+            var rows = Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 330f, 3f), ("town_b", "town_y", 30f, 2f));
+            var plain = Marks.BestBuyFrom(rows, "town_a");
+            var weighed = Marks.BestPlaceToGo(rows, Sold(), "town_a");
+            Assert.Equal(plain.from, weighed.from);
+            Assert.Equal(plain.rate, weighed.rate);
+            Assert.Equal(0f, weighed.sold);
+        }
+
         [Fact]
         public void The_sell_mark_counts_its_own_route_only_when_that_earns_more_a_day()
         {

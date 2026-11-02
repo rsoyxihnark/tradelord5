@@ -20752,7 +20752,10 @@ def the_ledger_counts_no_room_that_hold_cargo_keeps_full():
             and "rungs != null && HeldForTheMark(price, FloorForTheLast(rungs, boughtLeft, share), boughtLeft, rungs.Length);"
                 in S['Rules.cs']
             and "HoldCargoForBestMarket" not in S['Marker.cs']
-            and S['Marker.cs'].count("WhatTheMarkWouldKeep(") == 2
+            and S['Marker.cs'].count("WhatTheMarkWouldKeep(") == 3
+            and "WhatTheMarkWouldKeep(s, ride, cargo, holdShare), holdShare);" in
+                method_body(S['Marker.cs'], "private static (float rate, float earned) WhatYourCargoEarnsThere(")
+            and "WhatTheMarkWouldKeep(" not in method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
             and "Units_the_marked_market_pays_well_past_this_one_for_are_kept_so_they_free_no_room_here" in FLOORTESTS
             and "Units_past_what_the_marked_market_takes_or_with_no_mark_are_never_kept" in FLOORTESTS)
 
@@ -22884,7 +22887,7 @@ def the_marker_weighs_a_buy_from_on_the_last_route_scan_and_never_starts_one():
             and all(one not in marker for one in ("BestRoutes(", "ScanRoutes(", ".Listed(", "WhatTheLedgerBuysAt(", "EvidenceAt("))
             and ordered(best, "_routes = ScanRoutes();",
                         "_lastScan = (new List<TradeRoute>(_routes), hour, Hero.MainHero?.Gold ?? 0, Marker.WhatYouHoldNow(),\n"
-                        "                             Freshness.At(Stamp.Timeless));",
+                        "                             Freshness.At(Stamp.Timeless), Options.Current.HoldCargoForBestMarket);",
                         "return _routes.Count <= top")
             and "_lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&" in serves
             and "Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow)" in serves
@@ -22894,9 +22897,9 @@ def the_marker_weighs_a_buy_from_on_the_last_route_scan_and_never_starts_one():
                         "float days = Marks.RetimedDays(ride, r.TravelDays, r.Leg.ToBuy);",
                         "if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(r.To, days)) continue;",
                         "float profit = atConf ? r.TotalProfit * r.Confidence * r.Trust : r.TotalProfit;",
-                        "var best = Marks.BestBuyFrom(rows, _buyMark?.StringId);",
-                        "float sellRate = target == null ? 0f : how.Rate * conf;",
-                        "float sell = Marks.SellSideWithItsOwnRoute(sellRate, sellEarned, mine.profit, mine.days);",
+                        "var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);",
+                        "float sellRate = target == null ? 0f : sold[target.StringId].rate;",
+                        "float sell = mine.from != null && mine.rate > sellRate ? mine.rate : sellRate;",
                         "if (from == null || !Marks.ShowsTheBuyTown(best.rate, sell, _buyMark != null))")
             and all(one in BUYMARKTESTS for one in
                     ("One_silver_ore_at_36_a_day_gives_way_to_a_ledger_route_at_400_a_day",
@@ -23007,6 +23010,40 @@ def the_log_says_why_the_marker_shows_no_buy_from():
 
 chk("2.8.1", "with Enable extended debug logging on, TradeLord.log says why the map marker shows no Buy From of a TradeLord ledger route, once each time that reason changes",
     the_log_says_why_the_marker_shows_no_buy_from())
+
+
+def the_sell_mark_and_every_buy_from_are_weighed_on_what_you_sell_there_and_buy_there_together():
+    marker = S['Marker.cs']
+    show = method_body(marker, "private static string TheBuyTownToShow")
+    earns = method_body(marker, "private static (float rate, float earned) WhatYourCargoEarnsThere(")
+    rule = method_body(S['Rules.cs'], "internal static (string from, string to, float profit, float sold, float days, float rate, int rows) BestPlaceToGo(")
+    plain = method_body(S['Rules.cs'], "internal static (string from, string to, float profit, float days, float rate, int rows) BestBuyFrom(")
+    return (show and earns and rule and plain
+            and ordered(show, "sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure, scan.hold);",
+                        "var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);",
+                        "sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure, scan.hold);",
+                        "var mine = Marks.BestPlaceToGo(own, sold, null);")
+            and show.count("Marks.BestPlaceToGo(") == 2 and "Marks.BestBuyFrom(" not in show
+            and "how.Rate" not in show and "how.Value" not in show
+            and ordered(earns, "int purse = PurseOf(s, ride);",
+                        "WhatTheMarkWouldKeep(s, ride, cargo, holdShare), holdShare);",
+                        "float earned = (took.Value > purse ? purse : took.Value) - took.Cost;",
+                        "return (TradeMath.PerDay(earned, ride) * conf, earned * conf);")
+            and ordered(rule, "if (soldThere != null) soldThere.TryGetValue(key.from, out sold);",
+                        "float rate = SellSideWithItsOwnRoute(sold.rate, sold.earned, group.profit, group.days);",
+                        "float weighed = TradeMath.RateTheMarkHolds(rate, key.from == shownFrom);")
+            and "var best = BestPlaceToGo(rows, null, shownFrom);" in plain
+            and "Freshness.At(Stamp.Timeless), Options.Current.HoldCargoForBestMarket)" in
+                between(S['Ledger.cs'], "_lastScan = (new List<TradeRoute>(_routes)", ";")
+            and all(one in BUYMARKTESTS for one in
+                    ("A_town_that_takes_your_cargo_and_starts_a_route_is_weighed_on_both",
+                     "The_sell_mark_and_a_buy_town_are_weighed_by_one_rule",
+                     "What_your_cargo_fetches_in_a_town_counts_once_however_many_goods_start_there",
+                     "With_nothing_sold_anywhere_towns_rank_by_their_routes_alone")))
+
+
+chk("2.8.2", "the market the map marker would sell your cargo at and every Buy From of a TradeLord ledger route are weighed by one rule: what your cargo would really fetch there and the route that starts there, together",
+    the_sell_mark_and_every_buy_from_are_weighed_on_what_you_sell_there_and_buy_there_together())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

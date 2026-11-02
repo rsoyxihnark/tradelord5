@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.8.2
+
+- Fixed the map marker weighing a TradeLord ledger route's Buy From on the route alone, leaving out what your cargo would fetch there
+- TradeLord.log now says how much selling what you carry adds when the map marker shows a TradeLord ledger route's Buy From
+
 ## 2.8.1
 
 - Fixed the map marker never showing a TradeLord ledger route's Buy From once TradeLord had bought anything in the market you left
