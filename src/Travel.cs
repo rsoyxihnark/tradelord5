@@ -2106,10 +2106,20 @@ namespace TradeLord
             return TradeMath.DaysAtBestSpeed(distance, land, sea);
         }
 
+        private static bool _partySlow;
+
         private static void StandWhereYouAre(MobileParty party)
         {
             int hour = (int)CampaignTime.Now.ToHours;
             Vec2 at = party.GetPosition2D;
+            bool slow = party.IsDisorganized;
+            if (slow != _partySlow)
+            {
+                _partySlow = slow;
+                _partyHour = -1;
+                _speedHour = -1;
+                foreach (Road road in _partyDist.Values) road.Hour = -1;
+            }
             if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;
             if (at.DistanceSquared(_partyAt) > StoodStill)
             {

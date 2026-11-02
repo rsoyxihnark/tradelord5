@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.6
+
+- Fixed travel times not counting your party as Disorganized after a fight, or as recovered, until the next hour
+- Fixed the campaign map pausing as you left a market where nothing had changed since the TradeLord ledger last scanned there
+- With Enable extended debug logging on, TradeLord.log now says what purse TradeLord expected a town to have when you got there and what it had
+- With Enable extended debug logging on, TradeLord.log now says how long each step of the TradeLord ledger's route scan took
+- With Enable extended debug logging on, TradeLord.log now says when the TradeLord ledger kept its route scan as you left a market
+
 ## 2.8.5
 
 - Fixed the map marker marking a market for goods Hold cargo for the best market would keep there for their own Sell At
