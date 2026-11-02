@@ -215,6 +215,80 @@ namespace TradeLord
                                              long markedValue) =>
             markedValue > 0L && markedAt != null && markedAt == lookingAt &&
             OnlyEatenFrom(markedCargo, cargoNow);
+
+        internal const int ScanServesHours = 24;
+
+        internal const float LeastGoldKept = 0.9f;
+
+        internal static bool ScanStillServes(int goldThen, int goldNow,
+                                             List<(string good, int amount, bool food)> cargoThen,
+                                             List<(string good, int amount, bool food)> cargoNow) =>
+            OnlyEatenFrom(cargoThen, cargoNow) && (goldThen <= 0 || goldNow >= goldThen * LeastGoldKept);
+
+        internal static bool RowStillServes(int ageHours, float rideAtScanDays)
+        {
+            float ride = float.IsNaN(rideAtScanDays) || float.IsInfinity(rideAtScanDays) || rideAtScanDays < 0f
+                ? 0f : rideAtScanDays;
+            double limit = ScanServesHours + Math.Ceiling(24d * ride);
+            return ageHours >= 0 && ageHours <= limit;
+        }
+
+        internal static float RetimedDays(float rideNow, float legDays, float rideAtScan)
+        {
+            float now = float.IsNaN(rideNow) || rideNow < 0f ? 0f : rideNow;
+            float leg = float.IsNaN(legDays) || legDays < 0f ? 0f : legDays;
+            float then = float.IsNaN(rideAtScan) || rideAtScan < 0f ? 0f : rideAtScan;
+            float onward = leg - then;
+            return now + (float.IsNaN(onward) || onward < 0f ? 0f : onward);
+        }
+
+        internal static (string from, string to, float profit, float days, float rate, int rows) BestBuyFrom(
+            IList<(string from, string to, float profit, float days)> rows, string shownFrom)
+        {
+            var order = new List<(string from, string to)>();
+            var groups = new Dictionary<(string from, string to), (float profit, float days, int rows)>();
+            for (int i = 0; rows != null && i < rows.Count; i++)
+            {
+                var (from, to, profit, days) = rows[i];
+                if (from == null || to == null || !(profit > 0f) || float.IsNaN(days)) continue;
+                var key = (from, to);
+                if (!groups.TryGetValue(key, out var group))
+                {
+                    order.Add(key);
+                    groups[key] = (profit, days, 1);
+                    continue;
+                }
+                groups[key] = (group.profit + profit, Math.Max(group.days, days), group.rows + 1);
+            }
+            (string from, string to, float profit, float days, float rate, int rows) best = (null, null, 0f, 0f, 0f, 0);
+            float bar = 0f;
+            foreach (var key in order)
+            {
+                var group = groups[key];
+                float rate = TradeMath.PerDay(group.profit, group.days);
+                float weighed = TradeMath.RateTheMarkHolds(rate, key.from == shownFrom);
+                if (!(weighed > bar)) continue;
+                bar = weighed;
+                best = (key.from, key.to, group.profit, group.days, rate, group.rows);
+            }
+            return best;
+        }
+
+        internal static float SellSideWithItsOwnRoute(float sellRate, float sellEarned, float routeProfit, float routeDays)
+        {
+            if (!(routeProfit > 0f)) return sellRate;
+            float withRoute = TradeMath.PerDay((sellEarned > 0f ? sellEarned : 0f) + routeProfit, routeDays);
+            return sellRate > withRoute ? sellRate : withRoute;
+        }
+
+        internal static bool ShowsTheBuyTown(float buyRate, float sellRate, bool showingBuy)
+        {
+            if (!(buyRate > 0f)) return false;
+            if (!(sellRate > 0f)) return true;
+            return showingBuy
+                ? !(sellRate > buyRate * TradeMath.TheMarkedTownHoldsBy)
+                : buyRate > sellRate * TradeMath.TheMarkedTownHoldsBy;
+        }
     }
 
     internal static class MapButton

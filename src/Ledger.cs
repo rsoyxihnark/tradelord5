@@ -1479,9 +1479,21 @@ namespace TradeLord
                 _routes = ScanRoutes();
                 if (Travel.LostTheRoad) _routeStamp.Stale();
                 else Freshness.Taken(ref _routeStamp, hour);
+                _lastScan = (new List<TradeRoute>(_routes), hour, Hero.MainHero?.Gold ?? 0, Marker.WhatYouHoldNow(),
+                             Freshness.At(Stamp.Timeless));
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }
+
+        private (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings)
+            _lastScan;
+
+        internal (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings)
+            LastScan => _lastScan;
+
+        internal bool LastScanStillServes(List<(string good, int amount, bool food)> cargoNow) =>
+            _lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&
+            Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow);
 
         public Dictionary<string, int> WhatTheLedgerBuysAt(Settlement here)
         {
@@ -1600,7 +1612,8 @@ namespace TradeLord
                     ? "beaten by a route from " + ((object)Settlement.Find(elsewhere)?.Name ?? elsewhere)
                     : _hereRows.ContainsKey(item)
                         ? "still a route here, left off the list by your cargo room or purse"
-                        : _hereWhy.TryGetValue(item, out Block said) ? said.ToString() : "no longer priced here";
+                        : _hereWhy.TryGetValue(item, out Block said) ? said.ToString()
+                        : StockOf(here, item) <= 0 ? "the shelf here has none of it left" : "no longer priced here";
                 lines.Add("the ledger listed " + Tongue.Named(item.Name, item.StringId) + " from " + here.Name +
                           " for " + ((object)to?.Name ?? kv.Value.to) + " at " + kv.Value.sell +
                           " at its last scan, and walking in it left it: " + why + "; " + here.Name + " asks " +

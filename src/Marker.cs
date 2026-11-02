@@ -85,6 +85,8 @@ namespace TradeLord
 
         private static Settlement _picked;
 
+        private static Settlement _buyMark;
+
         private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);
 
         private sealed class Meant
@@ -272,9 +274,27 @@ namespace TradeLord
             set
             {
                 _tracked = value;
-                if (value != null) _picked = value;
+                if (value != null && value != _buyMark) _picked = value;
             }
         }
+
+        internal static string SellMarkId => _picked?.StringId ?? "";
+
+        private static string _sellMarkSaved;
+
+        internal static void TheSellMarkWas(string sellMarkId) => _sellMarkSaved = sellMarkId;
+
+        internal static void RestoreTheSellMark()
+        {
+            string saved = _sellMarkSaved;
+            _sellMarkSaved = null;
+            if (saved == null) return;
+            _picked = saved.Length == 0 ? null : Settlement.Find(saved);
+            _buyMark = _tracked != null && _tracked != _picked ? _tracked : null;
+            _buyMarkRestored = _buyMark != null;
+        }
+
+        private static bool _buyMarkRestored;
 
         internal static bool DueAgain(Vec2 at)
         {
@@ -305,6 +325,8 @@ namespace TradeLord
             _laidOutFor.Clear();
             _tracked = null;
             _picked = null;
+            _buyMark = null;
+            _buyMarkRestored = false;
             _owedAFairLook.Clear();
             _walkedInto = null;
             _markedOnTheWayIn = null;
@@ -485,40 +507,166 @@ namespace TradeLord
                                      " once each is weighed at the Conf of selling there"
                                    : ""));
 
+            string buySaid = on ? TheBuyTownToShow(target, how) : LetTheBuyMarkGo(target, "the map marker is switched off");
+            ShowOnTheMap(tracker, _buyMark ?? target);
+
             if (target == _picked)
             {
-                if (target != null && (_tracked != target || !tracker.CheckTracked(target)))
-                {
-                    tracker.RegisterObject(target);
-                    _tracked = target;
-                }
+                if (buySaid != null) Log.Write(buySaid);
                 Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,
                                    target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), target == null);
                 if (target != null) SayItWeighedAgain(target, how);
                 return;
             }
-            if (_tracked != null && tracker.CheckTracked(_tracked))
-                tracker.RemoveTrackedObject(_tracked);
-            _tracked = null;
             _picked = target;
             Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,
                                target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), true);
-            if (target != null)
-            {
-                tracker.RegisterObject(target);
-                _tracked = target;
-            }
             string why = on ? Why(how) : "the map marker is switched off";
             string left = on ? LeftBecause(was, target, how, lostBefore, cargoSame) : null;
+            string alongside = WhileTheMapShowsTheBuyTown(target != null);
             Log.Write(target != null
                 ? "map marker moved to " + target.Name + (left == null ? "" : " from " + was.Name + " because " + left) +
-                  ": " + why
+                  ": " + why + alongside
                 : left == null
-                    ? "map marker taken off the map: " + why
-                    : "map marker taken off " + was.Name + " because " + left + ": " + why);
+                    ? "map marker taken off the map: " + why + alongside
+                    : "map marker taken off " + was.Name + " because " + left + ": " + why + alongside);
+            if (buySaid != null && on) Log.Write(buySaid);
             Ultra(how, board: true);
             Told(how);
             Remember(target, how);
+        }
+
+        internal static List<(string good, int amount, bool food)> WhatYouHoldNow()
+        {
+            MobileParty party = MobileParty.MainParty;
+            return party == null ? null : Held(WhatYouCarryToSell(party));
+        }
+
+        private static void ShowOnTheMap(VisualTrackerManager tracker, Settlement onMap)
+        {
+            if (onMap != null && _tracked == onMap && tracker.CheckTracked(onMap)) return;
+            if (_tracked != null && _tracked != onMap && tracker.CheckTracked(_tracked))
+                tracker.RemoveTrackedObject(_tracked);
+            _tracked = null;
+            if (onMap == null) return;
+            tracker.RegisterObject(onMap);
+            _tracked = onMap;
+        }
+
+        private static string WhileTheMapShowsTheBuyTown(bool holding) =>
+            _buyMark == null
+                ? ""
+                : "; the map shows " + _buyMark.Name + ", the Buy From of the TradeLord ledger's best route" +
+                  (holding ? ", while this stays the market it would sell your cargo at" : "");
+
+        private static string LetTheBuyMarkGo(Settlement target, string because)
+        {
+            Settlement was = _buyMark;
+            _buyMark = null;
+            _buyMarkRestored = false;
+            if (was == null) return null;
+            return target == null
+                ? "map marker taken off " + was.Name + ": " + because
+                : "map marker moved to " + target.Name + " from " + was.Name + ": " + because;
+        }
+
+        private static Settlement _buyTo;
+
+        private static string TheBuyTownToShow(Settlement target, in Reckoning how)
+        {
+            MobileParty party = MobileParty.MainParty;
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (party == null || ledger == null) return LetTheBuyMarkGo(target, "there is no TradeLord ledger to read");
+            var scan = ledger.LastScan;
+            if (scan.rows == null)
+                return _buyMarkRestored && _buyMark != null && ARideToBuyFrom(_buyMark, party) >= 0f
+                    ? null
+                    : LetTheBuyMarkGo(target, "the TradeLord ledger has no route scan yet");
+            _buyMarkRestored = false;
+            if (!ledger.LastScanStillServes(WhatYouHoldNow()))
+                return LetTheBuyMarkGo(target, "your cargo or purse has changed since the route scan it was weighed on");
+
+            int age = (int)CampaignTime.Now.ToHours - scan.hour;
+            bool atConf = Options.Current.ConfidenceRanking;
+            var rides = new Dictionary<Settlement, float>();
+            var rows = new List<(string from, string to, float profit, float days)>();
+            var own = new List<(string from, string to, float profit, float days)>();
+            foreach (TradeRoute r in scan.rows)
+            {
+                if (r?.From == null || r.To == null || r.Leg == null || r.TotalProfit <= 0) continue;
+                if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;
+                if (!rides.TryGetValue(r.From, out float ride))
+                    rides[r.From] = ride = r.From == target ? how.Days : ARideToBuyFrom(r.From, party);
+                if (ride < 0f) continue;
+                float days = Marks.RetimedDays(ride, r.TravelDays, r.Leg.ToBuy);
+                if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(r.To, days)) continue;
+                float profit = atConf ? r.TotalProfit * r.Confidence * r.Trust : r.TotalProfit;
+                (r.From == target ? own : rows).Add((r.From.StringId, r.To.StringId, profit, days));
+            }
+            var best = Marks.BestBuyFrom(rows, _buyMark?.StringId);
+            if (best.from == null)
+                return LetTheBuyMarkGo(target, "the TradeLord ledger has no route left that starts in reach");
+
+            float conf = target == null ? 1f : AtTheConfOfSelling(target, how);
+            float sellRate = target == null ? 0f : how.Rate * conf;
+            float sellEarned = target == null ? 0f : (how.Value - how.Cost) * conf;
+            var mine = Marks.BestBuyFrom(own, null);
+            float sell = Marks.SellSideWithItsOwnRoute(sellRate, sellEarned, mine.profit, mine.days);
+            Settlement from = Settlement.Find(best.from);
+            Settlement to = Settlement.Find(best.to);
+            string weighed = atConf ? " at their Conf" : "";
+            string selling = target == null
+                ? "and you carry nothing it would sell"
+                : "against " + sell.ToString("0") + " a day selling what you carry at " + target.Name +
+                  (mine.from != null && sell > sellRate ? " and buying for the ledger's route from there" : "");
+            if (from == null || !Marks.ShowsTheBuyTown(best.rate, sell, _buyMark != null))
+                return LetTheBuyMarkGo(target, target == null
+                    ? "no route the TradeLord ledger found is worth showing"
+                    : "selling what you carry there earns " + sell.ToString("0") + " a day" + weighed + " against " +
+                      best.rate.ToString("0") + " for the TradeLord ledger's route from " +
+                      ((object)from?.Name ?? best.from));
+
+            Settlement was = _buyMark;
+            Settlement wasTo = _buyTo;
+            _buyMark = from;
+            _buyTo = to;
+            if (was == from && wasTo == to) return null;
+            return "map marker moved to " + from.Name + (was != null && was != from ? " from " + was.Name : "") +
+                   ", the Buy From of the TradeLord ledger's best route: " + best.rows + " good(s) for " +
+                   ((object)to?.Name ?? best.to) + ", " + best.profit.ToString("0") + " profit" + weighed + " over " +
+                   best.days.ToString("0.0", CultureInfo.InvariantCulture) + " day(s), so " +
+                   best.rate.ToString("0") + " profit a day, " + selling +
+                   (target == null ? "" : "; the market it would sell your cargo at is still " + target.Name) +
+                   "; the route scan is " + age + " hour(s) old";
+        }
+
+        private static float ARideToBuyFrom(Settlement s, MobileParty party)
+        {
+            if (s == party.CurrentSettlement) return -1f;
+            if (TradeActionBehavior.StillTheSameArrival(s)) return -1f;
+            if (!TradeActionBehavior.IsMarket(s)) return -1f;
+            if (TradeActionBehavior.MarkerLeavesItOut(s)) return -1f;
+            if (s.StringId == _keptForItsSellAt) return -1f;
+            if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) return -1f;
+            if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) return -1f;
+            float ride = Travel.EstimateDaysFromParty(s);
+            return TradeMath.OutOfReach(ride) || !LedgerBehavior.WithinTravelCeiling(s, ride) ? -1f : ride;
+        }
+
+        private static float AtTheConfOfSelling(Settlement s, in Reckoning how)
+        {
+            if (!Options.Current.ConfidenceRanking) return 1f;
+            MobileParty party = MobileParty.MainParty;
+            var cargo = party == null ? null : WhatYouCarryToSell(party);
+            if (cargo == null || cargo.Count == 0) return 1f;
+            var pressure = LedgerBehavior.CaravanPressure();
+            int caravans = pressure != null && pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;
+            int till = how.PurseCapped ? how.Purse : 0;
+            long worthThere = how.PurseCapped
+                ? WhatItWouldFetch(s, s.SettlementComponent, party, how.Days, cargo, int.MaxValue, null).Value
+                : 1L;
+            return Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, how.Days, true, caravans, till, worthThere,
+                                 out _, out _);
         }
 
         private static void TheHolderStays(ref Reckoning how)
@@ -597,7 +745,8 @@ namespace TradeLord
             if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld) ||
                 how.HeldForASecondLook != _toldSecondLook)
             {
-                Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
+                Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how) +
+                          WhileTheMapShowsTheBuyTown(true));
                 Ultra(how, board: false);
                 SayWhatElseMoved(target, how, alongside: true);
                 Told(how);
@@ -640,7 +789,8 @@ namespace TradeLord
                 ? "  and of the other markets it priced, " + string.Join("; ", said)
                 : "map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +
                   " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +
-                  " profit a day, and only other markets moved: " + string.Join("; ", said));
+                  " profit a day, and only other markets moved: " + string.Join("; ", said) +
+                  WhileTheMapShowsTheBuyTown(true));
             return true;
         }
 

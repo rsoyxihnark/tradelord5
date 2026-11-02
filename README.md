@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is eight strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is nine strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -73,6 +73,7 @@
 - ✅ Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that market's purse, how far away it is and the market it beat
 - ✅ It also says why the market marked before lost the mark, with the figures behind it, such as a siege, the days it is away or a market earning more a day
+- ✅ When a TradeLord ledger route earns more a day than selling what you carry, the map marker shows that route's Buy From instead, also when you carry nothing to sell
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed, the running total of what TradeLord has made you and the Trade XP it has earned you, along the top of that same panel
