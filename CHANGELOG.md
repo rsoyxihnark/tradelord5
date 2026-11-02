@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.0
+
+- The map marker now shows the Buy From of a TradeLord ledger route when that route earns more a day than selling what you carry
+- The map marker now shows the Buy From of the best TradeLord ledger route when you carry nothing to sell
+- The Auto-mark best sell market on map hint now says when the map marker shows a TradeLord ledger route's Buy From
+- TradeLord.log now says when the map marker shows a TradeLord ledger route's Buy From and what selling your cargo would earn instead
+- Fixed TradeLord.log saying a good the TradeLord ledger listed was no longer priced when the market had simply run out of it
+
 ## 2.7.6
 
 - Fixed Count what is on its way to a market leaving out what caravans that have not chosen a market yet will buy there

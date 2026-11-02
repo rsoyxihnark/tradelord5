@@ -330,7 +330,10 @@ namespace TradeLord
                 Guard.Run("Visit.PinsForSave", () => _pinnedTowns = LedgerPanel.PinnedIds());
             Settlement tracked = Marker.Tracked;
             dataStore.SyncData("TradeLord_TrackedTown", ref tracked);
+            string sellMark = dataStore.IsLoading ? null : Marker.SellMarkId;
+            dataStore.SyncData("TradeLord_SellMark", ref sellMark);
             Marker.Tracked = tracked;
+            if (dataStore.IsLoading) Marker.TheSellMarkWas(sellMark);
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
             if (_pinnedTowns == null) _pinnedTowns = "";
             string lastTraded = null;
@@ -1019,6 +1022,7 @@ namespace TradeLord
                 if (inside != null) _lastArrivalAt = inside.StringId;
                 if (inside != null) StillTheSameSitting(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
+                Guard.Run("Action.RestoreSellMark", Marker.RestoreTheSellMark);
                 Guard.Run("Action.RestoreMarker", Marker.Update);
                 Guard.Run("Shops.MendTheGamesRecords", Shops.MendTheGamesRecords);
                 Guard.Run("Shops.SayWhoSetsTheLimit", Shops.SayWhoSetsTheLimit);

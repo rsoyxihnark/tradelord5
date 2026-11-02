@@ -53,6 +53,7 @@ TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 HOLDINGTESTS = io.open('tests/HoldingsTests.cs', encoding='utf-8').read()
 ONELINETESTS = io.open('tests/OneLineEachTests.cs', encoding='utf-8').read()
 POINTERTESTS = io.open('tests/PointerTests.cs', encoding='utf-8').read()
+BUYMARKTESTS = io.open('tests/BuyMarkTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'HoldingsTests.cs': HOLDINGTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
@@ -74,7 +75,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'DealTests.cs': DEALTESTS,
      'LotTests.cs': LOTTESTS,
      'OneLineEachTests.cs': ONELINETESTS,
-     'PointerTests.cs': POINTERTESTS}
+     'PointerTests.cs': POINTERTESTS,
+     'BuyMarkTests.cs': BUYMARKTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1674,12 +1676,12 @@ chk("1.3.2", "zero-gold purchase not recorded",
               method_body(S['Passes.cs'], "internal static Traded BuyThem")) is not None)
 chk("1.3.2", "panel tracks a set of pins", "_panelPins = new HashSet<Settlement>" in S['Panel.cs'])
 chk("1.3.2", "marker never removes a panel pin",
-    (lambda update, toggle: "if (_tracked != null && tracker.CheckTracked(_tracked))\n"
+    (lambda update, toggle: "if (_tracked != null && _tracked != onMap && tracker.CheckTracked(_tracked))\n"
                             "                tracker.RemoveTrackedObject(_tracked);" in update
                             and S['Marker.cs'].count("RemoveTrackedObject(") == 1
                             and ordered(toggle, "_panelPins.Add(settlement);", "tracker.RegisterObject(settlement);")
                             and "CheckTracked(" not in toggle)
-    (method_body(S['Marker.cs'], "internal static void Update"),
+    (method_body(S['Marker.cs'], "private static void ShowOnTheMap"),
      method_body(S['Panel.cs'], "private static void ToggleMarker")))
 chk("1.3.2", "a good one half of the pass moved here is left alone by the other half",
     (lambda b: "if (books.Bought(sim, market.IdAt(at))) { tally.Note(Block.TradedHereAlready); continue; }" in b
@@ -3249,14 +3251,15 @@ chk("1.6.13", "a line newer than this build is still found when nothing has load
     "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
 
 chk("1.6.14", "the auto-marker claims a town only when it placed the marker itself, so it never removes one you set",
-    len(re.findall(r'if \(target != null && \(_tracked != target \|\| !tracker\.CheckTracked\(target\)\)\)\s*\{\s*'
-                   r'tracker\.RegisterObject\(target\);\s*_tracked = target;\s*\}',
-                   method_body(S['Marker.cs'], "internal static void Update"))) == 1 and
-    len(re.findall(r'if \(target != null\)\s*\{\s*tracker\.RegisterObject\(target\);\s*_tracked = target;\s*\}',
-                   method_body(S['Marker.cs'], "internal static void Update"))) == 1 and
-    "_tracked = target;" not in between(method_body(S['Marker.cs'], "internal static void Update"),
-                                        "tracker.RemoveTrackedObject(_tracked);", "if (target != null") and
-    "if (_tracked != null && tracker.CheckTracked(_tracked))" in S['Marker.cs'] and
+    method_body(S['Marker.cs'], "internal static void Update").count("ShowOnTheMap(tracker, _buyMark ?? target);") == 1 and
+    S['Marker.cs'].count("ShowOnTheMap(") == 2 and S['Marker.cs'].count("RegisterObject(") == 1 and
+    ordered(method_body(S['Marker.cs'], "private static void ShowOnTheMap"),
+            "if (onMap != null && _tracked == onMap && tracker.CheckTracked(onMap)) return;",
+            "tracker.RemoveTrackedObject(_tracked);", "_tracked = null;", "if (onMap == null) return;",
+            "tracker.RegisterObject(onMap);\n            _tracked = onMap;") and
+    "CheckTracked(onMap)) tracker.RegisterObject" not in S['Marker.cs'] and
+    S['Marker.cs'].count("_tracked = onMap;") == 1 and
+    "if (_tracked != null && _tracked != onMap && tracker.CheckTracked(_tracked))" in S['Marker.cs'] and
     "LedgerPanel.IsPinned(" not in S['Marker.cs'])
 chk("1.6.14", "a pin restored from a save is put back on the map, so the panel and the map agree",
     (lambda b: "VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;" in b
@@ -6055,7 +6058,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "_freeText = LedgerCodec.WritePurchases(_free);",
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
-            and trade.count("dataStore.SyncData(") == 4
+            and trade.count("dataStore.SyncData(") == 5
             and ledger.count("dataStore.SyncData(") == 15)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
@@ -7626,7 +7629,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                method_body(S['Ranking.cs'], "internal static float Ceiling")
                and "MarketRank.Ceiling(s.IsVillage, Options.Current)" in
                    between(S['Ledger.cs'], "internal static float TravelCeiling(Settlement s) =>", ";"))
-    said = "within the travel ceilings; a village only while Trade with villages is on." in en['TL345']
+    said = "within travel ceilings; villages need Trade with villages;" in en['TL345']
     swept = "Town.AllTowns" not in S['Trading.cs']
     return walks and gated and ceiling and said and swept
 
@@ -10297,9 +10300,10 @@ def the_marker_settles_on_a_town_already_on_your_map():
     return ("private static Settlement _picked;" in S['Marker.cs']
             and "if (target == _picked)" in update
             and "if (target == _tracked)" not in update
-            and ordered(update, "_tracked = null;", "_picked = target;")
+            and ordered(update, "ShowOnTheMap(tracker, _buyMark ?? target);", "if (target == _picked)", "_picked = target;")
+            and "_tracked = null;" in method_body(S['Marker.cs'], "private static void ShowOnTheMap")
             and "_picked = null;" in forget
-            and ordered(held, "_tracked = value;", "if (value != null) _picked = value;"))
+            and ordered(held, "_tracked = value;", "if (value != null && value != _buyMark) _picked = value;"))
 
 
 chk("1.79.1", "a market that is already on your map is still taken as the one the marker picked, so the line it writes to TradeLord.log is written once rather than over and over",
@@ -11208,7 +11212,7 @@ chk("1.84.0", "the ultralog counts every market the marker left out and says wha
 def the_marker_says_so_when_it_weighs_again_and_stays_put():
     update = method_body(S['Marker.cs'], "internal static void Update")
     again = method_body(S['Marker.cs'], "private static void SayItWeighedAgain")
-    stayed = between(update, "if (target == _picked)", "_tracked = null;")
+    stayed = between(update, "if (target == _picked)", "_picked = target;")
     return ("if (target != null) SayItWeighedAgain(target, how);" in stayed
             and "if (how.Value == _saidValue && how.Rate == _saidRate) return;" in again
             and '"map marker weighed your cargo again and stayed on "' in again
@@ -14378,7 +14382,8 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
                         '                ? "  and of the other markets it priced, " + string.Join("; ", said)\n'
                         '                : "map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +\n'
                         '                  " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +\n'
-                        '                  " profit a day, and only other markets moved: " + string.Join("; ", said));',
+                        '                  " profit a day, and only other markets moved: " + string.Join("; ", said) +\n'
+                        '                  WhileTheMapShowsTheBuyTown(true));',
                         "return true;")
             and moved.count("Log.Write(") == 1
             and ordered(told, "_toldValue = how.Board == null ? -1L : how.Value;", "_toldBoard.Clear();",
@@ -15704,14 +15709,18 @@ def unpinning_the_marked_town_leaves_the_map_marker_on_it():
     toggle = method_body(S['Panel.cs'], "private static void ToggleMarker")
     unpin = method_body(S['Panel.cs'], "internal static bool Unpin")
     update = method_body(S['Marker.cs'], "internal static void Update")
-    return (toggle and unpin and update
+    shown = method_body(S['Marker.cs'], "private static void ShowOnTheMap")
+    return (toggle and unpin and update and shown
             and ordered(toggle, "_panelPins.Add(settlement);", "tracker.RegisterObject(settlement);")
             and "CheckTracked(" not in toggle
             and unpin.count("tracker.RemoveTrackedObject(settlement);") == 1
             and "if (tracker != null && tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);" in unpin
             and "TakesOver" not in S['Marker.cs'] and "TakesOver" not in S['Panel.cs']
-            and "if (target != null && (_tracked != target || !tracker.CheckTracked(target)))" in update
-            and "if (_tracked != null && tracker.CheckTracked(_tracked))" in update)
+            and "ShowOnTheMap(tracker, _buyMark ?? target);" in update
+            and "if (onMap != null && _tracked == onMap && tracker.CheckTracked(onMap)) return;" in shown
+            and "if (onMap == null) return;\n            tracker.RegisterObject(onMap);\n            _tracked = onMap;" in shown
+            and "CheckTracked(onMap)) tracker.RegisterObject" not in shown
+            and "if (_tracked != null && _tracked != onMap && tracker.CheckTracked(_tracked))" in shown)
 
 chk("1.95.5", "unpinning a town in the ledger leaves the map marker on it when the marker points there, and the marker owns that arrow from then on so it can take it down later",
     unpinning_the_marked_town_leaves_the_map_marker_on_it())
@@ -16586,7 +16595,7 @@ def trade_xp_is_what_the_game_gives_for_the_same_sale():
             and "Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set" in README
             and "earns only the Trade XP the game itself would give for it, which is usually none" in README
             and "Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them" in README
-            and "All it puts in a save is eight strings, nine numbers, a switch and a settlement reference" in README)
+            and "All it puts in a save is nine strings, nine numbers, a switch and a settlement reference" in README)
 
 chk("1.97.5", "Trade XP for what TradeLord sells is what the game gives for the same sale on its trade screen: a visit's sales are put together good by good as that screen does and handed to the game's own reckoning once, before any save",
     trade_xp_is_what_the_game_gives_for_the_same_sale())
@@ -18393,7 +18402,7 @@ def the_map_marker_hint_says_it_marks_the_most_profit_per_day():
     return (marker
             and ordered(marker, "long earned = total - took.Cost;", "float rate = TradeMath.PerDay(earned, ride);",
                         "float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);", "if (weighed > bar)")
-            and "{=TL345}Marks the market that earns the most a day on the cargo it would really sell there," in M
+            and "{=TL345}Marks where the cargo it would really sell there earns most a day," in M
             and "en \u00e7ok g\u00fcnl\u00fck k\u00e2r getiren pazar\u0131" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL345']
             and "\u0441 \u043d\u0430\u0438\u0431\u043e\u043b\u044c\u0448\u0435\u0439 \u043f\u0440\u0438\u0431\u044b\u043b\u044c\u044e \u0432 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL345']
             and "\u6bcf\u5929\u5229\u6da6\u6700\u9ad8\u7684\u5e02\u573a" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL345'])
@@ -22863,6 +22872,96 @@ def the_marker_never_sends_you_back_to_a_market_that_kept_your_goods():
 
 chk("2.7.6", "a market where Hold cargo for the best market kept your goods for their Sell At is left out by the map marker until you walk into another market, so it never sends you back there to sell nothing",
     the_marker_never_sends_you_back_to_a_market_that_kept_your_goods())
+
+
+def the_marker_weighs_a_buy_from_on_the_last_route_scan_and_never_starts_one():
+    marker = S['Marker.cs']
+    best = method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes(int top)")
+    serves = between(S['Ledger.cs'], "internal bool LastScanStillServes(", ";")
+    show = method_body(marker, "private static string TheBuyTownToShow")
+    return (best and serves and show
+            and all(one not in marker for one in ("BestRoutes(", "ScanRoutes(", ".Listed(", "WhatTheLedgerBuysAt(", "EvidenceAt("))
+            and ordered(best, "_routes = ScanRoutes();",
+                        "_lastScan = (new List<TradeRoute>(_routes), hour, Hero.MainHero?.Gold ?? 0, Marker.WhatYouHoldNow(),\n"
+                        "                             Freshness.At(Stamp.Timeless));",
+                        "return _routes.Count <= top")
+            and "_lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&" in serves
+            and "Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow)" in serves
+            and ordered(show, "var scan = ledger.LastScan;", "if (!ledger.LastScanStillServes(WhatYouHoldNow()))",
+                        "if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;",
+                        "rides[r.From] = ride = r.From == target ? how.Days : ARideToBuyFrom(r.From, party);",
+                        "float days = Marks.RetimedDays(ride, r.TravelDays, r.Leg.ToBuy);",
+                        "if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(r.To, days)) continue;",
+                        "float profit = atConf ? r.TotalProfit * r.Confidence * r.Trust : r.TotalProfit;",
+                        "var best = Marks.BestBuyFrom(rows, _buyMark?.StringId);",
+                        "float sellRate = target == null ? 0f : how.Rate * conf;",
+                        "float sell = Marks.SellSideWithItsOwnRoute(sellRate, sellEarned, mine.profit, mine.days);",
+                        "if (from == null || !Marks.ShowsTheBuyTown(best.rate, sell, _buyMark != null))")
+            and all(one in BUYMARKTESTS for one in
+                    ("One_silver_ore_at_36_a_day_gives_way_to_a_ledger_route_at_400_a_day",
+                     "Routes_to_different_sell_at_markets_are_never_added_together",
+                     "The_shown_buy_town_stays_until_the_sell_mark_earns_past_the_hold_on_it",
+                     "A_row_serves_a_day_plus_its_ride_at_scan_time_in_hours",
+                     "The_scan_stops_serving_once_a_good_changed_or_the_gold_fell_past_a_tenth")))
+
+
+chk("2.8.0", "the map marker weighs a Buy From on the TradeLord ledger's last route scan, retimed from where you stand, and never starts a scan of its own, so riding the map does not stall each hour",
+    the_marker_weighs_a_buy_from_on_the_last_route_scan_and_never_starts_one())
+
+
+def a_buy_from_on_the_map_never_moves_the_sell_mark():
+    marker = S['Marker.cs']
+    ride = method_body(marker, "private static float ARideToBuyFrom")
+    kept = ("private static Settlement BestSellTownForCargo", "internal static Settlement TheMarkToHoldFor",
+            "internal static Settlement HoldFor(", "internal static void NoteTheWalkIn", "private static void Remember",
+            "internal static void ScoreTheMark", "private static void WhatItSaidOnTheWayOut",
+            "private static Settlement TheMarkFairlyWeighed(out Reckoning how)")
+    return (ride
+            and all(method_body(marker, one) and "_buyMark" not in method_body(marker, one) for one in kept)
+            and "Settlement mark = _picked;" in method_body(marker, "internal static Settlement TheMarkToHoldFor")
+            and "_markedOnTheWayIn = _picked?.StringId;" in method_body(marker, "internal static void NoteTheWalkIn")
+            and ordered(ride, "if (s == party.CurrentSettlement) return -1f;",
+                        "if (TradeActionBehavior.StillTheSameArrival(s)) return -1f;",
+                        "if (!TradeActionBehavior.IsMarket(s)) return -1f;",
+                        "if (TradeActionBehavior.MarkerLeavesItOut(s)) return -1f;",
+                        "if (s.StringId == _keptForItsSellAt) return -1f;",
+                        "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) return -1f;",
+                        "if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) return -1f;",
+                        "return TradeMath.OutOfReach(ride) || !LedgerBehavior.WithinTravelCeiling(s, ride) ? -1f : ride;")
+            and "_buyMark = null;" in method_body(marker, "internal static void Forget()")
+            and "{=TL345}Marks where the cargo it would really sell there earns most a day, or a ledger Buy From earning more," in M)
+
+
+chk("2.8.0", "while the map shows the Buy From of a TradeLord ledger route, Hold cargo for the best market, the marker checks and the mark's own hold stay on the market the marker would sell your cargo at",
+    a_buy_from_on_the_map_never_moves_the_sell_mark())
+
+
+def a_save_keeps_the_sell_mark_apart_from_the_buy_from_on_the_map():
+    sync = method_body(S['Trading.cs'], "public override void SyncData")
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    restore = method_body(S['Marker.cs'], "internal static void RestoreTheSellMark")
+    held = between(S['Marker.cs'], "internal static Settlement Tracked", "}\n\n")
+    return (sync and launched and restore and held
+            and ordered(sync, 'dataStore.SyncData("TradeLord_TrackedTown", ref tracked);',
+                        "string sellMark = dataStore.IsLoading ? null : Marker.SellMarkId;",
+                        'dataStore.SyncData("TradeLord_SellMark", ref sellMark);',
+                        "Marker.Tracked = tracked;",
+                        "if (dataStore.IsLoading) Marker.TheSellMarkWas(sellMark);")
+            and ordered(launched, 'Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));',
+                        'Guard.Run("Action.RestoreSellMark", Marker.RestoreTheSellMark);',
+                        'Guard.Run("Action.RestoreMarker", Marker.Update);')
+            and ordered(restore, "if (saved == null) return;",
+                        "_picked = saved.Length == 0 ? null : Settlement.Find(saved);",
+                        "_buyMark = _tracked != null && _tracked != _picked ? _tracked : null;",
+                        "_buyMarkRestored = _buyMark != null;")
+            and ordered(method_body(S['Marker.cs'], "private static string TheBuyTownToShow"), "if (scan.rows == null)",
+                        "return _buyMarkRestored && _buyMark != null && ARideToBuyFrom(_buyMark, party) >= 0f",
+                        "_buyMarkRestored = false;")
+            and "if (value != null && value != _buyMark) _picked = value;" in held)
+
+
+chk("2.8.0", "a save keeps the market the marker would sell your cargo at apart from the Buy From the map shows, and a save from before 2.8.0 loads as it always did",
+    a_save_keeps_the_sell_mark_apart_from_the_buy_from_on_the_map())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -200,7 +200,7 @@
 		<string id="TL342" text="TradeLord'un ne satıp ne alacağını ticaret yapmadan bildirir. En iyi durum olarak görün: hiçbir şey kıpırdamaz, her birim bugünün açılış fiyatından hesaplanır, gerçek geçiş genelde daha az ticaret yapar. Her sınır ve tüccarın altını tam modellenir."/>
 		<string id="TL343" text="Seferin bu gününden önce, menüden, girişte ya da yolda, TradeLord ticaret yapmaz. Yeni bir seferde fiyatlar henüz oturmamıştır."/>
 		<string id="TL344" text="Otomatik kâr için verilen Ticaret tecrübesini ölçekler. 0 tecrübeyi kapatır."/>
-		<string id="TL345" text="Orada gerçekten satacağı yüke göre en çok günlük kâr getiren pazarı, yol süresi sınırları içinde ve köyse yalnızca Köylerle ticaret yap açıkken işaretler. TradeLord'un son ticaret yaptığı pazarı siz oraya dönene kadar atlar. Varsayılan AÇIK."/>
+		<string id="TL345" text="Orada gerçekten satacağı yüke göre en çok günlük kâr getiren pazarı veya daha kârlı defter rotasının Alınacak Yer'ini işaretler; yol süresi sınırına ve Köylerle ticaret yap ayarına uyar, son pazarı siz oraya dönene kadar atlar. Varsayılan AÇIK."/>
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çalar. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları toplam tutarı en büyük olandan başlayarak adlandırır, örneğin '8 Zeytin, 3 Şarap 240 dinara satıldı, 90 kâr', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem pazara girerken hem yolda bir kervan ya da köylü bölüğüyle karşılaşınca, yalnızca TradeLord.log'a yazar. Uyarılar yine ekranda görünür: yük dolu, kese Altın rezervinin altında, hiçbir mala uymayan liste girdisi."/>
