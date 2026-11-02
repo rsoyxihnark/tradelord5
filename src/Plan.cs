@@ -260,6 +260,7 @@ namespace TradeLord
             TradeRoute best = null;
             float key = bar;
             bool roomAlone = false;
+            int mayCarry = TradeMath.UnitsARouteMayCarry(stocked, fits);
             var sells = SellsOf(item);
             foreach (var (to, sellPrice) in sells)
             {
@@ -279,7 +280,10 @@ namespace TradeLord
                     PassedOver++;
                     continue;
                 }
-                if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))
+                soonest = Math.Max(soonest, toBuy + Travel.SoonestRideBetween(from, to));
+                if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;
+                if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, mayCarry, soonest, beaten, key,
+                                                             MostItCounts(soonest)))
                 {
                     PassedOver++;
                     continue;
@@ -296,7 +300,8 @@ namespace TradeLord
                 int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);
                 LandingTicks += Now() - landing;
                 if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,
-                                                                      stocked, days, beaten, key, _safety))
+                                                                      mayCarry, days, beaten, key, _safety,
+                                                                      MostItCounts(days)))
                 {
                     PassedOver++;
                     continue;
@@ -331,7 +336,8 @@ namespace TradeLord
                 if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; roomAlone = true; continue; }
 
                 float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);
-                if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; ThrownByABetterRoute++; continue; }
+                if (beaten && TradeMath.PerDay(ceiling, days) * MostItCounts(days) <= key)
+                { ThrownAway++; ThrownByABetterRoute++; continue; }
 
                 var leg = new Leg
                 {
@@ -368,6 +374,8 @@ namespace TradeLord
         }
 
         internal float ScoreToBeat(TradeRoute route) => route == null ? 0f : ScoreOf(route);
+
+        private float MostItCounts(float days) => _rankByScore ? Confidence.MostItCanBe(days) : 1f;
 
         private List<(Settlement, int)> SellsOf(ItemObject item)
         {

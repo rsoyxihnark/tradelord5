@@ -3365,6 +3365,207 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_pair_passed_over_at_the_most_its_Conf_could_be_never_held_a_route_that_beats_the_one_found()
+        {
+            var rng = new Random(287);
+            int passed = 0;
+            for (int i = 0; i < 200000; i++)
+            {
+                int buy = rng.Next(1, 400);
+                int quoted = rng.Next(1, 700);
+                int stocked = rng.Next(1, 80);
+                int fits = rng.Next(1, 120);
+                float soonest = (float)rng.NextDouble() * 20f;
+                float key = (float)rng.NextDouble() * 300f;
+                int mayCarry = TradeMath.UnitsARouteMayCarry(stocked, fits);
+                if (!TradeMath.NoRoadCouldMakeIt(buy, quoted, mayCarry, soonest, true, key,
+                                                 Confidence.MostItCanBe(soonest)))
+                    continue;
+                passed++;
+                float days = rng.Next(4) == 0 ? soonest : soonest + (float)rng.NextDouble() * 10f;
+                int sell = rng.Next(4) == 0 ? TradeMath.MostAForecastCanReach(quoted)
+                                            : rng.Next(1, TradeMath.MostAForecastCanReach(quoted) + 1);
+                int units = rng.Next(4) == 0 ? Math.Min(stocked, fits) : rng.Next(1, Math.Min(stocked, fits) + 1);
+                int flat = (sell - buy) * units;
+                int profit = flat - rng.Next(0, 3) * units;
+                if (profit <= 0) continue;
+                float conf = Confidence.Of(rng.Next(2) == 0, flat, profit, rng.Next(0, 300), units, days,
+                                           rng.Next(0, 9), rng.Next(3) == 0 ? -1f : (float)rng.NextDouble() * 9f,
+                                           rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 20f,
+                                           days - soonest > 0f ? (float)rng.NextDouble() * (days - soonest) : 0f);
+                float trust = Confidence.AsPromisesHaveHeld(1f, rng.Next(0, 60), (float)rng.NextDouble() * 1.5f);
+                Assert.True(TradeMath.PerDay(profit, days) * conf * trust <= key);
+            }
+            Assert.True(passed > 1000);
+        }
+
+        [Fact]
+        public void The_route_scan_picks_the_same_route_with_every_pass_over_at_its_Conf_as_with_none()
+        {
+            var rng = new Random(2087);
+            int skipped = 0;
+            for (int item = 0; item < 1500; item++)
+            {
+                float safety = new[] { 0.6f, 0.85f, 1f }[rng.Next(3)];
+                float margin = new[] { 0f, 0.15f, 0.3f }[rng.Next(3)];
+                var pairs = new List<ConfPair>();
+                int many = rng.Next(1, 60);
+                for (int i = 0; i < many; i++)
+                {
+                    float days = 0.1f + (float)rng.NextDouble() * 15f;
+                    pairs.Add(new ConfPair
+                    {
+                        Buy = rng.Next(1, 400), Quoted = rng.Next(1, 600),
+                        Landed = rng.Next(3) == 0 ? 0 : rng.Next(-40, 41), Walked = rng.Next(-10, 1200),
+                        Stocked = rng.Next(1, 60), Fits = rng.Next(5) == 0 ? 0 : rng.Next(1, 90),
+                        Till = rng.Next(3) == 0 ? 0 : rng.Next(0, 20000), Days = days,
+                        Soonest = days * (float)rng.NextDouble(), Simulated = rng.Next(2) == 0,
+                        Shelf = rng.Next(0, 200), Caravans = rng.Next(0, 9),
+                        Age = rng.Next(3) == 0 ? -1f : (float)rng.NextDouble() * 9f,
+                        RunsOut = rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 20f,
+                        Trust = Confidence.AsPromisesHaveHeld(1f, rng.Next(0, 60), (float)rng.NextDouble() * 1.5f)
+                    });
+                }
+                var plain = ConfScan(pairs, false, safety, margin, out _);
+                var quick = ConfScan(pairs, true, safety, margin, out int passed);
+                skipped += passed;
+                Assert.Equal(plain, quick);
+            }
+            Assert.True(skipped > 1000);
+        }
+
+        private struct ConfPair
+        {
+            public int Buy, Quoted, Landed, Walked, Stocked, Fits, Till, Shelf, Caravans;
+            public float Days, Soonest, Age, RunsOut, Trust;
+            public bool Simulated;
+        }
+
+        private static (int at, float key) ConfScan(List<ConfPair> pairs, bool passOver, float safety, float margin,
+                                                    out int passed)
+        {
+            int bestAt = -1;
+            float bestKey = 0f;
+            passed = 0;
+            for (int i = 0; i < pairs.Count; i++)
+            {
+                ConfPair p = pairs[i];
+                bool beaten = bestAt >= 0;
+                int mayCarry = TradeMath.UnitsARouteMayCarry(p.Stocked, p.Fits);
+                if (passOver && TradeMath.NoRoadCouldMakeIt(p.Buy, p.Quoted, mayCarry, p.Soonest, beaten, bestKey,
+                                                            Confidence.MostItCanBe(p.Soonest)))
+                {
+                    passed++;
+                    continue;
+                }
+                if (passOver && TradeMath.NoOpeningPriceCouldMakeIt(p.Buy, p.Quoted, p.Landed, mayCarry, p.Days, beaten,
+                                                                    bestKey, safety, margin,
+                                                                    Confidence.MostItCanBe(p.Days)))
+                {
+                    passed++;
+                    continue;
+                }
+                int openingSell = p.Landed == 0 ? p.Quoted : TradeMath.ForecastWithin(p.Quoted, p.Walked);
+                if (!TradeMath.BuyAcceptable(p.Buy, TradeMath.Realizable(openingSell, safety), margin)) continue;
+                int qtyCap = p.Till > 0 ? Math.Min(p.Stocked, p.Till / openingSell) : p.Stocked;
+                if (qtyCap <= 0 || p.Fits <= 0) continue;
+                float ceiling = (float)(openingSell - p.Buy) * Math.Min(qtyCap, p.Fits);
+                if (passOver && beaten && TradeMath.PerDay(ceiling, p.Days) * Confidence.MostItCanBe(p.Days) <= bestKey)
+                {
+                    passed++;
+                    continue;
+                }
+                int units = Math.Min(qtyCap, p.Fits);
+                int flat = units * (openingSell - p.Buy);
+                int profit = flat - units * (units - 1) / 2;
+                if (profit <= 0) continue;
+                float conf = Confidence.Of(p.Simulated, flat, profit, p.Shelf, units, p.Days, p.Caravans, p.Age,
+                                           p.RunsOut, p.Days - p.Soonest);
+                float score = TradeMath.PerDay(profit, p.Days) * conf * p.Trust;
+                if (beaten && score <= bestKey) continue;
+                bestAt = i;
+                bestKey = score;
+            }
+            return (bestAt, bestKey);
+        }
+
+        [Fact]
+        public void A_route_may_carry_no_more_than_the_shelf_holds_or_your_cargo_has_room_for()
+        {
+            Assert.Equal(4, TradeMath.UnitsARouteMayCarry(10, 4));
+            Assert.Equal(10, TradeMath.UnitsARouteMayCarry(10, 40));
+            Assert.Equal(10, TradeMath.UnitsARouteMayCarry(10, 10));
+            Assert.Equal(10, TradeMath.UnitsARouteMayCarry(10, 0));
+            Assert.Equal(10, TradeMath.UnitsARouteMayCarry(10, -3));
+            Assert.Equal(0.3f, TradeMath.NoMoreThanWhole(0.3f));
+            Assert.Equal(1f, TradeMath.NoMoreThanWhole(1.5f));
+            Assert.Equal(1f, TradeMath.NoMoreThanWhole(0f));
+            Assert.Equal(1f, TradeMath.NoMoreThanWhole(-1f));
+            Assert.Equal(1f, TradeMath.NoMoreThanWhole(float.NaN));
+            Assert.True(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, true, 50f, 0.5f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, true, 50f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, true, 50f, float.NaN));
+        }
+
+        [Fact]
+        public void The_shortest_ride_over_a_measured_road_counts_its_land_and_never_more_than_its_length()
+        {
+            Assert.Equal(7f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f), (Plain, 2, 0, 4f)), 7f), 4);
+            Assert.Equal(6.5f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f), (Plain, 2, 0, 4f)), 6.5f), 4);
+            Assert.Equal(7f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f), (Plain, 2, 0, 4f)), 10f), 4);
+            var skipped = RoadOf((Else, 1, 0, 5f));
+            skipped.Insert(0, new TradeMath.Run { Ground = Else, Face = 0, Cell = 0, Length = -2f });
+            Assert.Equal(5f, TradeMath.ShortestOnLand(skipped, 9f), 4);
+            Assert.Equal(0f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f), (Sea, 2, 0, 4f)), 7f));
+            var odd = RoadOf((Else, 1, 0, 3f));
+            odd.Add(new TradeMath.Run { Ground = Else, Face = 2, Cell = 0, Length = float.NaN });
+            Assert.Equal(0f, TradeMath.ShortestOnLand(odd, 7f));
+            Assert.Equal(0f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f)), 0f));
+            Assert.Equal(0f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f)), float.NaN));
+            Assert.Equal(0f, TradeMath.ShortestOnLand(RoadOf((Else, 1, 0, 3f)), float.PositiveInfinity));
+            Assert.Equal(0f, TradeMath.ShortestOnLand(null, 7f));
+        }
+
+        [Fact]
+        public void No_ride_over_a_land_road_is_quicker_than_its_length_at_the_partys_best_pace()
+        {
+            var rng = new Random(1105);
+            for (int i = 0; i < 4000; i++)
+            {
+                var road = new List<TradeMath.Run>();
+                float length = 0f;
+                int runs = rng.Next(1, 12);
+                for (int k = 0; k < runs; k++)
+                {
+                    float piece = (float)rng.NextDouble() * 20f;
+                    TradeMath.AddRun(road, rng.Next(0, TradeMath.GroundSea), k, rng.Next(0, 3), piece);
+                    length += piece;
+                }
+                float Factor(float low, float high) => low + (float)rng.NextDouble() * (high - low);
+                var pace = new TradeMath.Pace
+                {
+                    Base = Factor(1f, 9f), Rest = Factor(-0.2f, 0.2f), Day = Factor(-0.1f, 0.2f),
+                    Night = Factor(-0.5f, 0.1f), Snow = Factor(-0.3f, 0.1f), Wet = Factor(-0.3f, 0.1f),
+                    Slow = Factor(-0.6f, 0.1f), SlowHours = rng.NextDouble() * 12d, Sea = Factor(1f, 9f),
+                    Even = rng.Next(5) == 0
+                };
+                for (int g = 0; g < TradeMath.Grounds; g++) pace.OnGround[g] = Factor(-0.4f, 0.3f);
+                var sky = new SkyOf();
+                for (int c = 0; c < 3; c++)
+                    for (int turn = 0; turn < 3; turn++)
+                        sky.Set(c, rng.NextDouble() * 60d, rng.Next(2) == 0, rng.Next(2) == 0);
+                float measured = rng.Next(3) == 0 ? length * Factor(0.98f, 1.02f) : length;
+                float shortest = TradeMath.ShortestOnLand(road, measured);
+                float soonest = TradeMath.DaysAtBestSpeed(shortest, pace.BestOnLand, 0f) *
+                                TradeMath.ARideIsNeverShorterThanItsRoadBy;
+                float ridden = pace.Even
+                    ? TradeMath.DaysAtSpeed(measured, 1f, pace.Base, pace.Afloat)
+                    : TradeMath.DaysAlong(road, pace, sky, rng.NextDouble() * 72d, 6, 20, rng.Next(2) == 0, null);
+                Assert.True(soonest <= ridden, "ride " + ridden + " came in under the soonest " + soonest);
+            }
+        }
+
+        [Fact]
         public void A_sell_market_close_enough_to_beat_the_best_route_keeps_its_road_walked()
         {
             Assert.False(TradeMath.NoRoadCouldMakeIt(100, 400, 10, 0.5f, true, 1000f));
@@ -4126,6 +4327,66 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeMath.TillWhenYouArrive(20000, 0, flood, 1f));
             Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, null, 2f),
                          TradeMath.TillWhenYouArrive(20000, 40000, new List<(float, int)>(), 2f));
+        }
+
+        [Fact]
+        public void What_a_caravan_pays_buying_in_a_town_reaches_its_purse_less_the_games_tax()
+        {
+            Assert.Equal(16, TradeMath.WhatAPurseKeepsOfAPurchase(54, 0.7f));
+            Assert.Equal(54, TradeMath.WhatAPurseKeepsOfAPurchase(54, 0f));
+            Assert.Equal(54, TradeMath.WhatAPurseKeepsOfAPurchase(54, -0.5f));
+            Assert.Equal(0, TradeMath.WhatAPurseKeepsOfAPurchase(54, 1f));
+            Assert.Equal(0, TradeMath.WhatAPurseKeepsOfAPurchase(54, 1.5f));
+            Assert.Equal(0, TradeMath.WhatAPurseKeepsOfAPurchase(54, float.NaN));
+            Assert.Equal(0, TradeMath.WhatAPurseKeepsOfAPurchase(0, 0.7f));
+            Assert.Equal(0, TradeMath.WhatAPurseKeepsOfAPurchase(-5, 0.7f));
+            Assert.Equal(int.MaxValue, TradeMath.WhatAPurseKeepsOfAPurchase(int.MaxValue, 0f));
+        }
+
+        [Fact]
+        public void Caravans_buying_in_a_town_refill_its_purse_after_the_sellers_arriving_with_them_draw_it()
+        {
+            double Closed(double till, double days) => 40000d - (40000d - till) * Math.Pow(0.75d, days);
+            var paid = new List<(float days, int gold)> { (0.5f, 30000), (1f, 5000) };
+            var taken = new List<(float days, int gold)> { (0.5f, 4000), (1.5f, 2000), (5f, 9000) };
+            double drawn = Math.Max(0d, Closed(20000d, 0.5d) - 30000d) + 4000d;
+            double refilled = Math.Max(0d, Closed(drawn, 0.5d) - 5000d);
+            double expected = Closed(Closed(refilled, 0.5d) + 2000d, 0.5d);
+            Assert.Equal((int)Math.Round(expected), TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f, taken));
+            Assert.Equal((int)Math.Round(Closed(Closed(20000d, 0.5d) + 4000d, 0.5d)),
+                         TradeMath.TillWhenYouArrive(20000, 40000, null, 1f, taken));
+            Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f),
+                         TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f, new List<(float, int)>()));
+            Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f),
+                         TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f, taken));
+            var odd = new List<(float days, int gold)> { (0.2f, 0), (0.3f, -70), (float.NaN, 500) };
+            Assert.Equal((int)Math.Round(Closed(20500d, 1d)), TradeMath.TillWhenYouArrive(20000, 40000, null, 1f, odd));
+        }
+
+        [Fact]
+        public void A_towns_purse_never_holds_more_on_arrival_than_the_most_the_route_scan_and_the_marker_count_on()
+        {
+            var rng = new Random(88);
+            for (int i = 0; i < 20000; i++)
+            {
+                int gold = rng.Next(-100, 90000);
+                int wouldHold = rng.Next(0, 90000);
+                var paid = new List<(float days, int gold)>();
+                var taken = new List<(float days, int gold)>();
+                for (int k = rng.Next(0, 8); k > 0; k--) paid.Add(((float)rng.NextDouble() * 6f, rng.Next(-10, 40000)));
+                for (int k = rng.Next(0, 8); k > 0; k--) taken.Add(((float)rng.NextDouble() * 6f, rng.Next(-10, 9000)));
+                paid.Sort((x, y) => x.days.CompareTo(y.days));
+                taken.Sort((x, y) => x.days.CompareTo(y.days));
+                int most = TradeMath.MostATillCanHold(gold, wouldHold, taken);
+                float days = (float)rng.NextDouble() * 8f;
+                Assert.True(TradeMath.TillWhenYouArrive(gold, wouldHold, paid, days, taken) <= most);
+                Assert.True(TradeMath.TillWhenYouArrive(gold, wouldHold, paid, days) <= TradeMath.MostATillCanHold(gold, wouldHold, null));
+            }
+            Assert.Equal(40000, TradeMath.MostATillCanHold(20000, 40000, null));
+            Assert.Equal(50000, TradeMath.MostATillCanHold(50000, 40000, null));
+            Assert.Equal(46000, TradeMath.MostATillCanHold(20000, 40000,
+                                                           new List<(float, int)> { (1f, 4000), (2f, 2000), (3f, -5) }));
+            Assert.Equal(int.MaxValue, TradeMath.MostATillCanHold(int.MaxValue, 0, new List<(float, int)> { (1f, 5) }));
         }
 
         [Fact]

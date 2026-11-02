@@ -1441,6 +1441,12 @@ namespace TradeLord
                 ? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(s, days), s.IsVillage)
                 : PurseUnread;
 
+        private static string TheCaravansPayIn(Settlement s, float ride)
+        {
+            int takesIn = Forecast.TillTakesInBefore(s, ride);
+            return takesIn > 0 ? " while the caravans buying there pay " + takesIn + " into it, after the game's tax" : "";
+        }
+
         private static int PurseAtMost(Settlement s) =>
             Options.Current.Omniscient
                 ? TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s), s.IsVillage)
@@ -1565,8 +1571,8 @@ namespace TradeLord
                                        : ", its till covered the whole sale") +
                                    (paysOut > 0
                                        ? ", and the sellers already on the road draw " + paysOut +
-                                         " of that till before you arrive, leaving it " +
-                                         Forecast.TillOnArrival(s, ride) + " when you get there"
+                                         " of that till before you arrive" + TheCaravansPayIn(s, ride) +
+                                         ", leaving it " + Forecast.TillOnArrival(s, ride) + " when you get there"
                                        : "") +
                                    ", " + caravans + " caravan(s) and villager(s) at or heading there";
                     }

@@ -1074,13 +1074,17 @@ namespace TradeLord
         public static int MostAForecastCanReach(int live) => (int)(live * (1f + MostAForecastMayMoveAPrice));
 
         public static bool NoOpeningPriceCouldMakeIt(int openingBuy, int quotedSell, int landed, int stocked, float days,
-                                                     bool beaten, float bestKey, float safety, float margin)
+                                                     bool beaten, float bestKey, float safety, float margin,
+                                                     float mostItCounts = 1f)
         {
             if (landed == 0 || quotedSell <= 0 || stocked <= 0 || !(safety >= 0f)) return false;
             int upper = MostAForecastCanReach(quotedSell);
             if (!BuyAcceptable(openingBuy, Realizable(upper, safety), margin)) return true;
-            return beaten && upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, days) <= bestKey;
+            return beaten && upper >= openingBuy &&
+                   PerDay((float)(upper - openingBuy) * stocked, days) * NoMoreThanWhole(mostItCounts) <= bestKey;
         }
+
+        public static float NoMoreThanWhole(float share) => share > 0f && share < 1f ? share : 1f;
 
         public static bool LandingCannotLiftItPastTheMargin(int openingBuy, int quotedSell, int unlanded, int landed,
                                                             float safety, float margin)
@@ -1096,11 +1100,32 @@ namespace TradeLord
         }
 
         public static bool NoRoadCouldMakeIt(int openingBuy, int quotedSell, int stocked, float soonest,
-                                             bool beaten, float bestKey)
+                                             bool beaten, float bestKey, float mostItCounts = 1f)
         {
             if (!beaten || quotedSell <= 0 || stocked <= 0 || !(soonest >= 0f)) return false;
             int upper = MostAForecastCanReach(quotedSell);
-            return upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, soonest) <= bestKey;
+            return upper >= openingBuy &&
+                   PerDay((float)(upper - openingBuy) * stocked, soonest) * NoMoreThanWhole(mostItCounts) <= bestKey;
+        }
+
+        public static int UnitsARouteMayCarry(int stocked, int fits) => fits > 0 && fits < stocked ? fits : stocked;
+
+        public const float ARideIsNeverShorterThanItsRoadBy = 0.999f;
+
+        public static float ShortestOnLand(IList<Run> runs, float length)
+        {
+            if (runs == null || !(length > 0f) || float.IsInfinity(length)) return 0f;
+            double sum = 0d;
+            for (int i = 0; i < runs.Count; i++)
+            {
+                float piece = runs[i].Length;
+                if (float.IsNaN(piece) || float.IsInfinity(piece)) return 0f;
+                if (!(piece > 0f)) continue;
+                if (runs[i].Ground == GroundSea) return 0f;
+                sum += piece;
+            }
+            float walked = (float)sum;
+            return walked < length ? walked : length;
         }
 
         public static int LandingWithinReach(int live, int landed, int firstUnit, Func<int, int> firstUnitAt)
@@ -1317,23 +1342,44 @@ namespace TradeLord
         }
 
         public static int TillWhenYouArrive(int gold, int wouldHold, IList<(float days, int gold)> paidInOrder,
-                                            float days)
+                                            float days, IList<(float days, int gold)> takenInOrder = null)
         {
             double till = Math.Max(0, gold);
             float until = Finite(days, 0f);
             if (until <= 0f) return (int)till;
             float at = 0f;
-            for (int i = 0; paidInOrder != null && i < paidInOrder.Count; i++)
+            int paid = paidInOrder?.Count ?? 0, taken = takenInOrder?.Count ?? 0;
+            for (int i = 0, k = 0; i < paid || k < taken;)
             {
-                float when = Math.Max(0f, Finite(paidInOrder[i].days, 0f));
+                float paidAt = i < paid ? Math.Max(0f, Finite(paidInOrder[i].days, 0f)) : float.PositiveInfinity;
+                float takenAt = k < taken ? Math.Max(0f, Finite(takenInOrder[k].days, 0f)) : float.PositiveInfinity;
+                bool paying = paidAt <= takenAt;
+                float when = paying ? paidAt : takenAt;
                 if (when > until) break;
-                if (paidInOrder[i].gold <= 0) continue;
+                int amount = paying ? paidInOrder[i++].gold : takenInOrder[k++].gold;
+                if (amount <= 0) continue;
                 till = APurseClosesItsGap(till, wouldHold, when - at);
-                till = Math.Max(0d, till - paidInOrder[i].gold);
+                till = paying ? Math.Max(0d, till - amount) : till + amount;
                 at = Math.Max(at, when);
             }
             till = APurseClosesItsGap(till, wouldHold, until - at);
             return (int)Math.Min(int.MaxValue, Math.Round(till));
+        }
+
+        public static int MostATillCanHold(int gold, int wouldHold, IList<(float days, int gold)> takenInOrder)
+        {
+            long most = Math.Max(Math.Max(0, gold), wouldHold);
+            for (int k = 0; takenInOrder != null && k < takenInOrder.Count; k++)
+                if (takenInOrder[k].gold > 0) most += takenInOrder[k].gold;
+            return (int)Math.Min(int.MaxValue, most);
+        }
+
+        public static int WhatAPurseKeepsOfAPurchase(int paid, float taxRatio)
+        {
+            if (paid <= 0) return 0;
+            double ratio = Finite(taxRatio, 1f);
+            ratio = ratio < 0d ? 0d : ratio > 1d ? 1d : ratio;
+            return (int)(paid - Math.Round(paid * ratio));
         }
 
         private static double APurseClosesItsGap(double till, int wouldHold, float days)
