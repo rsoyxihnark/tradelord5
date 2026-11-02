@@ -158,6 +158,29 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_purse_that_fell_only_by_the_wages_paid_since_the_scan_still_serves()
+        {
+            var cargo = Cargo(("silver_ore", 1, false));
+            Assert.True(Marks.ScanStillServes(500, 380, cargo, Cargo(("silver_ore", 1, false)), 120));
+            Assert.False(Marks.ScanStillServes(500, 379, cargo, Cargo(("silver_ore", 1, false)), 120));
+            Assert.False(Marks.ScanStillServes(500, 380, cargo, Cargo(("silver_ore", 1, false))));
+            Assert.False(Marks.ScanStillServes(500, 500, cargo, Cargo(("silver_ore", 2, false)), 1000));
+        }
+
+        [Fact]
+        public void Wages_are_counted_for_every_day_begun_since_the_scan()
+        {
+            Assert.Equal(0, Marks.WagesPaidSince(0, 50));
+            Assert.Equal(50, Marks.WagesPaidSince(1, 50));
+            Assert.Equal(50, Marks.WagesPaidSince(24, 50));
+            Assert.Equal(100, Marks.WagesPaidSince(25, 50));
+            Assert.Equal(0, Marks.WagesPaidSince(-3, 50));
+            Assert.Equal(0, Marks.WagesPaidSince(30, 0));
+            Assert.Equal(int.MaxValue, Marks.WagesPaidSince(int.MaxValue - 30, int.MaxValue));
+            Assert.Equal(89478486, Marks.WagesPaidSince(int.MaxValue, 1));
+        }
+
+        [Fact]
         public void A_scan_taken_with_no_gold_is_not_judged_by_the_gold()
         {
             var cargo = Cargo(("silver_ore", 1, false));

@@ -1493,7 +1493,16 @@ namespace TradeLord
 
         internal bool LastScanStillServes(List<(string good, int amount, bool food)> cargoNow) =>
             _lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&
-            Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow);
+            Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow,
+                                  WagesSinceTheLastScan());
+
+        private int WagesSinceTheLastScan()
+        {
+            int wage = 0;
+            try { wage = MobileParty.MainParty?.TotalWage ?? 0; }
+            catch (Exception e) { Log.Error(e, "wages since the last route scan (only the tenth of the purse holds)"); }
+            return Marks.WagesPaidSince(Freshness.Hour - _lastScan.hour, wage);
+        }
 
         internal string WhyTheLastScanServesNot(List<(string good, int amount, bool food)> cargoNow)
         {
@@ -1501,7 +1510,8 @@ namespace TradeLord
             if (!Freshness.Held(_lastScan.settings, Stamp.Timeless)) return "a setting changed since the last route scan";
             if (!Marks.OnlyEatenFrom(_lastScan.cargo, cargoNow)) return "your cargo changed since the last route scan";
             return "your purse is " + (Hero.MainHero?.Gold ?? 0) + ", down from the " + _lastScan.gold +
-                   " the last route scan was sized on";
+                   " the last route scan was sized on, by more than a tenth and the " + WagesSinceTheLastScan() +
+                   " your wages took since";
         }
 
         public Dictionary<string, int> WhatTheLedgerBuysAt(Settlement here)
