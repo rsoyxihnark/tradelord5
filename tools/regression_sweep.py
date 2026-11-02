@@ -23096,7 +23096,7 @@ def a_party_falling_into_or_out_of_disorder_times_its_rides_again_within_the_hou
             and "private static bool _partySlow;" in S['Travel.cs']
             and ordered(stand, "int hour = (int)CampaignTime.Now.ToHours;",
                         "bool slow = party.IsDisorganized;",
-                        "if (slow != _partySlow)",
+                        "if (slow != _partySlow || inside != _partyIn)",
                         "_partySlow = slow;",
                         "_partyHour = -1;",
                         "_speedHour = -1;",
@@ -23358,6 +23358,29 @@ def the_purse_lines_say_what_the_caravans_pay_in():
 
 chk("2.8.7", "with extended debug logging on, TradeLord.log says what the caravans already on the road will pay into a town's purse as they buy there, beside what its sellers draw",
     the_purse_lines_say_what_the_caravans_pay_in())
+
+
+def entering_or_leaving_a_market_times_every_ride_from_there_and_then():
+    tr = S['Travel.cs']
+    stand = method_body(tr, "private static void StandWhereYouAre")
+    return (stand
+            and "private static string _partyIn;" in tr
+            and ordered(stand, "int hour = (int)CampaignTime.Now.ToHours;", "Vec2 at = party.GetPosition2D;",
+                        "string inside = party.CurrentSettlement?.StringId;",
+                        "if (slow != _partySlow || inside != _partyIn)",
+                        "_partyIn = inside;", "_partyHour = -1;", "_speedHour = -1;",
+                        "foreach (Road road in _partyDist.Values) road.Hour = -1;",
+                        "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;",
+                        "if (at.DistanceSquared(_partyAt) > StoodStill)", "_partyDist.Clear();",
+                        "_partyAt = at;", "_moment = CampaignTime.Now;")
+            and stand.count("_partyIn = ") == 1
+            and "StandWhereYouAre(party);" in method_body(tr, "internal static float EstimateDaysFromParty")
+            and "StandWhereYouAre(party);" in method_body(tr, "internal static float EstimateDaysBetween")
+            and "float days = EstimateDaysFromParty(target);" in method_body(tr, "internal static Said WhatWasSaidAbout"))
+
+
+chk("2.8.8", "entering or leaving a market times every ride from there and then, from where your party stands, at the pace it has after trading, rather than from the top of the hour",
+    entering_or_leaving_a_market_times_every_ride_from_there_and_then())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

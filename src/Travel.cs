@@ -2137,15 +2137,18 @@ namespace TradeLord
         }
 
         private static bool _partySlow;
+        private static string _partyIn;
 
         private static void StandWhereYouAre(MobileParty party)
         {
             int hour = (int)CampaignTime.Now.ToHours;
             Vec2 at = party.GetPosition2D;
             bool slow = party.IsDisorganized;
-            if (slow != _partySlow)
+            string inside = party.CurrentSettlement?.StringId;
+            if (slow != _partySlow || inside != _partyIn)
             {
                 _partySlow = slow;
+                _partyIn = inside;
                 _partyHour = -1;
                 _speedHour = -1;
                 foreach (Road road in _partyDist.Values) road.Hour = -1;

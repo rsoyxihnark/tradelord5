@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8.8
+
+- Fixed travel times as you enter or leave a market counting from where your party stood, and how fast it rode, at the top of the hour
+
 ## 2.8.7
 
 - Fixed TradeLord leaving out the gold caravans pay into a town's purse when they buy there
