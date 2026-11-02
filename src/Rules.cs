@@ -222,8 +222,17 @@ namespace TradeLord
 
         internal static bool ScanStillServes(int goldThen, int goldNow,
                                              List<(string good, int amount, bool food)> cargoThen,
-                                             List<(string good, int amount, bool food)> cargoNow) =>
-            OnlyEatenFrom(cargoThen, cargoNow) && (goldThen <= 0 || goldNow >= goldThen * LeastGoldKept);
+                                             List<(string good, int amount, bool food)> cargoNow,
+                                             int wagesPaid = 0) =>
+            OnlyEatenFrom(cargoThen, cargoNow) &&
+            (goldThen <= 0 || goldNow >= goldThen * LeastGoldKept || (long)goldThen - goldNow <= wagesPaid);
+
+        internal static int WagesPaidSince(int hoursSince, int dailyWage)
+        {
+            if (hoursSince <= 0 || dailyWage <= 0) return 0;
+            long paid = (long)dailyWage * (((long)hoursSince + 23) / 24);
+            return paid > int.MaxValue ? int.MaxValue : (int)paid;
+        }
 
         internal static bool RowStillServes(int ageHours, float rideAtScanDays)
         {

@@ -22890,7 +22890,8 @@ def the_marker_weighs_a_buy_from_on_the_last_route_scan_and_never_starts_one():
                         "                             Freshness.At(Stamp.Timeless), Options.Current.HoldCargoForBestMarket);",
                         "return _routes.Count <= top")
             and "_lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&" in serves
-            and "Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow)" in serves
+            and "Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow,\n"
+                "                                  WagesSinceTheLastScan())" in serves
             and ordered(show, "var scan = ledger.LastScan;", "if (!ledger.LastScanStillServes(WhatYouHoldNow()))",
                         "if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;",
                         "rides[r.From] = ride = r.From == target ? how.Days : ARideToBuyFrom(r.From, party);",
@@ -23044,6 +23045,25 @@ def the_sell_mark_and_every_buy_from_are_weighed_on_what_you_sell_there_and_buy_
 
 chk("2.8.2", "the market the map marker would sell your cargo at and every Buy From of a TradeLord ledger route are weighed by one rule: what your cargo would really fetch there and the route that starts there, together",
     the_sell_mark_and_every_buy_from_are_weighed_on_what_you_sell_there_and_buy_there_together())
+
+
+def wages_paid_on_the_road_never_retire_the_route_scan():
+    rule = method_body(S['Rules.cs'], "internal static bool ScanStillServes(")
+    days = method_body(S['Rules.cs'], "internal static int WagesPaidSince(")
+    wages = method_body(S['Ledger.cs'], "private int WagesSinceTheLastScan()")
+    return (rule and days and wages
+            and "(goldThen <= 0 || goldNow >= goldThen * LeastGoldKept || (long)goldThen - goldNow <= wagesPaid);" in rule
+            and "long paid = (long)dailyWage * (((long)hoursSince + 23) / 24);" in days
+            and ordered(wages, "try { wage = MobileParty.MainParty?.TotalWage ?? 0; }",
+                        "catch (Exception e) { Log.Error(e,",
+                        "return Marks.WagesPaidSince(Freshness.Hour - _lastScan.hour, wage);")
+            and all(one in BUYMARKTESTS for one in
+                    ("A_purse_that_fell_only_by_the_wages_paid_since_the_scan_still_serves",
+                     "Wages_are_counted_for_every_day_begun_since_the_scan")))
+
+
+chk("2.8.3", "the wages your party is paid on the road never make the map marker let go of a Buy From partway through the ride, only a purse fallen by more than a tenth and those wages does",
+    wages_paid_on_the_road_never_retire_the_route_scan())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

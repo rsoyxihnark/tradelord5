@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.8.3
+
+- Fixed the map marker letting go of a TradeLord ledger route's Buy From partway through the ride once your wages had been paid
+- TradeLord.log now counts your wages when it says your purse fell too far since the last route scan
+
 ## 2.8.2
 
 - Fixed the map marker weighing a TradeLord ledger route's Buy From on the route alone, leaving out what your cargo would fetch there
