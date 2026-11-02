@@ -10970,7 +10970,8 @@ def every_extra_line_is_behind_the_one_log_switch_that_ships_on():
             and '[SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]\n'
                 '        public bool ExtensiveCursorDebugLogging' in M
             and screen.count("_o.ExtendedDebugLogging") == 2
-            and marker.count("Options.Current.ExtendedDebugLogging") == 5
+            and marker.count("Options.Current.ExtendedDebugLogging") == 6
+            and "if (_buyMark == null && Options.Current.ExtendedDebugLogging)" in method_body(marker, "private static string NoBuyFrom")
             and all("if (!Options.Current.ExtendedDebugLogging) return;" in method_body(marker, one)
                     for one in ("private static void Ultra",
                                 "private static void SayItWeighedAgain",
@@ -22962,6 +22963,50 @@ def a_save_keeps_the_sell_mark_apart_from_the_buy_from_on_the_map():
 
 chk("2.8.0", "a save keeps the market the marker would sell your cargo at apart from the Buy From the map shows, and a save from before 2.8.0 loads as it always did",
     a_save_keeps_the_sell_mark_apart_from_the_buy_from_on_the_map())
+
+
+def the_ledger_scans_once_as_you_leave_a_market_so_the_marker_weighs_what_you_carry():
+    left = method_body(S['Trading.cs'], "private void OnSettlementLeft")
+    return (left
+            and ordered(left, "LedgerBehavior.Instance?.TheRoutesWentStale(settlement);",
+                        "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);",
+                        'Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));',
+                        "if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);",
+                        "if (HasAMarket(settlement) && Options.Current.MarkBestSellTownOnMap)",
+                        'Guard.Run("Action.RescanOnLeaving", () => LedgerBehavior.Instance?.BestRoutes(int.MaxValue));',
+                        'Guard.Run("Action.OnSettlementLeft", Marker.Update);')
+            and left.count("BestRoutes(") == 1
+            and all(one not in S['Marker.cs'] for one in ("BestRoutes(", "ScanRoutes(")))
+
+
+chk("2.8.1", "the TradeLord ledger scans once as you leave a market, after anything sold or bought there, so the map marker weighs a Buy From on what you really carry rather than on what you carried before buying",
+    the_ledger_scans_once_as_you_leave_a_market_so_the_marker_weighs_what_you_carry())
+
+
+def the_log_says_why_the_marker_shows_no_buy_from():
+    marker = S['Marker.cs']
+    show = method_body(marker, "private static string TheBuyTownToShow")
+    no = method_body(marker, "private static string NoBuyFrom")
+    why = method_body(S['Ledger.cs'], "internal string WhyTheLastScanServesNot")
+    return (show and no and why
+            and ordered(no, "if (_buyMark == null && Options.Current.ExtendedDebugLogging)",
+                        'Log.Repeatable("marker no buy from", kind + "|" + target?.StringId,',
+                        '"map marker shows no Buy From of a TradeLord ledger route" +',
+                        "return LetTheBuyMarkGo(target, because);")
+            and all(one in show for one in
+                    (': NoBuyFrom(target, "scan", "the TradeLord ledger has no route scan yet");',
+                     'return NoBuyFrom(target, "stale", ledger.WhyTheLastScanServesNot(WhatYouHoldNow()));',
+                     'return NoBuyFrom(target, "reach", "the TradeLord ledger has no route left that starts in reach");',
+                     'return NoBuyFrom(target, "sell|" + best.from, target == null'))
+            and show.count("LetTheBuyMarkGo(") == 1
+            and ordered(why, 'if (_lastScan.rows == null) return "the TradeLord ledger has no route scan yet";',
+                        'if (!Freshness.Held(_lastScan.settings, Stamp.Timeless)) return "a setting changed since the last route scan";',
+                        'if (!Marks.OnlyEatenFrom(_lastScan.cargo, cargoNow)) return "your cargo changed since the last route scan";',
+                        'return "your purse is "'))
+
+
+chk("2.8.1", "with Enable extended debug logging on, TradeLord.log says why the map marker shows no Buy From of a TradeLord ledger route, once each time that reason changes",
+    the_log_says_why_the_marker_shows_no_buy_from())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
