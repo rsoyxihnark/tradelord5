@@ -684,7 +684,7 @@ namespace TradeLord
             if (market == null || cargo == null || cargo.Count == 0 || TradeMath.OutOfReach(ride)) return (0f, 0f);
             int purse = PurseOf(s, ride);
             if (purse <= 0) return (0f, 0f);
-            Takings took = WhatItWouldFetch(s, market, party, ride, cargo, purse, null);
+            Takings took = WhatItWouldSell(s, market, party, ride, cargo, purse, null);
             if (took.Value <= 0L) return (0f, 0f);
             float earned = (took.Value > purse ? purse : took.Value) - took.Cost;
             if (!(earned > 0f)) return (0f, 0f);
@@ -699,7 +699,7 @@ namespace TradeLord
             if (!Options.Current.ConfidenceRanking || cargo == null || cargo.Count == 0) return 1f;
             int caravans = pressure != null && pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;
             long worthThere = till > 0
-                ? WhatItWouldFetch(s, s.SettlementComponent, party, ride, cargo, int.MaxValue, null).Value
+                ? WhatItWouldSell(s, s.SettlementComponent, party, ride, cargo, int.MaxValue, null).Value
                 : 1L;
             return Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till, worthThere,
                                  out _, out _);
@@ -1223,6 +1223,16 @@ namespace TradeLord
             return most;
         }
 
+        private static Takings WhatItWouldSell(
+            Settlement site, SettlementComponent market, MobileParty party, float ride,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+            int gold, List<Share> bill)
+        {
+            float share = Options.Current.HoldCargoForBestMarket;
+            return WhatItWouldFetch(site, market, party, ride, cargo, gold, bill,
+                                    WhatTheMarkWouldKeep(site, ride, cargo, share, asTheMark: true), share);
+        }
+
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
@@ -1391,7 +1401,7 @@ namespace TradeLord
             float ride = Travel.EstimateDaysFromParty(one.s);
             int gold = PurseOf(one.s, ride);
             if (gold <= 0) return 0f;
-            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, gold, null);
+            Takings took = WhatItWouldSell(one.s, one.market, party, ride, cargo, gold, null);
             if (took.Value <= 0L) return 0f;
             long total = took.Value > gold ? gold : took.Value;
             return TradeMath.PerDay(total - took.Cost, ride);
@@ -1515,7 +1525,7 @@ namespace TradeLord
                 gold = PurseOf(s, ride);
                 if (gold <= 0) { how.NoTill++; continue; }
                 how.Told++;
-                Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);
+                Takings took = WhatItWouldSell(s, market, party, ride, cargo, gold, null);
                 if (took.Value <= 0L && took.PurseCapped)
                 {
                     how.TooPoor++;
@@ -1532,7 +1542,7 @@ namespace TradeLord
                 if (oneBasis && took.PurseCapped)
                 {
                     till = gold;
-                    worthThere = WhatItWouldFetch(s, market, party, ride, cargo, int.MaxValue, null).Value;
+                    worthThere = WhatItWouldSell(s, market, party, ride, cargo, int.MaxValue, null).Value;
                 }
                 float judged = rate;
                 string confSaid = null;
@@ -1618,13 +1628,13 @@ namespace TradeLord
             if (ultra && how.Best != null)
             {
                 how.Bill = new List<Share>();
-                WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);
+                WhatItWouldSell(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);
             }
             if (ultra && how.HolderPriced && how.Best != holder)
             {
                 how.HolderBill = new List<Share>();
-                WhatItWouldFetch(holder, holder.SettlementComponent, party, how.HolderDays, cargo, how.HolderPurse,
-                                 how.HolderBill);
+                WhatItWouldSell(holder, holder.SettlementComponent, party, how.HolderDays, cargo, how.HolderPurse,
+                                how.HolderBill);
             }
             return how.Best;
         }
@@ -1700,14 +1710,15 @@ namespace TradeLord
 
         internal static Settlement HoldFor(EquipmentElement el, int units, Settlement here,
                                            System.Func<Settlement, float> rideTo, float lead,
-                                           out float ride, out int purse, out bool boughtFor, out NoHold why)
+                                           out float ride, out int purse, out bool boughtFor, out NoHold why,
+                                           bool asTheMark = false)
         {
             ride = 0f;
             purse = 0;
             boughtFor = false;
             why = NoHold.NoMarket;
             if (el.Item == null || rideTo == null) return null;
-            bool marked = InTheMarkedMarket(here);
+            bool marked = asTheMark || InTheMarkedMarket(here);
             Settlement meant = BoughtFor(el.Item);
             if (meant != null && meant == here) { why = NoHold.ItsSellAt; return null; }
             if (marked && meant == null) { why = NoHold.MarkedMarket; return null; }
@@ -1724,7 +1735,8 @@ namespace TradeLord
             }
             if (TradeRules.HoldForTheSellAt(meantHolds, markHolds, meantPays, markPays))
             {
-                if (marked && here == MobileParty.MainParty?.CurrentSettlement) _keptForItsSellAt = here.StringId;
+                if (marked && !asTheMark && here == MobileParty.MainParty?.CurrentSettlement)
+                    _keptForItsSellAt = here.StringId;
                 ride = meantRide;
                 purse = meantPurse;
                 boughtFor = true;
@@ -1792,7 +1804,8 @@ namespace TradeLord
 
         private static int[][] WhatTheMarkWouldKeep(
             Settlement site, float ride,
-            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, float holdShare)
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, float holdShare,
+            bool asTheMark = false)
         {
             if (!(holdShare > 0f)) return null;
             MobileParty party = MobileParty.MainParty;
@@ -1812,7 +1825,8 @@ namespace TradeLord
                 var (el, amount, worth, floors) = cargo[at];
                 int units = System.Math.Max(0, amount - floors.AgedLeft);
                 if (units <= 0) continue;
-                Settlement mark = HoldFor(el, units, site, onwardTo, ride, out float onward, out int purse, out _, out _);
+                Settlement mark = HoldFor(el, units, site, onwardTo, ride, out float onward, out int purse, out _, out _,
+                                          asTheMark);
                 if (mark == null) continue;
                 int[] ladder = WhatTheMarkTakes(mark, el, units, worth, ride + onward, purse);
                 if (ladder.Length == 0) continue;

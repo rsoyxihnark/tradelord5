@@ -63,7 +63,7 @@
 - ✅ What this means says when your gold reserve is what is stopping you buying
 - ✅ Click any market to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that market
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
-- ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
+- ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin and that Hold cargo for the best market does not keep for their own Sell At, so it never sends you somewhere it will then refuse to sell
 - ✅ With Live world prices on, it works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
 - ✅ With Live world prices on, it reads every market's price live each time it weighs one, so the marker is never pointing at a market on a price it read hours ago
 - ✅ With Live world prices off, it weighs only the markets where you have seen a price for what you carry, at that price, and never reads their purse
