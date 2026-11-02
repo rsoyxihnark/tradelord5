@@ -542,8 +542,9 @@ namespace TradeLord
                                                        Options.Current.MinProfitMargin);
 
         internal static bool NoOpeningPriceCouldMakeIt(int openingBuy, int quotedSell, int landed, int stocked,
-                                                       float days, bool beaten, float bestKey, float safety) =>
+                                                       float days, bool beaten, float bestKey, float safety,
+                                                       float mostItCounts) =>
             TradeMath.NoOpeningPriceCouldMakeIt(openingBuy, quotedSell, landed, stocked, days, beaten, bestKey, safety,
-                                                Options.Current.MinProfitMargin);
+                                                Options.Current.MinProfitMargin, mostItCounts);
     }
 }

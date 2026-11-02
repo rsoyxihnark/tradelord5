@@ -68,6 +68,7 @@ namespace TradeLord
             internal bool TillSaid;
             internal int TillThen;
             internal int TillDraw;
+            internal int TillTake;
             internal int TillOnArrival;
         }
 
@@ -182,6 +183,7 @@ namespace TradeLord
                 _ride.TillSaid = true;
                 _ride.TillThen = to.SettlementComponent.Gold;
                 _ride.TillDraw = Forecast.TillPaysOutBefore(to, said.Days);
+                _ride.TillTake = Forecast.TillTakesInBefore(to, said.Days);
                 _ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);
             }
             _riding = true;
@@ -278,8 +280,9 @@ namespace TradeLord
                 int holds = at.SettlementComponent.Gold;
                 int missed = holds - _ride.TillOnArrival;
                 lines.Add("  purse: it held " + _ride.TillThen + " when you set off; TradeLord said the sellers " +
-                          "already on the road would draw " + _ride.TillDraw + " of it before you got there and " +
-                          "it would hold " + _ride.TillOnArrival + ", and it holds " + holds + ", " +
+                          "already on the road would draw " + _ride.TillDraw + " of it and the caravans already on " +
+                          "the road would pay " + _ride.TillTake + " into it, after the game's tax, before you got " +
+                          "there, and it would hold " + _ride.TillOnArrival + ", and it holds " + holds + ", " +
                           (missed == 0 ? "exactly what it said" : Math.Abs(missed) + (missed > 0 ? " more" : " less") +
                                                                    " than it said"));
             }

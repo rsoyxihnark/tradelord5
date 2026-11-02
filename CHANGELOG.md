@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.7
+
+- Fixed TradeLord leaving out the gold caravans pay into a town's purse when they buy there
+- The campaign map pauses for less time while the TradeLord ledger scans its routes, most of all with Town travel ceiling set to 0
+- With Enable extended debug logging on, TradeLord.log now says what caravans on the road will pay into a town's purse as they buy there
+
 ## 2.8.6
 
 - Fixed travel times not counting your party as Disorganized after a fight, or as recovered, until the next hour

@@ -162,6 +162,7 @@ namespace TradeLord
             internal bool Walked;
             internal int Hour = -1;
             internal float Days;
+            internal float Shortest = -1f;
         }
 
         private sealed class GroundFactors
@@ -704,10 +705,21 @@ namespace TradeLord
             return pace;
         }
 
+        private static TradeMath.Pace _bestFor;
+        private static float _bestOnLand;
+
+        private static float BestOnLand(TradeMath.Pace pace)
+        {
+            if (ReferenceEquals(pace, _bestFor)) return _bestOnLand;
+            _bestOnLand = pace.BestOnLand;
+            _bestFor = pace;
+            return _bestOnLand;
+        }
+
         private static void Speeds(bool sailed, out float land, out float sea)
         {
             TradeMath.Pace pace = PartyPace();
-            land = pace.BestOnLand;
+            land = BestOnLand(pace);
             sea = sailed && WindsBlow() ? pace.BestAtSea : pace.Afloat;
         }
 
@@ -2089,6 +2101,24 @@ namespace TradeLord
 
         internal static float StraightDaysBetween(Settlement a, Settlement b) =>
             a == null || b == null ? 0f : StraightDays(Nearest(a, b), a.HasPort);
+
+        internal static float SoonestRideBetween(Settlement a, Settlement b)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (a == null || b == null || a == b || party == null) return 0f;
+            DropIfNavalChanged();
+            StandWhereYouAre(party);
+            if (!_pairDist.TryGetValue((a.StringId, b.StringId), out Road road)) return 0f;
+            if (road.Shortest < 0f)
+                road.Shortest = road.Sails == null && road.Afloat == null && road.Ashore == null && road.LandRatio >= 1f
+                    ? TradeMath.ShortestOnLand(road.Runs, road.Length)
+                    : 0f;
+            if (!(road.Shortest > 0f)) return 0f;
+            float best = BestOnLand(PartyPace());
+            if (!(best > 0f)) return 0f;
+            float days = TradeMath.DaysAtBestSpeed(road.Shortest, best, 0f);
+            return TradeMath.OutOfReach(days) ? 0f : days * TradeMath.ARideIsNeverShorterThanItsRoadBy;
+        }
 
         internal static float StraightDaysFor(MobileParty party, Settlement target)
         {
