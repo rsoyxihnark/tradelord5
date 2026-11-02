@@ -421,6 +421,8 @@ namespace TradeLord
             });
             Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
             if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);
+            if (HasAMarket(settlement) && Options.Current.MarkBestSellTownOnMap)
+                Guard.Run("Action.RescanOnLeaving", () => LedgerBehavior.Instance?.BestRoutes(int.MaxValue));
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
         }
 

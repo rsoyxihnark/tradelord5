@@ -572,6 +572,15 @@ namespace TradeLord
 
         private static Settlement _buyTo;
 
+        private static string NoBuyFrom(Settlement target, string kind, string because)
+        {
+            if (_buyMark == null && Options.Current.ExtendedDebugLogging)
+                Log.Repeatable("marker no buy from", kind + "|" + target?.StringId,
+                               "map marker shows no Buy From of a TradeLord ledger route" +
+                               (target == null ? "" : " while it marks " + target.Name) + ": " + because);
+            return LetTheBuyMarkGo(target, because);
+        }
+
         private static string TheBuyTownToShow(Settlement target, in Reckoning how)
         {
             MobileParty party = MobileParty.MainParty;
@@ -581,10 +590,10 @@ namespace TradeLord
             if (scan.rows == null)
                 return _buyMarkRestored && _buyMark != null && ARideToBuyFrom(_buyMark, party) >= 0f
                     ? null
-                    : LetTheBuyMarkGo(target, "the TradeLord ledger has no route scan yet");
+                    : NoBuyFrom(target, "scan", "the TradeLord ledger has no route scan yet");
             _buyMarkRestored = false;
             if (!ledger.LastScanStillServes(WhatYouHoldNow()))
-                return LetTheBuyMarkGo(target, "your cargo or purse has changed since the route scan it was weighed on");
+                return NoBuyFrom(target, "stale", ledger.WhyTheLastScanServesNot(WhatYouHoldNow()));
 
             int age = (int)CampaignTime.Now.ToHours - scan.hour;
             bool atConf = Options.Current.ConfidenceRanking;
@@ -605,7 +614,7 @@ namespace TradeLord
             }
             var best = Marks.BestBuyFrom(rows, _buyMark?.StringId);
             if (best.from == null)
-                return LetTheBuyMarkGo(target, "the TradeLord ledger has no route left that starts in reach");
+                return NoBuyFrom(target, "reach", "the TradeLord ledger has no route left that starts in reach");
 
             float conf = target == null ? 1f : AtTheConfOfSelling(target, how);
             float sellRate = target == null ? 0f : how.Rate * conf;
@@ -620,7 +629,7 @@ namespace TradeLord
                 : "against " + sell.ToString("0") + " a day selling what you carry at " + target.Name +
                   (mine.from != null && sell > sellRate ? " and buying for the ledger's route from there" : "");
             if (from == null || !Marks.ShowsTheBuyTown(best.rate, sell, _buyMark != null))
-                return LetTheBuyMarkGo(target, target == null
+                return NoBuyFrom(target, "sell|" + best.from, target == null
                     ? "no route the TradeLord ledger found is worth showing"
                     : "selling what you carry there earns " + sell.ToString("0") + " a day" + weighed + " against " +
                       best.rate.ToString("0") + " for the TradeLord ledger's route from " +

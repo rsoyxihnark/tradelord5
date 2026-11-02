@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.1
+
+- Fixed the map marker never showing a TradeLord ledger route's Buy From once TradeLord had bought anything in the market you left
+- TradeLord.log now says exactly why the map marker stopped showing a TradeLord ledger route's Buy From
+- With Enable extended debug logging on, TradeLord.log now says why the map marker shows no Buy From of a TradeLord ledger route
+
 ## 2.8.0
 
 - The map marker now shows the Buy From of a TradeLord ledger route when that route earns more a day than selling what you carry

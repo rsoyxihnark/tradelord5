@@ -1495,6 +1495,15 @@ namespace TradeLord
             _lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&
             Marks.ScanStillServes(_lastScan.gold, Hero.MainHero?.Gold ?? 0, _lastScan.cargo, cargoNow);
 
+        internal string WhyTheLastScanServesNot(List<(string good, int amount, bool food)> cargoNow)
+        {
+            if (_lastScan.rows == null) return "the TradeLord ledger has no route scan yet";
+            if (!Freshness.Held(_lastScan.settings, Stamp.Timeless)) return "a setting changed since the last route scan";
+            if (!Marks.OnlyEatenFrom(_lastScan.cargo, cargoNow)) return "your cargo changed since the last route scan";
+            return "your purse is " + (Hero.MainHero?.Gold ?? 0) + ", down from the " + _lastScan.gold +
+                   " the last route scan was sized on";
+        }
+
         public Dictionary<string, int> WhatTheLedgerBuysAt(Settlement here)
         {
             var asked = new Dictionary<string, int>(StringComparer.Ordinal);
