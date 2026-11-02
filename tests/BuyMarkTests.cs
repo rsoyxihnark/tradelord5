@@ -231,10 +231,8 @@ namespace TradeLord.Tests
             var sold = Sold(("town_m", 100f, 100f), ("town_b", 90f, 90f));
             var mark = Marks.BestPlaceToGo(Rows(("town_m", "town_x", 110f, 1f)), sold, null);
             var other = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 110f, 1f)), sold, null);
-            Assert.Equal(210f, mark.rate);
-            Assert.Equal(200f, other.rate);
-            Assert.Equal(Marks.SellSideWithItsOwnRoute(100f, 100f, 110f, 1f), mark.rate);
-            Assert.Equal(Marks.SellSideWithItsOwnRoute(90f, 90f, 110f, 1f), other.rate);
+            Assert.Equal(TradeMath.PerDay(100f + 110f, 1f), mark.rate);
+            Assert.Equal(TradeMath.PerDay(90f + 110f, 1f), other.rate);
         }
 
         [Fact]
@@ -249,10 +247,11 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_town_never_scores_under_what_your_cargo_alone_earns_there()
+        public void A_buy_town_is_weighed_on_its_route_and_sale_together_never_on_its_sale_alone()
         {
-            var best = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 10f, 10f)), Sold(("town_b", 80f, 80f)), null);
-            Assert.Equal(80f, best.rate);
+            var best = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 14f, 2.4f)), Sold(("town_b", 400f, 261f)), null);
+            Assert.Equal(TradeMath.PerDay(261f + 14f, 2.4f), best.rate);
+            Assert.False(Marks.ShowsTheBuyTown(best.rate, 431f, false));
         }
 
         [Fact]

@@ -285,7 +285,7 @@ namespace TradeLord
                 var group = groups[key];
                 (float rate, float earned) sold = default;
                 if (soldThere != null) soldThere.TryGetValue(key.from, out sold);
-                float rate = SellSideWithItsOwnRoute(sold.rate, sold.earned, group.profit, group.days);
+                float rate = TradeMath.PerDay((sold.earned > 0f ? sold.earned : 0f) + group.profit, group.days);
                 float weighed = TradeMath.RateTheMarkHolds(rate, key.from == shownFrom);
                 if (!(weighed > bar)) continue;
                 bar = weighed;

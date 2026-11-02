@@ -1480,16 +1480,16 @@ namespace TradeLord
                 if (Travel.LostTheRoad) _routeStamp.Stale();
                 else Freshness.Taken(ref _routeStamp, hour);
                 _lastScan = (new List<TradeRoute>(_routes), hour, Hero.MainHero?.Gold ?? 0, Marker.WhatYouHoldNow(),
-                             Freshness.At(Stamp.Timeless), Options.Current.HoldCargoForBestMarket);
+                             Freshness.At(Stamp.Timeless));
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }
 
-        private (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings,
-             float hold) _lastScan;
+        private (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings)
+            _lastScan;
 
-        internal (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings,
-             float hold) LastScan => _lastScan;
+        internal (List<TradeRoute> rows, int hour, int gold, List<(string good, int amount, bool food)> cargo, Stamp settings)
+            LastScan => _lastScan;
 
         internal bool LastScanStillServes(List<(string good, int amount, bool food)> cargoNow) =>
             _lastScan.rows != null && Freshness.Held(_lastScan.settings, Stamp.Timeless) &&

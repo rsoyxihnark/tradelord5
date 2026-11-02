@@ -567,7 +567,9 @@ namespace TradeLord
             if (was == null) return null;
             return target == null
                 ? "map marker taken off " + was.Name + ": " + because
-                : "map marker moved to " + target.Name + " from " + was.Name + ": " + because;
+                : target == was
+                    ? "map marker stays on " + target.Name + ", now as the market it would sell your cargo at: " + because
+                    : "map marker moved to " + target.Name + " from " + was.Name + ": " + because;
         }
 
         private static Settlement _buyTo;
@@ -611,7 +613,7 @@ namespace TradeLord
                 {
                     rides[r.From] = ride = r.From == target ? how.Days : ARideToBuyFrom(r.From, party);
                     if (ride >= 0f)
-                        sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure, scan.hold);
+                        sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure);
                 }
                 if (ride < 0f) continue;
                 float days = Marks.RetimedDays(ride, r.TravelDays, r.Leg.ToBuy);
@@ -624,7 +626,7 @@ namespace TradeLord
                 return NoBuyFrom(target, "reach", "the TradeLord ledger has no route left that starts in reach");
 
             if (target != null && !sold.ContainsKey(target.StringId))
-                sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure, scan.hold);
+                sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure);
             float sellRate = target == null ? 0f : sold[target.StringId].rate;
             var mine = Marks.BestPlaceToGo(own, sold, null);
             float sell = mine.from != null && mine.rate > sellRate ? mine.rate : sellRate;
@@ -676,14 +678,13 @@ namespace TradeLord
         private static (float rate, float earned) WhatYourCargoEarnsThere(
             Settlement s, float ride, MobileParty party,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            Dictionary<Settlement, int> pressure, float holdShare)
+            Dictionary<Settlement, int> pressure)
         {
             SettlementComponent market = s?.SettlementComponent;
             if (market == null || cargo == null || cargo.Count == 0 || TradeMath.OutOfReach(ride)) return (0f, 0f);
             int purse = PurseOf(s, ride);
             if (purse <= 0) return (0f, 0f);
-            Takings took = WhatItWouldFetch(s, market, party, ride, cargo, purse, null,
-                                            WhatTheMarkWouldKeep(s, ride, cargo, holdShare), holdShare);
+            Takings took = WhatItWouldFetch(s, market, party, ride, cargo, purse, null);
             if (took.Value <= 0L) return (0f, 0f);
             float earned = (took.Value > purse ? purse : took.Value) - took.Cost;
             if (!(earned > 0f)) return (0f, 0f);
