@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8.5
+
+- Fixed the map marker marking a market for goods Hold cargo for the best market would keep there for their own Sell At
+
 ## 2.8.4
 
 - Fixed the map marker sending you to a TradeLord ledger route's Buy From for a route worth almost nothing, because your cargo sold well there
