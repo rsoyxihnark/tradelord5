@@ -4321,12 +4321,158 @@ namespace TradeLord.Tests
             var paid = new List<(float days, int gold)> { (0.5f, 10000), (1f, 5000), (3f, 9000) };
             double expected = Closed(Math.Max(0d, Closed(Math.Max(0d, Closed(20000d, 0.5d) - 10000d), 0.5d) - 5000d), 1d);
             Assert.Equal((int)Math.Round(expected), TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f));
-            Assert.Equal((int)Math.Round(Closed(20000d, 0.4d)), TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f));
+            Assert.Equal((int)Math.Round(Closed(20000d, 0.4d) - 0.25d * 10000d), TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f));
             var flood = new List<(float days, int gold)> { (0.1f, 90000), (0.2f, 0), (0.2f, -50) };
             Assert.Equal((int)Math.Round(Closed(0d, 0.9d)), TradeMath.TillWhenYouArrive(20000, 40000, flood, 1f));
             Assert.Equal(0, TradeMath.TillWhenYouArrive(20000, 0, flood, 1f));
             Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, null, 2f),
                          TradeMath.TillWhenYouArrive(20000, 40000, new List<(float, int)>(), 2f));
+        }
+
+        [Fact]
+        public void A_forecast_price_glides_between_quarter_days_instead_of_jumping()
+        {
+            Assert.Equal(0.25f, TradeMath.TheQuarterDayBelow(0.1f));
+            Assert.Equal(0.25f, TradeMath.TheQuarterDayBelow(0.25f));
+            Assert.Equal(0.25f, TradeMath.TheQuarterDayBelow(0.3f));
+            Assert.Equal(0.5f, TradeMath.TheQuarterDayBelow(0.74f));
+            Assert.Equal(1f, TradeMath.TheQuarterDayBelow(1f));
+            Assert.Equal(0f, TradeMath.TheQuarterDayBelow(0f));
+            Assert.Equal(0f, TradeMath.TheQuarterDayBelow(float.NaN));
+            Assert.Equal(0.2f, TradeMath.ShareOfTheQuarterDayAbove(0.3f, 0.25f), 4);
+            Assert.Equal(0f, TradeMath.ShareOfTheQuarterDayAbove(0.25f, 0.25f));
+            Assert.Equal(0f, TradeMath.ShareOfTheQuarterDayAbove(0.1f, 0.25f));
+            Assert.Equal(-150, TradeMath.BlendedShift(-100, -200, 0.5f));
+            Assert.Equal(-100, TradeMath.BlendedShift(-100, -200, 0f));
+            Assert.Equal(-200, TradeMath.BlendedShift(-100, -200, 1f));
+            int ShiftAt(float quarter) => (int)Math.Round(-1000d * quarter);
+            int Priced(float days)
+            {
+                float low = TradeMath.TheQuarterDayBelow(days);
+                float share = TradeMath.ShareOfTheQuarterDayAbove(days, low);
+                return share > 0f ? TradeMath.BlendedShift(ShiftAt(low), ShiftAt(low + TradeMath.HorizonStep), share)
+                                  : ShiftAt(low);
+            }
+            int before = Priced(0.26f);
+            for (float days = 0.27f; days <= 3f; days += 0.01f)
+            {
+                int now = Priced(days);
+                Assert.True(Math.Abs(now - before) <= 12, "the price jumped by " + (now - before) + " at " + days);
+                before = now;
+            }
+        }
+
+        [Fact]
+        public void A_towns_purse_fills_only_at_its_daily_tick_and_a_ride_that_misses_it_finds_no_refill()
+        {
+            var paid = new List<(float days, int gold)> { (0.1f, 2015) };
+            Assert.Equal(87, TradeMath.TillWhenYouArrive(2102, 56000, paid, 0.38f, null, 0.6f, 0));
+            int ticked = TradeMath.TillWhenYouArrive(2102, 56000, paid, 0.38f, null, 0.2f, 0);
+            float share = TradeMath.ShareThatLands(0.2f, 0.38f);
+            Assert.Equal((int)Math.Round(87d + share * (TradeMath.ATownsDailyTick(87d, 56000, 0d) - 87d)), ticked);
+            double Closed(double till, double days) => 56000d - (56000d - till) * Math.Pow(0.75d, days);
+            Assert.Equal((int)Math.Round(Closed(Math.Max(0d, Closed(2102d, 0.1d) - 2015d), 0.28d)),
+                         TradeMath.TillWhenYouArrive(2102, 56000, paid, 0.38f));
+            Assert.Equal(TradeMath.TillWhenYouArrive(2102, 56000, paid, 0.38f),
+                         TradeMath.TillWhenYouArrive(2102, 56000, paid, 0.38f, null, float.NaN, 5000));
+            int twoTicks = TradeMath.TillWhenYouArrive(20000, 40000, null, 2f, null, 0.5f, 1000);
+            double first = TradeMath.ATownsDailyTick(20000d, 40000, 1000d);
+            Assert.Equal((int)Math.Round(TradeMath.ATownsDailyTick(first, 40000, 1000d)), twoTicks);
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task A_purse_forecast_for_a_town_out_of_reach_returns_at_once_while_its_daily_tick_is_known()
+        {
+            var paid = new List<(float days, int gold)> { (0.1f, 2015) };
+            var run = System.Threading.Tasks.Task.Run(() =>
+                TradeMath.TillWhenYouArrive(2102, 56000, paid, TradeMath.FurthestThereIs, null, 0.6f, 500));
+            Assert.Same(run, await System.Threading.Tasks.Task.WhenAny(run, System.Threading.Tasks.Task.Delay(10000)));
+            Assert.Equal(TradeMath.TillWhenYouArrive(2102, 56000, paid, TradeMath.FurthestThereIs), await run);
+            Assert.Equal(TradeMath.TillWhenYouArrive(2102, 56000, paid, TradeMath.LongerThanAnyRide),
+                         TradeMath.TillWhenYouArrive(2102, 56000, paid, TradeMath.LongerThanAnyRide, null, 0.6f, 500));
+            Assert.NotEqual(TradeMath.TillWhenYouArrive(2102, 56000, paid, 3f),
+                            TradeMath.TillWhenYouArrive(2102, 56000, paid, 3f, null, 0.6f, 500));
+        }
+
+        [Fact]
+        public void A_daily_tick_adds_what_the_town_used_up_then_closes_a_quarter_of_the_gap()
+        {
+            Assert.Equal(19000d, TradeMath.ATownsDailyTick(10000d, 40000, 2000d), 3);
+            Assert.Equal(55000d, TradeMath.ATownsDailyTick(60000d, 40000, 0d), 3);
+            Assert.Equal(12000d, TradeMath.ATownsDailyTick(10000d, 0, 2000d), 3);
+            Assert.Equal(10000d, TradeMath.ATownsDailyTick(-5d, 40000, 0d), 3);
+            Assert.Equal(0.7f, TradeMath.ATownTicksIn(0.3d), 4);
+            Assert.Equal(0.7f, TradeMath.ATownTicksIn(1.3d), 4);
+            Assert.Equal(1f, TradeMath.ATownTicksIn(0d), 4);
+            Assert.True(float.IsNaN(TradeMath.ATownTicksIn(2.5d)));
+            Assert.True(float.IsNaN(TradeMath.ATownTicksIn(-1d)));
+            Assert.True(float.IsNaN(TradeMath.ATownTicksIn(double.NaN)));
+            Assert.Equal(300, TradeMath.WhatATownTakesInForWhatItUses(500f, 300f));
+            Assert.Equal(300, TradeMath.WhatATownTakesInForWhatItUses(300f, 500f));
+            Assert.Equal(0, TradeMath.WhatATownTakesInForWhatItUses(0.005f, 100f));
+            Assert.Equal(0, TradeMath.WhatATownTakesInForWhatItUses(float.NaN, 100f));
+            Assert.Equal(0, TradeMath.WhatATownTakesInForWhatItUses(100f, 0f));
+        }
+
+        [Fact]
+        public void A_towns_purse_with_ticks_income_and_caravans_paying_in_never_holds_more_than_the_most_counted_on()
+        {
+            var rng = new Random(889);
+            for (int i = 0; i < 30000; i++)
+            {
+                int gold = rng.Next(-100, 90000);
+                int wouldHold = rng.Next(1, 90000);
+                int income = rng.Next(0, 6000);
+                var paid = new List<(float days, int gold)>();
+                var taken = new List<(float days, int gold)>();
+                for (int k = rng.Next(0, 8); k > 0; k--) paid.Add(((float)rng.NextDouble() * 9f, rng.Next(-10, 40000)));
+                for (int k = rng.Next(0, 8); k > 0; k--) taken.Add(((float)rng.NextDouble() * 9f, rng.Next(-10, 9000)));
+                paid.Sort((x, y) => x.days.CompareTo(y.days));
+                taken.Sort((x, y) => x.days.CompareTo(y.days));
+                float tick = rng.Next(5) == 0 ? float.NaN : (float)rng.NextDouble();
+                float days = (float)rng.NextDouble() * 10f;
+                int most = TradeMath.MostATillCanHold(gold, wouldHold, taken, income);
+                int till = TradeMath.TillWhenYouArrive(gold, wouldHold, paid, days, taken, tick, income);
+                Assert.True(till <= most, "the purse came to " + till + " past the most of " + most);
+                Assert.True(till >= 0);
+            }
+            Assert.Equal(46000, TradeMath.MostATillCanHold(20000, 40000, null, 2000));
+            Assert.Equal(90000, TradeMath.MostATillCanHold(90000, 40000, null, 2000));
+        }
+
+        [Fact]
+        public void The_purse_lines_count_each_draw_at_the_same_share_the_purse_on_arrival_counts_it()
+        {
+            Assert.Equal(1000d, TradeMath.TheShareThatCounts(1000, 0.5f, 2f), 3);
+            Assert.Equal(300d, TradeMath.TheShareThatCounts(1000, 2.1f, 2f), 3);
+            Assert.Equal(0d, TradeMath.TheShareThatCounts(1000, 2.3f, 2f), 3);
+            Assert.Equal(0d, TradeMath.TheShareThatCounts(-5, 0.5f, 2f), 3);
+            Assert.Equal(0d, TradeMath.TheShareThatCounts(1000, 0.5f, 0f), 3);
+            Assert.Equal(1000d, TradeMath.TheShareThatCounts(1000, float.NaN, 2f), 3);
+            var paid = new List<(float days, int gold)> { (0.5f, 1000), (2.1f, 2000), (3f, 500) };
+            double said = 0d;
+            foreach (var (days, gold) in paid) said += TradeMath.TheShareThatCounts(gold, days, 2f);
+            Assert.Equal(1600d, said, 3);
+            Assert.Equal(50000 - 1600, TradeMath.TillWhenYouArrive(50000, 0, paid, 2f));
+        }
+
+        [Fact]
+        public void A_towns_purse_draw_is_split_by_who_brings_it_and_names_a_village_counted_twice()
+        {
+            var draws = new List<(int gold, int from, string who)>
+            {
+                (500, TradeMath.DrawnByCaravans, "Caravan A"), (300, TradeMath.DrawnByVillagers, "Village X"),
+                (700, TradeMath.DrawnByVillagesNextTrips, "Village X"), (200, TradeMath.DrawnByVillagesNextTrips, "Village Y"),
+                (100, TradeMath.DrawnByVillagers, "Village Z"), (-5, TradeMath.DrawnByCaravans, "Nobody")
+            };
+            var split = TradeMath.TillDrawsBySource(draws, 3);
+            Assert.Equal(500L, split.caravans);
+            Assert.Equal(400L, split.villagers);
+            Assert.Equal(900L, split.villages);
+            Assert.Equal(new[] { "Village X", "Caravan A", "Village Y" }, split.top.ConvertAll(one => one.who).ToArray());
+            Assert.Equal(1000L, split.top[0].gold);
+            Assert.Equal(new List<string> { "Village X" }, split.both);
+            Assert.Empty(TradeMath.TillDrawsBySource(null, 3).top);
         }
 
         [Fact]
@@ -4357,7 +4503,7 @@ namespace TradeLord.Tests
                          TradeMath.TillWhenYouArrive(20000, 40000, null, 1f, taken));
             Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f),
                          TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f, new List<(float, int)>()));
-            Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f),
+            Assert.Equal((int)Math.Round(Closed(20000d, 0.4d) - 0.25d * 30000d + 0.25d * 4000d),
                          TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f, taken));
             var odd = new List<(float days, int gold)> { (0.2f, 0), (0.3f, -70), (float.NaN, 500) };
             Assert.Equal((int)Math.Round(Closed(20500d, 1d)), TradeMath.TillWhenYouArrive(20000, 40000, null, 1f, odd));

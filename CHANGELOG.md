@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.8.9
+
+- Fixed the map marker sending you back and forth between two markets on the road while nothing had changed
+- Fixed the map marker sending you off to a new Buy From partway along a ride
+- Fixed TradeLord counting on a town's purse refilling during a ride that ends before the town refills it
+- Fixed TradeLord leaving out the gold a town takes in each day for the goods it uses up
+- Fixed the forecast price of a market jumping every six hours as your ride to it got shorter
+- Fixed the map marker and the TradeLord ledger timing the same ride from the market you stand in differently
+- Fixed a Buy From's ride on to its Sell At being taken from an old route scan instead of timed afresh
+- Fixed a Buy From counting as sold the goods Hold cargo for the best market would keep for the map marker's market
+- Fixed Hold cargo for the best market leaving your ride to the market you sell at first out of the purse and travel ceiling it checks
+- A town's purse on your arrival now counts in part the sellers due there around the time you arrive, rather than all or nothing
+- With Enable extended debug logging on, TradeLord.log now says who draws a town's purse: caravans, villagers and the villages' next trips
+- With Enable extended debug logging on, TradeLord.log now says what caravans not bound yet will draw from a town's purse and pay into it
+- With Enable extended debug logging on, TradeLord.log now scores a Staged Trading deal you take against the map marker
+- With Enable extended debug logging on, TradeLord.log now says when the map marker will not go back to a market it left on the road
+- With Enable extended debug logging on, TradeLord.log now says when a new Buy From waits until you enter or leave a market
+- With Enable extended debug logging on, TradeLord.log now says each day how often the map marker moved, turned back and dropped a Buy From
+
 ## 2.8.8
 
 - Fixed travel times as you enter or leave a market counting from where your party stood, and how fast it rode, at the top of the hour

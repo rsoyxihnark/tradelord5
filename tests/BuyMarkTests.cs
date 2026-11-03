@@ -188,20 +188,55 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_row_is_retimed_from_where_you_stand_now()
+        public void A_market_left_at_a_gate_or_as_your_cargo_changed_is_not_held_back()
         {
-            Assert.Equal(4f, Marks.RetimedDays(1f, 5f, 2f));
-            Assert.Equal(5f, Marks.RetimedDays(2f, 5f, 2f));
+            var beaten = new Dictionary<string, int>(StringComparer.Ordinal);
+            Assert.False(Marks.RememberABeatenMark(beaten, "vostrum", 100, false, true, true));
+            Assert.False(Marks.RememberABeatenMark(beaten, "vostrum", 100, true, false, true));
+            Assert.False(Marks.RememberABeatenMark(beaten, "vostrum", 100, true, true, false));
+            Assert.Empty(beaten);
+            Assert.False(Marks.ComesBackTooSoon(beaten, "vostrum", 105, true, 311f, 261f));
         }
 
         [Fact]
-        public void A_retimed_row_never_runs_backwards()
+        public void A_market_beaten_on_the_road_needs_a_quarter_more_to_win_the_mark_back_within_the_day()
         {
-            Assert.Equal(1f, Marks.RetimedDays(1f, 2f, 3f));
-            Assert.Equal(3f, Marks.RetimedDays(float.NaN, 5f, 2f));
-            Assert.Equal(5f, Marks.RetimedDays(-1f, 5f, -2f));
-            Assert.Equal(0f, Marks.RetimedDays(-1f, -5f, float.NaN));
-            Assert.Equal(2f, Marks.RetimedDays(2f, float.PositiveInfinity, float.PositiveInfinity));
+            var beaten = new Dictionary<string, int>(StringComparer.Ordinal);
+            Assert.True(Marks.RememberABeatenMark(beaten, "vostrum", 100, true, true, true));
+            Assert.True(Marks.ComesBackTooSoon(beaten, "vostrum", 105, true, 311f, 261f));
+            Assert.True(Marks.ComesBackTooSoon(beaten, "vostrum", 105, true, 326.25f, 261f));
+            Assert.False(Marks.ComesBackTooSoon(beaten, "vostrum", 105, true, 330f, 261f));
+            Assert.False(Marks.ComesBackTooSoon(beaten, "vostrum", 125, true, 311f, 261f));
+            Assert.True(Marks.ComesBackTooSoon(beaten, "vostrum", 124, true, 311f, 261f));
+            Assert.False(Marks.ComesBackTooSoon(beaten, "vostrum", 99, true, 311f, 261f));
+            Assert.True(Marks.LeftOnTheRoadLately(beaten, "vostrum", 124));
+            Assert.False(Marks.LeftOnTheRoadLately(beaten, "vostrum", 125));
+            Assert.False(Marks.LeftOnTheRoadLately(beaten, "vostrum", 99));
+            Assert.False(Marks.LeftOnTheRoadLately(beaten, "atphynia", 105));
+            Assert.False(Marks.LeftOnTheRoadLately(null, "vostrum", 105));
+            Assert.False(Marks.ComesBackTooSoon(beaten, "vostrum", 105, false, 311f, 261f));
+            Assert.False(Marks.ComesBackTooSoon(beaten, "atphynia", 105, true, 311f, 261f));
+        }
+
+        [Fact]
+        public void A_village_passed_on_the_road_without_entering_keeps_what_the_marker_remembers()
+        {
+            var beaten = new Dictionary<string, int>(StringComparer.Ordinal);
+            Marks.RememberABeatenMark(beaten, "vostrum", 100, true, true, true);
+            Marks.RememberABeatenMark(beaten, "atphynia", 102, true, true, true);
+            Assert.True(Marks.ComesBackTooSoon(beaten, "vostrum", 103, true, 300f, 261f));
+            Assert.True(Marks.ComesBackTooSoon(beaten, "atphynia", 103, true, 300f, 261f));
+        }
+
+        [Fact]
+        public void A_Buy_From_is_taken_up_only_at_a_gate_and_only_kept_or_dropped_on_the_road()
+        {
+            Assert.True(Marks.MayTakeUpABuyFrom(true, "jalmarys", null));
+            Assert.True(Marks.MayTakeUpABuyFrom(true, "poros", "jalmarys"));
+            Assert.False(Marks.MayTakeUpABuyFrom(false, "jalmarys", null));
+            Assert.True(Marks.MayTakeUpABuyFrom(false, "jalmarys", "jalmarys"));
+            Assert.False(Marks.MayTakeUpABuyFrom(false, "poros", "jalmarys"));
+            Assert.False(Marks.MayTakeUpABuyFrom(false, null, null));
         }
 
         private static Dictionary<string, (float rate, float earned)> Sold(

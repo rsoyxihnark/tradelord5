@@ -383,6 +383,7 @@ namespace TradeLord
                 else if (shed > 0)
                     Drove.LogState("at " + here.Name + (HasAMarket(here) ? "" : ", which has no market"), shed);
             });
+            Guard.Run("Action.MarkerToday", Marker.SayHowItHeldToday);
             Guard.Run("Action.DailyTick", Marker.Update);
         }
 
@@ -1313,6 +1314,9 @@ namespace TradeLord
                           "Trade skill or your TradeLord profit, because it cannot square the two.");
             ReportWhatYouSold(selling, got, addsUp);
             ReportWhatYouBought(buying, paid);
+            if (addsUp && got.Units > 0)
+                Guard.Run("Marker.CheckTheDeal",
+                          () => Marker.ScoreTheMark(settlement, got.Units, got.Gold, got.Profit));
         }
 
         private static void ReportWhatYouSold(Pass pass, Took got, bool addsUp)

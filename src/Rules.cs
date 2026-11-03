@@ -138,6 +138,31 @@ namespace TradeLord
     {
         internal static bool OutEarns(float back, float marked) => back > 0f && back > marked;
 
+        internal const int ABeatenMarkIsRememberedFor = 24;
+        internal const float AComebackMustBeatTheMarkBy = 1.25f;
+
+        internal static bool RememberABeatenMark(IDictionary<string, int> beaten, string leftId, int hour,
+                                                 bool onTheRoad, bool cargoSame, bool beatenForASecondHour)
+        {
+            if (beaten == null || leftId == null || !onTheRoad || !cargoSame || !beatenForASecondHour) return false;
+            beaten[leftId] = hour;
+            return true;
+        }
+
+        internal static bool LeftOnTheRoadLately(IDictionary<string, int> beaten, string id, int hourNow) =>
+            beaten != null && id != null && beaten.TryGetValue(id, out int left) &&
+            hourNow >= left && hourNow - left <= ABeatenMarkIsRememberedFor;
+
+        internal static bool ComesBackTooSoon(IDictionary<string, int> beaten, string targetId, int hourNow,
+                                              bool holderSells, float targetJudged, float holderJudged)
+        {
+            if (!holderSells || !LeftOnTheRoadLately(beaten, targetId, hourNow)) return false;
+            return !(targetJudged > holderJudged * AComebackMustBeatTheMarkBy);
+        }
+
+        internal static bool MayTakeUpABuyFrom(bool atAGate, string candidateId, string shownId) =>
+            atAGate || (candidateId != null && candidateId == shownId);
+
         internal static bool HoldsForASecondLook(bool holderPriced, bool afresh, bool cargoSame, int lostAt,
                                                  int hourNow) =>
             holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);
@@ -240,15 +265,6 @@ namespace TradeLord
                 ? 0f : rideAtScanDays;
             double limit = ScanServesHours + Math.Ceiling(24d * ride);
             return ageHours >= 0 && ageHours <= limit;
-        }
-
-        internal static float RetimedDays(float rideNow, float legDays, float rideAtScan)
-        {
-            float now = float.IsNaN(rideNow) || rideNow < 0f ? 0f : rideNow;
-            float leg = float.IsNaN(legDays) || legDays < 0f ? 0f : legDays;
-            float then = float.IsNaN(rideAtScan) || rideAtScan < 0f ? 0f : rideAtScan;
-            float onward = leg - then;
-            return now + (float.IsNaN(onward) || onward < 0f ? 0f : onward);
         }
 
         internal static (string from, string to, float profit, float days, float rate, int rows) BestBuyFrom(

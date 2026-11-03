@@ -69,6 +69,7 @@ namespace TradeLord
             internal int TillThen;
             internal int TillDraw;
             internal int TillTake;
+            internal string TillWho;
             internal int TillOnArrival;
         }
 
@@ -125,6 +126,7 @@ namespace TradeLord
             if (_riding && to != _ride.To && party.CurrentSettlement == null)
             {
                 _riding = false;
+                Marker.NoteATurnAway((float)(now - _ride.From));
                 Log.Write("ride check: you turned away from " + Tongue.Named(_ride.To.Name, _ride.To.StringId) +
                           " after " + Hours((float)(now - _ride.From)) + " h, so that ride is not judged");
             }
@@ -184,6 +186,7 @@ namespace TradeLord
                 _ride.TillThen = to.SettlementComponent.Gold;
                 _ride.TillDraw = Forecast.TillPaysOutBefore(to, said.Days);
                 _ride.TillTake = Forecast.TillTakesInBefore(to, said.Days);
+                _ride.TillWho = Forecast.WhoDrawsTheTill(to, said.Days);
                 _ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);
             }
             _riding = true;
@@ -285,6 +288,7 @@ namespace TradeLord
                           "there, and it would hold " + _ride.TillOnArrival + ", and it holds " + holds + ", " +
                           (missed == 0 ? "exactly what it said" : Math.Abs(missed) + (missed > 0 ? " more" : " less") +
                                                                    " than it said"));
+                if (_ride.TillWho != null) lines.Add("  purse draw: " + _ride.TillWho);
             }
             if (_ride.Standing > StoodStill || _ride.Fought)
                 lines.Add("  left out: " + Hours((float)_ride.Standing) + " h standing still" +
