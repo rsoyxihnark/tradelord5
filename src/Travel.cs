@@ -2012,8 +2012,8 @@ namespace TradeLord
         private static Vec2 _partyAt;
         private static int _partyHour = -1;
         private static readonly Dictionary<(string, string), Road> _pairDist = new Dictionary<(string, string), Road>();
-        private static readonly Dictionary<(string, string), (CampaignTime Moment, float After, float Days)> _pairDays =
-            new Dictionary<(string, string), (CampaignTime, float, float)>();
+        private static readonly Dictionary<(string, string), (CampaignTime Moment, float After, bool Fresh, float Days)> _pairDays =
+            new Dictionary<(string, string), (CampaignTime, float, bool, float)>();
         private static bool _cachedNaval;
         private static int _roadsFound, _roadsLost;
 
@@ -2096,6 +2096,8 @@ namespace TradeLord
         {
             MobileParty party = MobileParty.MainParty;
             if (target == null || party == null) return 0f;
+            Settlement inside = party.CurrentSettlement;
+            if (inside != null) return target == inside ? 0f : StraightDaysBetween(inside, target);
             return StraightDays(Nearest(party.GetPosition2D, target), MaySail(party, target));
         }
 
@@ -2173,6 +2175,8 @@ namespace TradeLord
             if (target == null || party == null) return 0f;
             DropIfNavalChanged();
             StandWhereYouAre(party);
+            Settlement inside = party.CurrentSettlement;
+            if (inside != null) return target == inside ? 0f : EstimateDaysBetween(inside, target, 0f);
             if (!_partyDist.TryGetValue(target.StringId, out Road hit))
             {
                 if (ThePartyRoadWaitsForTheBackground(party, target)) return TradeMath.FurthestThereIs;
@@ -2266,11 +2270,13 @@ namespace TradeLord
             DropIfNavalChanged();
             StandWhereYouAre(party);
             var key = (a.StringId, b.StringId);
-            if (_pairDays.TryGetValue(key, out var known) && known.Moment == _moment && known.After == after)
+            bool fromWhereYouStand = !(after > 0f) && a == party.CurrentSettlement;
+            if (_pairDays.TryGetValue(key, out var known) && known.Moment == _moment && known.After == after &&
+                known.Fresh == !fromWhereYouStand)
                 return known.Days;
             if (ThePairRoadWaitsForTheBackground(a, b)) return TradeMath.FurthestThereIs;
-            float days = RideBetween(PairRoad(a, b), after, true);
-            _pairDays[key] = (_moment, after, days);
+            float days = RideBetween(PairRoad(a, b), after, !fromWhereYouStand);
+            _pairDays[key] = (_moment, after, !fromWhereYouStand, days);
             return days;
         }
 

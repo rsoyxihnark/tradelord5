@@ -1342,36 +1342,114 @@ namespace TradeLord
         }
 
         public static int TillWhenYouArrive(int gold, int wouldHold, IList<(float days, int gold)> paidInOrder,
-                                            float days, IList<(float days, int gold)> takenInOrder = null)
+                                            float days, IList<(float days, int gold)> takenInOrder = null,
+                                            float firstTick = float.NaN, int income = 0)
         {
             double till = Math.Max(0, gold);
             float until = Finite(days, 0f);
             if (until <= 0f) return (int)till;
+            bool ticks = firstTick >= 0f && !float.IsInfinity(firstTick) && !OutOfReach(until);
+            double comes = Math.Max(0, income);
+            float reach = until / 2f < HorizonStep ? until / 2f : HorizonStep;
+            float end = until + reach;
             float at = 0f;
+            double tick = ticks ? firstTick : double.PositiveInfinity;
             int paid = paidInOrder?.Count ?? 0, taken = takenInOrder?.Count ?? 0;
-            for (int i = 0, k = 0; i < paid || k < taken;)
+            for (int i = 0, k = 0; ;)
             {
                 float paidAt = i < paid ? Math.Max(0f, Finite(paidInOrder[i].days, 0f)) : float.PositiveInfinity;
                 float takenAt = k < taken ? Math.Max(0f, Finite(takenInOrder[k].days, 0f)) : float.PositiveInfinity;
-                bool paying = paidAt <= takenAt;
-                float when = paying ? paidAt : takenAt;
-                if (when > until) break;
-                int amount = paying ? paidInOrder[i++].gold : takenInOrder[k++].gold;
-                if (amount <= 0) continue;
-                till = APurseClosesItsGap(till, wouldHold, when - at);
-                till = paying ? Math.Max(0d, till - amount) : till + amount;
-                at = Math.Max(at, when);
+                double next = Math.Min(Math.Min(paidAt, takenAt), tick);
+                if (!(next < end)) break;
+                float share = ShareThatLands((float)next, until);
+                if (paidAt <= takenAt && paidAt <= tick)
+                {
+                    int amount = paidInOrder[i++].gold;
+                    if (amount <= 0 || !(share > 0f)) continue;
+                    float upTo = paidAt < until ? paidAt : until;
+                    if (!ticks) till = APurseClosesItsGap(till, wouldHold, upTo - at);
+                    till = Math.Max(0d, till - share * (double)amount);
+                    at = Math.Max(at, upTo);
+                }
+                else if (takenAt <= tick)
+                {
+                    int amount = takenInOrder[k++].gold;
+                    if (amount <= 0 || !(share > 0f)) continue;
+                    float upTo = takenAt < until ? takenAt : until;
+                    if (!ticks) till = APurseClosesItsGap(till, wouldHold, upTo - at);
+                    till += share * (double)amount;
+                    at = Math.Max(at, upTo);
+                }
+                else
+                {
+                    till += share * (ATownsDailyTick(till, wouldHold, comes) - till);
+                    tick += 1d;
+                }
             }
-            till = APurseClosesItsGap(till, wouldHold, until - at);
+            if (!ticks) till = APurseClosesItsGap(till, wouldHold, until - at);
             return (int)Math.Min(int.MaxValue, Math.Round(till));
         }
 
-        public static int MostATillCanHold(int gold, int wouldHold, IList<(float days, int gold)> takenInOrder)
+        public static double ATownsDailyTick(double till, int wouldHold, double income)
         {
-            long most = Math.Max(Math.Max(0, gold), wouldHold);
+            double held = Math.Max(0d, till) + Math.Max(0d, income);
+            return wouldHold > 0 ? held + (wouldHold - held) * ATownsPurseClosesItsGapADayBy : held;
+        }
+
+        public static int MostATillCanHold(int gold, int wouldHold, IList<(float days, int gold)> takenInOrder,
+                                           int income = 0)
+        {
+            long most = Math.Max(Math.Max(0, gold),
+                                 wouldHold > 0 ? (long)wouldHold + 3L * Math.Max(0, income) : 0L);
+            if (wouldHold <= 0 && income > 0) most = long.MaxValue / 4;
             for (int k = 0; takenInOrder != null && k < takenInOrder.Count; k++)
                 if (takenInOrder[k].gold > 0) most += takenInOrder[k].gold;
             return (int)Math.Min(int.MaxValue, most);
+        }
+
+        public const int DrawnByCaravans = 0, DrawnByVillagers = 1, DrawnByVillagesNextTrips = 2;
+
+        public static (long caravans, long villagers, long villages, List<(string who, long gold)> top, List<string> both)
+            TillDrawsBySource(IList<(int gold, int from, string who)> draws, int top)
+        {
+            long caravans = 0L, villagers = 0L, villages = 0L;
+            var byWho = new Dictionary<string, long>(StringComparer.Ordinal);
+            var onTheRoad = new HashSet<string>(StringComparer.Ordinal);
+            var nextTrip = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; draws != null && i < draws.Count; i++)
+            {
+                var (gold, from, who) = draws[i];
+                if (gold <= 0) continue;
+                string name = who ?? "?";
+                if (from == DrawnByCaravans) caravans += gold;
+                else if (from == DrawnByVillagers) { villagers += gold; onTheRoad.Add(name); }
+                else { villages += gold; nextTrip.Add(name); }
+                byWho.TryGetValue(name, out long had);
+                byWho[name] = had + gold;
+            }
+            var ranked = new List<(string who, long gold)>();
+            foreach (var one in byWho) ranked.Add((one.Key, one.Value));
+            ranked.Sort((x, y) => x.gold != y.gold ? y.gold.CompareTo(x.gold) : string.CompareOrdinal(x.who, y.who));
+            if (top >= 0 && ranked.Count > top) ranked.RemoveRange(top, ranked.Count - top);
+            var both = new List<string>();
+            foreach (string name in onTheRoad) if (nextTrip.Contains(name)) both.Add(name);
+            both.Sort(StringComparer.Ordinal);
+            return (caravans, villagers, villages, ranked, both);
+        }
+
+        public static double TheShareThatCounts(int gold, float days, float withinDays)
+        {
+            float until = Finite(withinDays, 0f);
+            if (gold <= 0 || !(until > 0f)) return 0d;
+            return gold * (double)ShareThatLands(Math.Max(0f, Finite(days, 0f)), until);
+        }
+
+        public static int WhatATownTakesInForWhatItUses(float budget, float inStore)
+        {
+            float budgeted = Finite(budget, 0f), stocked = Finite(inStore, 0f);
+            if (!(budgeted > 0.01f) || !(stocked > 0f)) return 0;
+            double takes = Math.Min(budgeted, stocked);
+            return (int)Math.Min(int.MaxValue, Math.Round(takes));
         }
 
         public static int WhatAPurseKeepsOfAPurchase(int paid, float taxRatio)
@@ -2400,6 +2478,30 @@ namespace TradeLord
             return steps <= 0d ? 0f : Finite((float)(steps * HorizonStep), days);
         }
 
+        public static float TheQuarterDayBelow(float days)
+        {
+            days = Finite(days, 0f);
+            if (!(days > HorizonStep)) return ARideToTheQuarterDay(days);
+            double steps = Math.Floor(days / HorizonStep);
+            return Finite((float)(steps * HorizonStep), HorizonStep);
+        }
+
+        public static float ShareOfTheQuarterDayAbove(float days, float quarterDayBelow)
+        {
+            days = Finite(days, 0f);
+            if (!(days > HorizonStep) || !(days > quarterDayBelow)) return 0f;
+            float share = (days - quarterDayBelow) / HorizonStep;
+            return share <= 0f ? 0f : share >= 1f ? 1f : share;
+        }
+
+        public static int BlendedShift(int below, int above, float share)
+        {
+            if (!(share > 0f)) return below;
+            if (share >= 1f) return above;
+            double blended = below + (above - (double)below) * share;
+            return (int)Math.Round(Math.Max(int.MinValue, Math.Min(int.MaxValue, blended)), MidpointRounding.AwayFromZero);
+        }
+
         public static float ARideToTheQuarterDay(float days)
         {
             float quartered = ToTheQuarterDay(days);
@@ -2420,6 +2522,15 @@ namespace TradeLord
         public const float TickTimeUnknown = 0.5f;
 
         public const double DaysARunTellsTheTickFor = 2d;
+
+        public static float ATownTicksIn(double daysSinceTheLastTick)
+        {
+            if (double.IsNaN(daysSinceTheLastTick) || daysSinceTheLastTick < 0d ||
+                daysSinceTheLastTick > DaysARunTellsTheTickFor) return float.NaN;
+            double gone = daysSinceTheLastTick - Math.Floor(daysSinceTheLastTick);
+            float next = (float)(1d - gone);
+            return next > 0f && next <= 1f ? next : 1f;
+        }
 
         public static float NextDailyTickIn(double daysSinceTheLastRun)
         {

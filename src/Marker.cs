@@ -328,6 +328,10 @@ namespace TradeLord
             _buyMark = null;
             _buyMarkRestored = false;
             _owedAFairLook.Clear();
+            _beatenOnTheRoad.Clear();
+            _atAGate = _gatePending = false;
+            _moves = _secondHourMoves = _comebacksHeld = _comebacksLetThrough = _buyFromsTaken = _buyFromsDropped = 0;
+            _turnedAwayHours = 0f;
             _walkedInto = null;
             _markedOnTheWayIn = null;
             _keptForItsSellAt = null;
@@ -443,6 +447,7 @@ namespace TradeLord
             internal List<Share> Bill;
             internal List<Weighing> Board;
             internal bool HeldForASecondLook;
+            internal bool HeldForAComeback;
             internal bool HolderPriced;
             internal long HolderValue;
             internal long HolderCost;
@@ -475,8 +480,30 @@ namespace TradeLord
             Settlement was = _picked;
             int lostBefore = _lostAt;
             bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);
+            bool onTheRoad = MobileParty.MainParty?.CurrentSettlement == null;
+            if (!cargoSame) _beatenOnTheRoad.Clear();
+            _atAGate = !onTheRoad || _gatePending || !cargoSame;
+            _gatePending = false;
             if (_picked != null && target != _picked && target != null &&
-                Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))
+                Marks.ComesBackTooSoon(_beatenOnTheRoad, target.StringId, hour,
+                                       how.HolderPriced && how.HolderLost == null && how.HolderValue > 0L,
+                                       how.Judged, how.HolderJudged))
+            {
+                _comebacksHeld++;
+                if (Options.Current.ExtendedDebugLogging)
+                    Log.Repeatable("marker comeback", _picked.StringId + "<" + target.StringId,
+                                   "map marker stays on " + _picked.Name + " rather than going back to " + target.Name +
+                                   ", which it left on the road within the day: " + target.Name + " would weigh " +
+                                   how.Judged.ToString("0") + " against " + how.HolderJudged.ToString("0") +
+                                   ", and going back needs more than " +
+                                   (how.HolderJudged * Marks.AComebackMustBeatTheMarkBy).ToString("0"));
+                TheHolderStays(ref how);
+                how.HeldForAComeback = true;
+                target = _picked;
+                _lostAt = -1;
+            }
+            else if (_picked != null && target != _picked && target != null &&
+                     Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))
             {
                 if (_lostAt < 0) _lostAt = hour;
                 TheHolderStays(ref how);
@@ -519,6 +546,12 @@ namespace TradeLord
                 return;
             }
             _picked = target;
+            _moves++;
+            if (was != null && target != null && Marks.LeftOnTheRoadLately(_beatenOnTheRoad, target.StringId, hour))
+                _comebacksLetThrough++;
+            if (was != null && target != null &&
+                Marks.RememberABeatenMark(_beatenOnTheRoad, was.StringId, hour, onTheRoad, cargoSame, lostBefore >= 0))
+                _secondHourMoves++;
             Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,
                                target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), true);
             string why = on ? Why(how) : "the map marker is switched off";
@@ -559,9 +592,40 @@ namespace TradeLord
                 : "; the map shows " + _buyMark.Name + ", the Buy From of the TradeLord ledger's best route" +
                   (holding ? ", while this stays the market it would sell your cargo at" : "");
 
+        private static readonly Dictionary<string, int> _beatenOnTheRoad = new Dictionary<string, int>(System.StringComparer.Ordinal);
+        private static bool _atAGate, _gatePending;
+        private static int _moves, _secondHourMoves, _comebacksHeld, _comebacksLetThrough, _buyFromsTaken, _buyFromsDropped;
+        private static float _turnedAwayHours;
+
+        internal static void NoteATurnAway(float hours)
+        {
+            if (hours > 0f && !float.IsInfinity(hours)) _turnedAwayHours += hours;
+        }
+
+        internal static void SayHowItHeldToday()
+        {
+            if (Options.Current.ExtendedDebugLogging)
+                Log.Write("marker today: " + _moves + " move(s), " + _secondHourMoves + " of them beaten for a second " +
+                          "hour on the road with the same cargo; " + _comebacksHeld + " hour(s) it held back a comeback to a market " +
+                          "it left on the road and " + _comebacksLetThrough + " comeback(s) let through; " + _buyFromsTaken + " Buy From(s) taken up " +
+                          "and " + _buyFromsDropped + " dropped before you got there; and " +
+                          _turnedAwayHours.ToString("0.#", CultureInfo.InvariantCulture) +
+                          " h of rides you turned away from");
+            _moves = _secondHourMoves = _comebacksHeld = _comebacksLetThrough = _buyFromsTaken = _buyFromsDropped = 0;
+            _turnedAwayHours = 0f;
+        }
+
+        private static void CountADroppedBuyFrom(Settlement was)
+        {
+            if (was == null) return;
+            Settlement here = MobileParty.MainParty?.CurrentSettlement;
+            if (here != was && _walkedInto != was.StringId) _buyFromsDropped++;
+        }
+
         private static string LetTheBuyMarkGo(Settlement target, string because)
         {
             Settlement was = _buyMark;
+            CountADroppedBuyFrom(was);
             _buyMark = null;
             _buyMarkRestored = false;
             if (was == null) return null;
@@ -605,25 +669,34 @@ namespace TradeLord
             var sold = new Dictionary<string, (float rate, float earned)>(System.StringComparer.Ordinal);
             var rows = new List<(string from, string to, float profit, float days)>();
             var own = new List<(string from, string to, float profit, float days)>();
+            bool heldAtTheGate = false;
             foreach (TradeRoute r in scan.rows)
             {
                 if (r?.From == null || r.To == null || r.Leg == null || r.TotalProfit <= 0) continue;
                 if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;
+                if (r.From != target && !Marks.MayTakeUpABuyFrom(_atAGate, r.From.StringId, _buyMark?.StringId))
+                {
+                    heldAtTheGate = true;
+                    continue;
+                }
                 if (!rides.TryGetValue(r.From, out float ride))
                 {
                     rides[r.From] = ride = r.From == target ? how.Days : ARideToBuyFrom(r.From, party);
                     if (ride >= 0f)
-                        sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure);
+                        sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure, target);
                 }
                 if (ride < 0f) continue;
-                float days = Marks.RetimedDays(ride, r.TravelDays, r.Leg.ToBuy);
+                float days = ride + Travel.EstimateDaysBetween(r.From, r.To, ride);
                 if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(r.To, days)) continue;
                 float profit = atConf ? r.TotalProfit * r.Confidence * r.Trust : r.TotalProfit;
                 (r.From == target ? own : rows).Add((r.From.StringId, r.To.StringId, profit, days));
             }
             var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);
             if (best.from == null)
-                return NoBuyFrom(target, "reach", "the TradeLord ledger has no route left that starts in reach");
+                return heldAtTheGate
+                    ? NoBuyFrom(target, "gate", "the TradeLord ledger has no route left in reach that may be taken up on the road, " +
+                                                "as a new Buy From is only taken up as you enter or leave a market or your cargo changes")
+                    : NoBuyFrom(target, "reach", "the TradeLord ledger has no route left that starts in reach");
 
             if (target != null && !sold.ContainsKey(target.StringId))
                 sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure);
@@ -647,6 +720,11 @@ namespace TradeLord
 
             Settlement was = _buyMark;
             Settlement wasTo = _buyTo;
+            if (was != from)
+            {
+                CountADroppedBuyFrom(was);
+                _buyFromsTaken++;
+            }
             _buyMark = from;
             _buyTo = to;
             if (was == from && wasTo == to) return null;
@@ -678,28 +756,28 @@ namespace TradeLord
         private static (float rate, float earned) WhatYourCargoEarnsThere(
             Settlement s, float ride, MobileParty party,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            Dictionary<Settlement, int> pressure)
+            Dictionary<Settlement, int> pressure, Settlement sellMark = null)
         {
             SettlementComponent market = s?.SettlementComponent;
             if (market == null || cargo == null || cargo.Count == 0 || TradeMath.OutOfReach(ride)) return (0f, 0f);
             int purse = PurseOf(s, ride);
             if (purse <= 0) return (0f, 0f);
-            Takings took = WhatItWouldSell(s, market, party, ride, cargo, purse, null);
+            Takings took = WhatItWouldSell(s, market, party, ride, cargo, purse, null, sellMark);
             if (took.Value <= 0L) return (0f, 0f);
             float earned = (took.Value > purse ? purse : took.Value) - took.Cost;
             if (!(earned > 0f)) return (0f, 0f);
-            float conf = AtTheConfOfSelling(s, ride, took.PurseCapped ? purse : 0, party, cargo, pressure);
+            float conf = AtTheConfOfSelling(s, ride, took.PurseCapped ? purse : 0, party, cargo, pressure, sellMark);
             return (TradeMath.PerDay(earned, ride) * conf, earned * conf);
         }
 
         private static float AtTheConfOfSelling(Settlement s, float ride, int till, MobileParty party,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            Dictionary<Settlement, int> pressure)
+            Dictionary<Settlement, int> pressure, Settlement sellMark = null)
         {
             if (!Options.Current.ConfidenceRanking || cargo == null || cargo.Count == 0) return 1f;
             int caravans = pressure != null && pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;
             long worthThere = till > 0
-                ? WhatItWouldSell(s, s.SettlementComponent, party, ride, cargo, int.MaxValue, null).Value
+                ? WhatItWouldSell(s, s.SettlementComponent, party, ride, cargo, int.MaxValue, null, sellMark).Value
                 : 1L;
             return Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till, worthThere,
                                  out _, out _);
@@ -853,6 +931,8 @@ namespace TradeLord
             if (from == null) return;
             _walkedOutOf = from;
             _justWalkedOut = true;
+            _beatenOnTheRoad.Clear();
+            _gatePending = true;
         }
 
         private static void WhatItSaidOnTheWayOut(Settlement target, in Reckoning how)
@@ -982,6 +1062,9 @@ namespace TradeLord
                 ? ", " + (how.Judged / TradeMath.TheMarkedTownHoldsBy).ToString("0") + " against " +
                   how.RunnerUpJudged.ToString("0") + " once each is weighed at the Conf of selling there"
                 : "";
+            if (how.HeldForAComeback)
+                return ", and it holds the mark against " + next + weighed +
+                       ", which it left on the road within the day";
             if (how.HeldForASecondLook)
                 return ", and it holds the mark against " + next + weighed +
                        ", until another market earns more in a later hour";
@@ -1167,7 +1250,7 @@ namespace TradeLord
         {
             if (_payingsHeld <= 0 || site == null || el.Item == null || el.IsQuestItem)
                 return new Paying(site, market, el, party, ride);
-            var key = (site, el.Item, el.ItemModifier, party, TradeMath.ARideToTheQuarterDay(ride));
+            var key = (site, el.Item, el.ItemModifier, party, ride);
             if (!_payings.TryGetValue(key, out Paying pays)) _payings[key] = pays = new Paying(site, market, el, party, ride);
             return pays;
         }
@@ -1226,11 +1309,13 @@ namespace TradeLord
         private static Takings WhatItWouldSell(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            int gold, List<Share> bill)
+            int gold, List<Share> bill, Settlement sellMark = null)
         {
             float share = Options.Current.HoldCargoForBestMarket;
+            bool asTheMark = sellMark == null || sellMark == site;
             return WhatItWouldFetch(site, market, party, ride, cargo, gold, bill,
-                                    WhatTheMarkWouldKeep(site, ride, cargo, share, asTheMark: true), share);
+                                    WhatTheMarkWouldKeep(site, ride, cargo, share, asTheMark,
+                                                         asTheMark ? null : sellMark), share);
         }
 
         private static Takings WhatItWouldFetch(
@@ -1399,6 +1484,7 @@ namespace TradeLord
                                        List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
         {
             float ride = Travel.EstimateDaysFromParty(one.s);
+            if (TradeMath.OutOfReach(ride)) return 0f;
             int gold = PurseOf(one.s, ride);
             if (gold <= 0) return 0f;
             Takings took = WhatItWouldSell(one.s, one.market, party, ride, cargo, gold, null);
@@ -1691,6 +1777,8 @@ namespace TradeLord
 
         internal static void NoteTheWalkIn(Settlement at)
         {
+            _beatenOnTheRoad.Clear();
+            _gatePending = true;
             if (at?.StringId != _keptForItsSellAt) _keptForItsSellAt = null;
             _walkedInto = at?.StringId;
             _markedOnTheWayIn = _picked?.StringId;
@@ -1703,12 +1791,15 @@ namespace TradeLord
             _markedOnTheWayIn = at?.StringId;
         }
 
-        internal static Settlement TheMarkToHoldFor(Settlement here)
+        internal static Settlement TheMarkToHoldFor(Settlement here, Settlement sellMark = null)
         {
-            Settlement mark = _picked;
+            Settlement mark = sellMark ?? _picked;
             if (!Options.Current.MarkBestSellTownOnMap || mark?.SettlementComponent == null) return null;
             if (!TradeActionBehavior.IsMarket(mark)) return null;
-            if (!Marks.HoldsFor(mark.StringId, here?.StringId, _walkedInto, _markedOnTheWayIn)) return null;
+            bool holds = sellMark != null
+                ? Marks.HoldsFor(mark.StringId, here?.StringId, here?.StringId, mark.StringId)
+                : Marks.HoldsFor(mark.StringId, here?.StringId, _walkedInto, _markedOnTheWayIn);
+            if (!holds) return null;
             if (LedgerBehavior.UnderAttack(mark) || LedgerBehavior.VillageShut(mark)) return null;
             if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(mark)) return null;
             return mark;
@@ -1717,22 +1808,22 @@ namespace TradeLord
         internal static Settlement HoldFor(EquipmentElement el, int units, Settlement here,
                                            System.Func<Settlement, float> rideTo, float lead,
                                            out float ride, out int purse, out bool boughtFor, out NoHold why,
-                                           bool asTheMark = false)
+                                           bool asTheMark = false, Settlement sellMark = null)
         {
             ride = 0f;
             purse = 0;
             boughtFor = false;
             why = NoHold.NoMarket;
             if (el.Item == null || rideTo == null) return null;
-            bool marked = asTheMark || InTheMarkedMarket(here);
+            bool marked = asTheMark || (sellMark == null && InTheMarkedMarket(here));
             Settlement meant = BoughtFor(el.Item);
             if (meant != null && meant == here) { why = NoHold.ItsSellAt; return null; }
             if (marked && meant == null) { why = NoHold.MarkedMarket; return null; }
             float meantRide = 0f, markRide = 0f;
             int meantPurse = 0, markPurse = 0;
-            bool meantHolds = meant != null && MayHoldFor(meant) && InReach(meant, rideTo, out meantRide, out meantPurse);
-            Settlement mark = marked ? null : TheMarkToHoldFor(here);
-            bool markHolds = mark != null && mark != meant && InReach(mark, rideTo, out markRide, out markPurse);
+            bool meantHolds = meant != null && MayHoldFor(meant) && InReach(meant, rideTo, lead, out meantRide, out meantPurse);
+            Settlement mark = marked ? null : TheMarkToHoldFor(here, sellMark);
+            bool markHolds = mark != null && mark != meant && InReach(mark, rideTo, lead, out markRide, out markPurse);
             long meantPays = 0L, markPays = 0L;
             if (meantHolds && markHolds)
             {
@@ -1784,11 +1875,15 @@ namespace TradeLord
             !LedgerBehavior.UnderAttack(s) && !LedgerBehavior.VillageShut(s) &&
             !(Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s));
 
-        private static bool InReach(Settlement s, System.Func<Settlement, float> rideTo, out float ride, out int purse)
+        private static bool InReach(Settlement s, System.Func<Settlement, float> rideTo, float lead, out float ride,
+                                    out int purse)
         {
             ride = rideTo(s);
-            purse = PurseOf(s, ride);
-            return LedgerBehavior.WithinTravelCeiling(s, ride) && purse > 0;
+            purse = 0;
+            if (TradeMath.OutOfReach(ride)) return false;
+            float whole = System.Math.Max(0f, TradeMath.Finite(lead, 0f)) + ride;
+            purse = PurseOf(s, whole);
+            return LedgerBehavior.WithinTravelCeiling(s, whole) && purse > 0;
         }
 
         internal static (float room, int gold) WhatYourCargoFrees(Settlement site, float holdShare)
@@ -1811,7 +1906,7 @@ namespace TradeLord
         private static int[][] WhatTheMarkWouldKeep(
             Settlement site, float ride,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, float holdShare,
-            bool asTheMark = false)
+            bool asTheMark = false, Settlement sellMark = null)
         {
             if (!(holdShare > 0f)) return null;
             MobileParty party = MobileParty.MainParty;
@@ -1832,7 +1927,7 @@ namespace TradeLord
                 int units = System.Math.Max(0, amount - floors.AgedLeft);
                 if (units <= 0) continue;
                 Settlement mark = HoldFor(el, units, site, onwardTo, ride, out float onward, out int purse, out _, out _,
-                                          asTheMark);
+                                          asTheMark, sellMark);
                 if (mark == null) continue;
                 int[] ladder = WhatTheMarkTakes(mark, el, units, worth, ride + onward, purse);
                 if (ladder.Length == 0) continue;
