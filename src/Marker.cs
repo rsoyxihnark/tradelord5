@@ -365,6 +365,9 @@ namespace TradeLord
             _heldCargo = null;
             _toldNext = null;
             _toldBoard.Clear();
+            _gateWaits = 0;
+            _gateWaitHour = -1;
+            Shadow.Forget();
         }
 
         private struct Share
@@ -482,7 +485,7 @@ namespace TradeLord
             bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);
             bool onTheRoad = MobileParty.MainParty?.CurrentSettlement == null;
             if (!cargoSame) _beatenOnTheRoad.Clear();
-            _atAGate = !onTheRoad || _gatePending || !cargoSame;
+            _atAGate = Marks.AtAGate(onTheRoad, _gatePending, cargoSame);
             _gatePending = false;
             if (_picked != null && target != _picked && target != null &&
                 Marks.ComesBackTooSoon(_beatenOnTheRoad, target.StringId, hour,
@@ -514,6 +517,8 @@ namespace TradeLord
                 _lostAt = -1;
                 _heldCargo = _cargoHeld;
             }
+            if (on && Options.Current.ExtendedDebugLogging)
+                Shadow.Weigh(how, how.Unheld == null ? was : null, _atAGate, hour, onTheRoad, target);
 
             if (target != null)
             {
@@ -595,6 +600,7 @@ namespace TradeLord
         private static readonly Dictionary<string, int> _beatenOnTheRoad = new Dictionary<string, int>(System.StringComparer.Ordinal);
         private static bool _atAGate, _gatePending;
         private static int _moves, _secondHourMoves, _comebacksHeld, _comebacksLetThrough, _buyFromsTaken, _buyFromsDropped;
+        private static int _gateWaits, _gateWaitHour = -1;
         private static float _turnedAwayHours;
 
         internal static void NoteATurnAway(float hours)
@@ -608,11 +614,176 @@ namespace TradeLord
                 Log.Write("marker today: " + _moves + " move(s), " + _secondHourMoves + " of them beaten for a second " +
                           "hour on the road with the same cargo; " + _comebacksHeld + " hour(s) it held back a comeback to a market " +
                           "it left on the road and " + _comebacksLetThrough + " comeback(s) let through; " + _buyFromsTaken + " Buy From(s) taken up " +
-                          "and " + _buyFromsDropped + " dropped before you got there; and " +
+                          "and " + _buyFromsDropped + " dropped before you got there; " + _gateWaits + " hour(s) a new " +
+                          "Buy From waited for you to enter or leave a market; and " +
                           _turnedAwayHours.ToString("0.#", CultureInfo.InvariantCulture) +
                           " h of rides you turned away from");
             _moves = _secondHourMoves = _comebacksHeld = _comebacksLetThrough = _buyFromsTaken = _buyFromsDropped = 0;
+            _gateWaits = 0;
             _turnedAwayHours = 0f;
+            Shadow.SayHowItHeldToday();
+        }
+
+        private static void CountAGateWait()
+        {
+            int hour = (int)CampaignTime.Now.ToHours;
+            if (hour == _gateWaitHour) return;
+            _gateWaitHour = hour;
+            _gateWaits++;
+        }
+
+        private static class Shadow
+        {
+            private static Settlement _mark;
+            private static readonly Dictionary<string, (Settlement where, float judged, long earned, float days)> _lowest =
+                new Dictionary<string, (Settlement, float, long, float)>(System.StringComparer.Ordinal);
+            private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> _cargo;
+            private static Settlement _checkAt;
+            private static string _checkFrom;
+            private static int _checkHour = -1;
+            private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> _checkCargo;
+            private static int _shadowMoves, _shadowGreatDeals, _shadowApart;
+
+            internal static void Forget()
+            {
+                _mark = null;
+                _lowest.Clear();
+                _cargo = null;
+                _checkAt = null;
+                _checkFrom = null;
+                _checkHour = -1;
+                _checkCargo = null;
+                _shadowMoves = _shadowGreatDeals = _shadowApart = 0;
+            }
+
+            internal static void Weigh(in Reckoning how, Settlement holder, bool atAGate, int hour, bool onTheRoad,
+                                       Settlement live)
+            {
+                MobileParty party = MobileParty.MainParty;
+                if (party == null) return;
+                CheckWhatItWouldHavePaid(party, hour);
+                Settlement here = party.CurrentSettlement;
+                if (atAGate && !onTheRoad && here != null && _mark != null && _mark != here && _cargo != null &&
+                    _checkAt == null && _lowest.TryGetValue(_mark.StringId, out var last) &&
+                    !TradeMath.OutOfReach(last.days))
+                {
+                    _checkAt = _mark;
+                    _checkFrom = here.Name?.ToString() ?? here.StringId;
+                    _checkHour = hour + System.Math.Max(1, (int)System.Math.Round(last.days * 24f));
+                    _checkCargo = _cargo;
+                }
+                if (onTheRoad) _cargo = WhatYouCarryToSell(party);
+                if (atAGate) _lowest.Clear();
+                for (int i = 0; how.Board != null && i < how.Board.Count; i++)
+                {
+                    Weighing one = how.Board[i];
+                    float judged = one.Where == holder && one.Judged > 0f
+                        ? one.Judged / TradeMath.TheMarkedTownHoldsBy
+                        : one.Judged;
+                    Lowest(one.Where, judged, one.Earned, one.Days);
+                }
+                if (_mark != null && !OnTheBoard(how, _mark))
+                {
+                    var priced = PriceIt(_mark, party, how.OneBasis);
+                    if (priced.judged > 0f) Lowest(_mark, priced.judged, priced.earned, priced.days);
+                    else _lowest.Remove(_mark.StringId);
+                }
+                Settlement was = _mark;
+                Settlement best = null;
+                float bestJudged = 0f;
+                long bestEarned = 0L;
+                foreach (var one in _lowest.Values)
+                {
+                    float judged = one.where == _mark ? TradeMath.RateTheMarkHolds(one.judged, true) : one.judged;
+                    if (judged <= bestJudged) continue;
+                    best = one.where;
+                    bestJudged = judged;
+                    bestEarned = one.earned;
+                }
+                (Settlement where, float judged, long earned, float days) mine = default;
+                bool held = _mark != null && _lowest.TryGetValue(_mark.StringId, out mine);
+                if (atAGate || !held)
+                    _mark = best;
+                else if (best != null && best != _mark &&
+                         Marks.AGreatDealBeatsTheShadow(bestJudged, bestEarned,
+                                                         TradeMath.RateTheMarkHolds(mine.judged, true), mine.earned))
+                {
+                    _mark = best;
+                    _shadowGreatDeals++;
+                }
+                if (_mark != was)
+                {
+                    _shadowMoves++;
+                    Log.Repeatable("shadow marker", _mark?.StringId ?? "",
+                                   "shadow marker, which believes good news only at the next market, " +
+                                   (_mark == null ? "has no market" : "moved to " + _mark.Name) +
+                                   (was == null ? "" : " from " + was.Name) +
+                                   (atAGate ? " at a gate" : held ? " for a great deal" : " as its market went unpriced"));
+                }
+                if (_mark != null && live != null && _mark != live) _shadowApart++;
+            }
+
+            private static bool OnTheBoard(in Reckoning how, Settlement s)
+            {
+                for (int i = 0; how.Board != null && i < how.Board.Count; i++)
+                    if (how.Board[i].Where == s) return true;
+                return false;
+            }
+
+            private static void Lowest(Settlement where, float judged, long earned, float days)
+            {
+                if (where?.StringId == null) return;
+                if (_lowest.TryGetValue(where.StringId, out var had) && had.judged <= judged) return;
+                _lowest[where.StringId] = (where, judged, earned, days);
+            }
+
+            private static (float judged, long earned, float days) PriceIt(Settlement s, MobileParty party, bool oneBasis)
+            {
+                SettlementComponent market = s?.SettlementComponent;
+                var cargo = WhatYouCarryToSell(party);
+                if (market == null || cargo.Count == 0) return (0f, 0L, float.NaN);
+                float ride = Travel.EstimateDaysFromParty(s);
+                if (TradeMath.OutOfReach(ride)) return (0f, 0L, ride);
+                int purse = PurseOf(s, ride);
+                if (purse <= 0) return (0f, 0L, ride);
+                Takings took = WhatItWouldSell(s, market, party, ride, cargo, purse, null);
+                if (took.Value <= 0L) return (0f, 0L, ride);
+                long earned = System.Math.Min(took.Value, purse) - took.Cost;
+                float rate = TradeMath.PerDay(earned, ride);
+                if (oneBasis)
+                    rate *= AtTheConfOfSelling(s, ride, took.PurseCapped ? purse : 0, party, cargo,
+                                               LedgerBehavior.CaravanPressure());
+                return (rate, earned, ride);
+            }
+
+            private static void CheckWhatItWouldHavePaid(MobileParty party, int hour)
+            {
+                if (_checkAt == null || hour < _checkHour) return;
+                Settlement at = _checkAt;
+                var cargo = _checkCargo;
+                string from = _checkFrom;
+                _checkAt = null;
+                _checkCargo = null;
+                SettlementComponent market = at.SettlementComponent;
+                if (market == null || cargo == null || cargo.Count == 0 || !Options.Current.Omniscient) return;
+                int purse = PurseOf(at, 0f);
+                Takings took = WhatItWouldSell(at, market, party, 0f, cargo, purse, null);
+                long value = System.Math.Min(took.Value, purse);
+                Log.Repeatable("shadow marker check", at.StringId + "@" + hour,
+                               "shadow marker check: the cargo you carried into " + from + " would have fetched " + value +
+                               " at " + at.Name + ", the market the shadow marker held, earning " + (value - took.Cost) +
+                               " over what it cost, at the hour you would have got there, its purse holding " + purse);
+            }
+
+            internal static void SayHowItHeldToday()
+            {
+                if (Options.Current.ExtendedDebugLogging && (_shadowMoves > 0 || _shadowApart > 0))
+                    Log.Repeatable("shadow marker today", _shadowMoves + "/" + _shadowApart,
+                                   "shadow marker today: " + _shadowMoves + " move(s), " + _shadowGreatDeals +
+                                   " of them for a great deal on the road, and " + _shadowApart +
+                                   " weighing(s) on a different market from the map marker");
+                _shadowMoves = _shadowGreatDeals = _shadowApart = 0;
+            }
         }
 
         private static void CountADroppedBuyFrom(Settlement was)
@@ -676,6 +847,7 @@ namespace TradeLord
                 if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;
                 if (r.From != target && !Marks.MayTakeUpABuyFrom(_atAGate, r.From.StringId, _buyMark?.StringId))
                 {
+                    if (!heldAtTheGate) CountAGateWait();
                     heldAtTheGate = true;
                     continue;
                 }
@@ -1656,8 +1828,9 @@ namespace TradeLord
                                          " your cargo would fetch there"
                                        : ", its till covered the whole sale") +
                                    (paysOut > 0
-                                       ? ", and the sellers already on the road draw " + paysOut +
-                                         " of that till before you arrive" + TheCaravansPayIn(s, ride) +
+                                       ? ", and the sellers already on the road want to draw " + paysOut +
+                                         " of that till before you arrive, of which it can pay them " +
+                                         Forecast.TillPaidOutBefore(s, ride) + TheCaravansPayIn(s, ride) +
                                          ", leaving it " + Forecast.TillOnArrival(s, ride) + " when you get there"
                                        : "") +
                                    ", " + caravans + " caravan(s) and villager(s) at or heading there";

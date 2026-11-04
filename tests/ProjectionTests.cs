@@ -20,7 +20,7 @@ namespace TradeLord.Tests
         public void What_a_town_uses_up_each_day_leaves_its_shelf_for_every_day_of_the_window()
         {
             Assert.Equal(600, Projection.WorthUsedUp(null, "wool", 2f, 300, 10000));
-            Assert.Equal(300, Projection.WorthUsedUp(null, "wool", 1.1f, 300, 10000));
+            Assert.Equal(330, Projection.WorthUsedUp(null, "wool", 1.1f, 300, 10000));
             Assert.Equal(0, Projection.WorthUsedUp(null, "wool", 0f, 300, 10000));
         }
 
@@ -122,11 +122,53 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_window_is_read_to_the_nearest_quarter_day()
+        public void The_window_glides_between_the_quarter_days_either_side_of_the_ride()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 20, 400, 0.6f) };
-            Assert.Equal(0, Projection.UnitsLanding(listed, "grain", 0.6f));
-            Assert.Equal(20, Projection.UnitsLanding(listed, "grain", 0.7f));
+            Assert.Equal(0, Projection.UnitsLanding(listed, "grain", 0.5f));
+            Assert.Equal(8, Projection.UnitsLanding(listed, "grain", 0.6f));
+            Assert.Equal(16, Projection.UnitsLanding(listed, "grain", 0.7f));
+            Assert.Equal(20, Projection.UnitsLanding(listed, "grain", 0.75f));
+        }
+
+        [Fact]
+        public void A_ride_under_a_quarter_day_counts_only_what_lands_around_its_own_end()
+        {
+            var listed = new List<Landing> { Coming("velvet", "velvet", 4, 2000, 0.2f) };
+            var coming = new List<Spending> { Bought("velvet", 1000, 0.2f) };
+            var drawn = new List<Draw> { Taken("velvet", 1000, 0.2f) };
+            Assert.Equal(0, Projection.UnitsLanding(listed, "velvet", 0.1f, graded: true));
+            Assert.Equal(0, Projection.WorthLanding(listed, "velvet", 0.1f, graded: true));
+            Assert.Equal(0, Projection.WorthBought(coming, "velvet", 0.1f, graded: true));
+            Assert.Equal(0, Projection.WorthUsedUp(drawn, "velvet", 0.1f, 0, 10000, graded: true));
+            Assert.Equal(3, Projection.UnitsLanding(listed, "velvet", 0.24f, graded: true));
+        }
+
+        [Fact]
+        public void The_forecast_meets_itself_at_the_quarter_day_with_no_step()
+        {
+            var listed = new List<Landing>
+            {
+                Coming("oil", "oil", 40, 4000, 0.2f), Coming("oil", "oil", 40, 4000, 0.3f), Coming("oil", "oil", 40, 4000, 0.4f)
+            };
+            var coming = new List<Spending> { Bought("oil", 4000, 0.3f) };
+            var drawn = new List<Draw> { Taken("oil", 4000, 0.3f) };
+            const float below = 0.25f - 1e-4f, above = 0.25f + 1e-4f;
+            Assert.InRange(Math.Abs(Projection.UnitsLanding(listed, "oil", below, true) -
+                                       Projection.UnitsLanding(listed, "oil", above, true)), 0, 1);
+            Assert.InRange(Math.Abs(Projection.WorthLanding(listed, "oil", below, true) -
+                                       Projection.WorthLanding(listed, "oil", above, true)), 0, 20);
+            Assert.InRange(Math.Abs(Projection.WorthBought(coming, "oil", below, true) -
+                                       Projection.WorthBought(coming, "oil", above, true)), 0, 20);
+            Assert.InRange(Math.Abs(Projection.WorthUsedUp(drawn, "oil", below, 300, 100000, true) -
+                                       Projection.WorthUsedUp(drawn, "oil", above, 300, 100000, true)), 0, 20);
+            int before = Projection.WorthLanding(listed, "oil", 0.01f, true);
+            for (float days = 0.02f; days <= 1.5f; days += 0.01f)
+            {
+                int now = Projection.WorthLanding(listed, "oil", days, true);
+                Assert.True(Math.Abs(now - before) <= 1000, "the forecast stepped by " + (now - before) + " at " + days);
+                before = now;
+            }
         }
 
         [Fact]
@@ -147,6 +189,43 @@ namespace TradeLord.Tests
             Assert.Equal(0, Projection.UnitsLanding(new List<Landing>(), "grain", 2f));
             Assert.Equal(0, Projection.UnitsLanding(new List<Landing> { Coming("grain", "grain", 20, 400, 1f) },
                                                     null, 2f));
+        }
+
+        [Fact]
+        public void A_forecast_figure_is_made_of_its_sources_and_what_the_shelf_held_it_to()
+        {
+            var listed = new List<Landing>
+            {
+                new Landing { Item = "grain", Category = "grain", Units = 10, Worth = 200, Days = 0.5f, From = 0 },
+                new Landing { Item = "grain", Category = "grain", Units = 5, Worth = 100, Days = 0.5f, From = 1 },
+                new Landing { Item = "grain", Category = "grain", Units = 4, Worth = 80, Days = 0.5f, From = 2 },
+                new Landing { Item = "grain", Category = "grain", Units = 3, Worth = 60, Days = 0.5f, From = Projection.FromWorkshops }
+            };
+            var coming = new List<Spending> { Bought("grain", 50, 0.5f) };
+            var drawn = new List<Draw> { Taken("grain", 30, 0.5f) };
+            int[] parts = Projection.WorthParts(listed, coming, drawn, "grain", 1f, 40, 5000, true, 70, 20, out int figure);
+            Assert.Equal(new[] { 200, 100, 80, 60, 70, -50, -20, -30, -40, 0 }, parts);
+            int landing = TradeMath.ShelfAfterLanding(Projection.WorthLanding(listed, "grain", 1f, true), 70);
+            int leaving = TradeMath.AddedUp(TradeMath.AddedUp(Projection.WorthBought(coming, "grain", 1f, true), 20),
+                                            Projection.WorthUsedUp(drawn, "grain", 1f, 40, 5000 + landing, true));
+            Assert.Equal(TradeMath.WorthShift(landing, leaving), figure);
+            int sum = 0;
+            foreach (int one in parts) sum += one;
+            Assert.Equal(figure, sum);
+            int[] held = Projection.WorthParts(null, coming, drawn, "grain", 1f, 400, 100, true, 0, 20, out int capped);
+            Assert.Equal(-100, capped);
+            Assert.Equal(-50 - 20 - 30 - 400 + held[9], capped);
+            Assert.True(held[9] > 0);
+            int[] village = Projection.WorthParts(listed, coming, drawn, "grain", 1f, 40, 0, false, 0, 0, out int there);
+            Assert.Equal(0, village[7]);
+            Assert.Equal(0, village[8]);
+            Assert.Equal(440 - 50, there);
+            Assert.Equal(0, village[9]);
+            float[] soonest = Projection.SoonestLanding(listed, "grain");
+            Assert.Equal(new[] { 0.5f, 0.5f, 0.5f, 0.5f }, soonest);
+            listed.Add(new Landing { Item = "grain", Category = "grain", Units = 0, Worth = 0, Days = 0.1f, From = 0 });
+            Assert.Equal(0.5f, Projection.SoonestLanding(listed, "grain")[0]);
+            Assert.True(float.IsNaN(Projection.SoonestLanding(null, "grain")[0]));
         }
 
         [Fact]
@@ -181,15 +260,15 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Worth_landing_keeps_the_window_and_the_quarter_day_too()
+        public void Worth_landing_keeps_the_window_and_glides_between_quarter_days_too()
         {
             var listed = new List<Landing>
             {
                 Coming("grain", "grain", 20, 400, 0.6f),
                 Coming("grain", "grain", 30, 600, 5f)
             };
-            Assert.Equal(0, Projection.WorthLanding(listed, "grain", 0.6f));
-            Assert.Equal(400, Projection.WorthLanding(listed, "grain", 0.7f));
+            Assert.Equal(160, Projection.WorthLanding(listed, "grain", 0.6f));
+            Assert.Equal(320, Projection.WorthLanding(listed, "grain", 0.7f));
             Assert.Equal(1000, Projection.WorthLanding(listed, "grain", 5f));
         }
 
@@ -218,11 +297,11 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_window_for_what_caravans_buy_is_read_to_the_nearest_quarter_day_as_well()
+        public void The_window_for_what_caravans_buy_glides_between_quarter_days_as_well()
         {
             var coming = new List<Spending> { Bought("grain", 500, 0.6f) };
-            Assert.Equal(0, Projection.WorthBought(coming, "grain", 0.6f));
-            Assert.Equal(500, Projection.WorthBought(coming, "grain", 0.7f));
+            Assert.Equal(200, Projection.WorthBought(coming, "grain", 0.6f));
+            Assert.Equal(400, Projection.WorthBought(coming, "grain", 0.7f));
         }
 
         [Fact]
@@ -513,6 +592,58 @@ namespace TradeLord.Tests
             Assert.Equal(4, Made(made, "cloth"));
             Assert.Equal(new[] { 0.5f, 1.5f, 2.5f, 3.5f }, made.ConvertAll(one => one.Days).ToArray());
             Assert.Equal(4 * 20, Drawn(taken));
+        }
+
+        [Fact]
+        public void Goods_on_their_way_in_feed_a_workshop_only_as_far_as_the_towns_purse_paid_for_them()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 0, 20);
+            Shelve(town, "cloth", 0, 150);
+            var arriving = new List<Landing>
+            {
+                new Landing { Category = "wool", Units = 4, Worth = 80, Days = 0.5f, Draw = 1 },
+                new Landing { Category = "wool", Units = 1, Worth = 20, Days = 0.5f }
+            };
+            WorkshopRuns.Days days = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, town,
+                                                        arriving, null, Flat);
+            var made = new List<Landing>();
+            var taken = new List<Draw>();
+            for (float at = 1f; at <= 5f; at += 1f) WorkshopRuns.Day(days, at, k => k == 0 ? 0.5d : 0d, made, taken);
+            Assert.Equal(3, Made(made, "cloth"));
+            Assert.Null(WorkshopRuns.Begin(new List<ShopLine>(), town, arriving, null, Flat));
+            Assert.Equal(0.5f, WorkshopRuns.FirstDay(0.5f));
+            Assert.Equal(1f, WorkshopRuns.FirstDay(float.NaN));
+            Assert.Equal(1f, WorkshopRuns.FirstDay(0f));
+        }
+
+        [Fact]
+        public void A_workshop_run_takes_its_input_price_into_the_purse_once_a_line_and_pays_at_most_1000_a_good()
+        {
+            TownBook town = Town(1, gold: 50000);
+            Shelve(town, "wool", 10, 20);
+            Shelve(town, "cloth", 0, 150);
+            var line = new ShopLine { Shop = 0, Progress = 0f, Speed = 1f, Pace = 5f };
+            line.Inputs.Add(("wool", 3));
+            line.Outputs.Add(("cloth", 2));
+            WorkshopRuns.Days days = WorkshopRuns.Begin(new List<ShopLine> { line }, town, null, null, Flat);
+            WorkshopRuns.Day(days, 1f, null, null, null);
+            Assert.Equal(20L, town.TakenIn);
+            Assert.Equal(300L, town.PaidOut);
+            Assert.Equal(50000 + 20 - 300, town.Gold);
+            TownBook dear = Town(1, gold: 50000, capital: 100000);
+            Shelve(dear, "wool", 10, 20);
+            Shelve(dear, "cloth", 0, 1500);
+            var rich = new ShopLine { Shop = 0, Progress = 0f, Speed = 1f, Pace = 5f };
+            rich.Inputs.Add(("wool", 1));
+            rich.Outputs.Add(("cloth", 2));
+            WorkshopRuns.Days dearDays = WorkshopRuns.Begin(new List<ShopLine> { rich }, dear, null, null,
+                                                            (kind, store, selling) => kind == "wool" ? 20 : 1500);
+            WorkshopRuns.Day(dearDays, 1f, null, null, null);
+            Assert.Equal(2000L, dear.PaidOut);
+            WorkshopRuns.Day(dearDays, 2f, null, null, null);
+            Assert.Equal(2000L, dear.PaidOut);
+            Assert.Equal(20L, dear.TakenIn);
         }
 
         [Fact]

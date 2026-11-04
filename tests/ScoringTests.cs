@@ -914,5 +914,23 @@ namespace TradeLord.Tests
                     Assert.True(read < 0 || read >= Scoring.FirstStepJudged(within));
                 }
         }
+
+        [Fact]
+        public void A_forecast_check_names_what_its_figure_was_made_of_and_when_each_source_landed()
+        {
+            var parts = new[] { 200, 0, 0, 60, 0, -50, 0, 0, -40, 10 };
+            string said = Scoring.MadeOf(parts, new[] { 0.5f, float.NaN, float.NaN, 1f }, 0.75f);
+            Assert.Equal("    made of: caravans on the road selling +200, workshops +60, caravans on the road buying -50, " +
+                         "the town's own use -40, held to the shelf +10; the soonest landing after it said so: " +
+                         "caravans on the road selling 12.0 h, workshops 24.0 h, and you walked in 18.0 h after it said so",
+                         said);
+            Assert.Null(Scoring.MadeOf(new int[10], null, 1f));
+            Assert.Null(Scoring.MadeOf(new int[3], null, 1f));
+            Assert.Null(Scoring.PartsAtTheWalkIn(null, 1f));
+            var ahead = new[] { new[] { 1 }, new[] { 2 }, new[] { 3 } };
+            Assert.Equal(new[] { 2 }, Scoring.PartsAtTheWalkIn(ahead, 0.5f));
+            Assert.Equal(new[] { 3 }, Scoring.PartsAtTheWalkIn(ahead, 4f));
+            Assert.Null(Scoring.PartsAtTheWalkIn(ahead, 0f));
+        }
     }
 }

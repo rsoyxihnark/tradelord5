@@ -2169,6 +2169,7 @@ namespace TradeLord
             _roadsLost = 0;
         }
 
+        // Intended-Behavior: every trade ride is standing point -> buy point -> sell point, timed only through these two functions
         internal static float EstimateDaysFromParty(Settlement target)
         {
             MobileParty party = MobileParty.MainParty;
@@ -2181,16 +2182,7 @@ namespace TradeLord
             {
                 if (ThePartyRoadWaitsForTheBackground(party, target)) return TradeMath.FurthestThereIs;
                 hit = RoadFromParty(party, target);
-                if (TradeMath.OutOfReach(RideFromParty(hit)))
-                {
-                    float fromHere = FromWhereYouStand(party, target);
-                    if (!TradeMath.OutOfReach(fromHere))
-                    {
-                        _roadsFound++;
-                        return fromHere;
-                    }
-                    _roadsLost++;
-                }
+                if (TradeMath.OutOfReach(RideFromParty(hit))) _roadsLost++;
                 else
                 {
                     _roadsFound++;
@@ -2199,13 +2191,6 @@ namespace TradeLord
             }
             else _roadsFound++;
             return RideFromParty(hit);
-        }
-
-        private static float FromWhereYouStand(MobileParty party, Settlement target)
-        {
-            Settlement inside = party.CurrentSettlement;
-            if (inside == null || ThePairRoadWaitsForTheBackground(inside, target)) return TradeMath.FurthestThereIs;
-            return RideBetween(PairRoad(inside, target), 0f, false);
         }
 
         private static Road PairRoad(Settlement a, Settlement b)
@@ -2262,6 +2247,7 @@ namespace TradeLord
             return _ratioHeld;
         }
 
+        // Intended-Behavior: every trade ride is standing point -> buy point -> sell point, timed only through these two functions
         internal static float EstimateDaysBetween(Settlement a, Settlement b, float after)
         {
             MobileParty party = MobileParty.MainParty;
@@ -2444,10 +2430,16 @@ namespace TradeLord
         {
             if (target == null) return "no market to ride to";
             string name = Tongue.Named(target.Name, target.StringId);
-            if (!_partyDist.TryGetValue(target.StringId, out Road road))
-                return "the ride to " + name + (MobileParty.MainParty?.CurrentSettlement != null
-                    ? " was timed from the market you stand in"
-                    : " was not timed from where your party stands this hour");
+            Settlement inside = MobileParty.MainParty?.CurrentSettlement;
+            Road road;
+            if (inside != null)
+            {
+                if (inside == target) return "the ride to " + name + " is no ride, as you stand in it";
+                if (!_pairDist.TryGetValue((inside.StringId, target.StringId), out road))
+                    return "the ride to " + name + " was not timed from the market you stand in this hour";
+            }
+            else if (!_partyDist.TryGetValue(target.StringId, out road))
+                return "the ride to " + name + " was not timed from where your party stands this hour";
             TradeMath.Pace pace = PartyPace();
             var tally = new TradeMath.Tally();
             float days = Ride(road, pace, _moment, 0d, false, tally);

@@ -341,5 +341,6 @@
 		<string id="TL513" text="TradeLord is still measuring {COUNT} road(s)"/>
 		<string id="TL514" text="The ledger fills in as the roads are measured, a little each frame, so the map never stops"/>
 		<string id="TL515" text="it would earn under a tenth a day of the best good to buy here"/>
+		<string id="TL516" text=" | Days? = as scanned, while the road from where you stand is still being measured"/>
 	</strings>
 </base>

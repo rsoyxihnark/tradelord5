@@ -242,6 +242,38 @@ namespace TradeLord
             return (stock, worth);
         }
 
+        internal static int[] PartsAtTheWalkIn(int[][] partsAhead, float since)
+        {
+            if (partsAhead == null || partsAhead.Length == 0) return null;
+            int step = (int)Math.Round(TradeMath.ToTheQuarterDay(since) / TradeMath.HorizonStep) - 1;
+            if (step < 0) return null;
+            return partsAhead[step < partsAhead.Length ? step : partsAhead.Length - 1];
+        }
+
+        private static readonly string[] PartNames =
+        {
+            "caravans on the road selling", "villagers on the road", "the villages' next trips", "workshops",
+            "caravans not bound yet selling", "caravans on the road buying", "caravans not bound yet buying",
+            "workshops taking inputs", "the town's own use", "held to the shelf"
+        };
+
+        internal static string MadeOf(int[] parts, float[] soonest, float since)
+        {
+            if (parts == null || parts.Length != PartNames.Length) return null;
+            var said = new List<string>();
+            for (int k = 0; k < parts.Length; k++)
+                if (parts[k] != 0) said.Add(PartNames[k] + " " + (parts[k] > 0 ? "+" : "") + parts[k]);
+            if (said.Count == 0) return null;
+            var landed = new List<string>();
+            for (int k = 0; soonest != null && k < soonest.Length && k < 4; k++)
+                if (!float.IsNaN(soonest[k])) landed.Add(PartNames[k] + " " + Figure(soonest[k] * 24f) + " h");
+            return "    made of: " + string.Join(", ", said.ToArray()) +
+                   (landed.Count > 0
+                       ? "; the soonest landing after it said so: " + string.Join(", ", landed.ToArray()) +
+                         ", and you walked in " + Figure(since * 24f) + " h after it said so"
+                       : "");
+        }
+
         private static int ReadAt(int[] ahead, int step)
         {
             if (ahead == null || ahead.Length == 0 || step < 0) return 0;

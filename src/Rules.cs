@@ -160,6 +160,17 @@ namespace TradeLord
             return !(targetJudged > holderJudged * AComebackMustBeatTheMarkBy);
         }
 
+        internal const float AGreatDealBeatsTheShadowBy = 1.5f;
+
+        internal const long AGreatDealEarnsTheShadowAtLeast = 300L;
+
+        internal static bool AGreatDealBeatsTheShadow(float judged, long earned, float markJudged, long markEarned) =>
+            judged > 0f && judged >= markJudged * AGreatDealBeatsTheShadowBy &&
+            earned - markEarned >= AGreatDealEarnsTheShadowAtLeast;
+
+        internal static bool AtAGate(bool onTheRoad, bool gatePending, bool cargoSame) =>
+            !onTheRoad || gatePending || !cargoSame;
+
         internal static bool MayTakeUpABuyFrom(bool atAGate, string candidateId, string shownId) =>
             atAGate || (candidateId != null && candidateId == shownId);
 

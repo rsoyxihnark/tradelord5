@@ -212,6 +212,7 @@ namespace TradeLord
         private void OnCaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
         {
             Guard.Run("Forecast.CaravanTraded", () => Forecast.ACaravanTraded(caravan, town, traded));
+            Guard.Run("RideCheck.CaravanTraded", () => RideCheck.ACaravanTraded(caravan, town, traded));
         }
 
         public override void SyncData(IDataStore dataStore)

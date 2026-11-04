@@ -85,6 +85,25 @@ namespace TradeLord
 
         private static readonly Dictionary<string, int> _wouldHold = new Dictionary<string, int>(StringComparer.Ordinal);
 
+        private sealed class ShopsAhead
+        {
+            internal WorkshopRuns.Days Days;
+            internal float First;
+            internal float Watch;
+            internal Dictionary<string, (ItemObject stands, float supply, float demand)> Standing;
+            internal Dictionary<string, ItemCategory> Kinds;
+        }
+
+        private static readonly Dictionary<string, ShopsAhead> _shopsAhead =
+            new Dictionary<string, ShopsAhead>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, List<(float days, int gold)>> _tillPaid =
+            new Dictionary<string, List<(float, int)>>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, double> _runSeen = new Dictionary<string, double>(StringComparer.Ordinal);
+
+        private const float JustBeforeTheTick = 1E-4f;
+
         private sealed class Turn
         {
             internal string Town;
@@ -159,6 +178,9 @@ namespace TradeLord
             _unseenUnits.Clear();
             _unseenWorth.Clear();
             _unseenBought.Clear();
+            _shopsAhead.Clear();
+            _tillPaid.Clear();
+            _runSeen.Clear();
             ForgetTheTurns();
             _saidItCouldNotRead = false;
         }
@@ -240,12 +262,9 @@ namespace TradeLord
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
             Build();
-            float low = TradeMath.TheQuarterDayBelow(withinDays);
-            float share = TradeMath.ShareOfTheQuarterDayAbove(withinDays, low);
-            int below = ShiftCachedAt(site, item, low);
-            return share > 0f
-                ? TradeMath.BlendedShift(below, ShiftCachedAt(site, item, low + TradeMath.HorizonStep), share)
-                : below;
+            TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);
+            int below = low >= TradeMath.HorizonStep ? ShiftCachedAt(site, item, low) : WorthShift(site, item, low);
+            return share > 0f ? TradeMath.BlendedShift(below, ShiftCachedAt(site, item, high), share) : below;
         }
 
         private static int ShiftCachedAt(Settlement site, ItemObject item, float quarterDay)
@@ -279,6 +298,31 @@ namespace TradeLord
             return leaving > most ? most : leaving;
         }
 
+        internal static int[] WorthParts(Settlement site, ItemObject item, float withinDays, out int figure)
+        {
+            figure = 0;
+            if (!On || site == null || item == null || item.ItemCategory == null) return null;
+            Build();
+            string kind = item.ItemCategory.StringId;
+            _landing.TryGetValue(site.StringId, out List<Landing> listed);
+            _spending.TryGetValue(site.StringId, out List<Spending> coming);
+            _drawing.TryGetValue(site.StringId, out List<Draw> drawn);
+            Town town = site.IsTown ? site.Town : null;
+            int shelf = town == null ? 0 : Guard.Read("Forecast.Shelf", town,
+                                                      where => where.MarketData.GetCategoryData(item.ItemCategory).InStoreValue, 0);
+            return Projection.WorthParts(listed, coming, drawn, kind, withinDays, UsedUpADay(site, item.ItemCategory), shelf,
+                                         town != null, Unseen(_unseenWorth, (site.StringId, kind), withinDays),
+                                         Unseen(_unseenBought, (site.StringId, kind), withinDays), out figure);
+        }
+
+        internal static float[] SoonestLanding(Settlement site, ItemObject item)
+        {
+            if (!On || site == null || item?.ItemCategory == null) return null;
+            Build();
+            _landing.TryGetValue(site.StringId, out List<Landing> listed);
+            return Projection.SoonestLanding(listed, item.ItemCategory.StringId);
+        }
+
         internal static int UsedUpADay(Settlement site, ItemObject item)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
@@ -297,8 +341,7 @@ namespace TradeLord
         {
             if (!from.TryGetValue(key, out List<(float lead, float perDay)> turns)) return 0;
             float within = TradeMath.Finite(withinDays, 0f);
-            float brought = TradeMath.WhatUnseenCaravansBring(
-                turns, within > TradeMath.HorizonStep ? within : TradeMath.ARideToTheQuarterDay(within));
+            float brought = TradeMath.WhatUnseenCaravansBring(turns, within);
             return brought >= int.MaxValue ? int.MaxValue : (int)Math.Round(brought);
         }
 
@@ -370,11 +413,14 @@ namespace TradeLord
             _unseenUnits.Clear();
             _unseenWorth.Clear();
             _unseenBought.Clear();
+            _shopsAhead.Clear();
+            _tillPaid.Clear();
             Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
             Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);
+            Guard.Run("Forecast.Purses", SettleThePurses);
             foreach (List<(float days, int gold)> paid in _tillPays.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
             foreach (List<(float days, int gold)> paid in _tillAhead.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
             foreach (List<(float days, int gold)> taken in _tillTakes.Values) taken.Sort((x, y) => x.days.CompareTo(y.days));
@@ -419,10 +465,13 @@ namespace TradeLord
                     int units = TradeMath.WhatVillagersSell(amount, till, price);
                     if (units <= 0) continue;
                     till -= units * price;
-                    NoteTheTillPays(bound, units * price, days, TillDraw.Villagers,
-                                    Naming ? party.HomeSettlement?.Name?.ToString() ?? party.Name?.ToString() : null);
+                    int draw = NoteTheTillPays(bound, units * price, days, TradeMath.TillDraw.Villagers,
+                                               Naming ? party.HomeSettlement?.Name?.ToString() ?? party.Name?.ToString()
+                                                      : null,
+                                               party.HomeSettlement?.StringId ?? party.StringId);
                     if (TradePolicy.Priced(item))
-                        Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);
+                        Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days, draw,
+                             (int)TradeMath.TillDraw.Villagers);
                 }
             }
         }
@@ -565,23 +614,102 @@ namespace TradeLord
             {
                 var unseen = new List<(float days, int gold)>();
                 TradeMath.UnseenDraws(one.Value, TradeMath.MostDaysTheUnseenDrawAPurse, unseen);
-                var ahead = _tillPays.TryGetValue(one.Key, out List<(float days, int gold)> paid)
-                    ? new List<(float, int)>(paid)
-                    : new List<(float, int)>();
-                ahead.AddRange(unseen);
-                _tillAhead[one.Key] = ahead;
-                if (Naming) _unseenPaysOut[one.Key] = unseen;
+                _unseenPaysOut[one.Key] = unseen;
             }
             foreach (KeyValuePair<string, List<(float lead, float perDay)>> one in takes)
             {
                 var unseen = new List<(float days, int gold)>();
                 TradeMath.UnseenDraws(one.Value, TradeMath.MostDaysTheUnseenDrawAPurse, unseen);
-                var ahead = _tillTakes.TryGetValue(one.Key, out List<(float days, int gold)> taken)
-                    ? new List<(float, int)>(taken)
-                    : new List<(float, int)>();
-                ahead.AddRange(unseen);
-                _tillTakesAhead[one.Key] = ahead;
-                if (Naming) _unseenTakesIn[one.Key] = unseen;
+                _unseenTakesIn[one.Key] = unseen;
+            }
+        }
+
+        private static void SettleThePurses()
+        {
+            MBReadOnlyList<Town> towns = Town.AllTowns;
+            for (int i = 0; towns != null && i < towns.Count; i++)
+            {
+                Town town = towns[i];
+                if (town?.Settlement?.StringId == null) continue;
+                Guard.Run("Forecast.Purse", town, SettleThePurse);
+            }
+        }
+
+        private static void SettleThePurse(Town town)
+        {
+            Settlement site = town.Settlement;
+            string id = site.StringId;
+            _tillPays.TryGetValue(id, out List<(float days, int gold)> claims);
+            _tillTakes.TryGetValue(id, out List<(float days, int gold)> takes);
+            _shopsAhead.TryGetValue(id, out ShopsAhead shops);
+            var draws = new List<(float days, int gold)>();
+            var takings = takes != null ? new List<(float, int)>(takes) : new List<(float, int)>();
+            if ((claims != null && claims.Count > 0) || shops != null)
+            {
+                var made = new List<Landing>();
+                var taken = new List<Draw>();
+                var shopDays = new List<float>();
+                Func<float, double, Func<int, double>, double> run = null;
+                if (shops != null)
+                {
+                    for (float at = shops.First; at <= shops.Watch; at += 1f) shopDays.Add(at);
+                    run = (at, till, share) =>
+                    {
+                        TownBook book = shops.Days.Town;
+                        book.Gold = (int)Math.Min(int.MaxValue, Math.Round(till));
+                        WorkshopRuns.Day(shops.Days, at, share, made, taken);
+                        if (book.TakenIn > 0L)
+                            takings.Add((at - 2f * JustBeforeTheTick, (int)Math.Min(int.MaxValue, book.TakenIn)));
+                        if (book.PaidOut > 0L)
+                            draws.Add((at - JustBeforeTheTick, (int)Math.Min(int.MaxValue, book.PaidOut)));
+                        return book.Gold;
+                    };
+                }
+                int gold = town.Gold;
+                double[] paid = TradeMath.WhatAPurseCanPay(gold, WouldHold(site, gold), claims, takes,
+                                                           TheTownTicksIn(site), ConsumptionIncome(site),
+                                                           TradeMath.MostDaysTheUnseenDrawAPurse, shopDays, run);
+                if (claims != null && claims.Count > 0)
+                {
+                    var settled = new List<(float days, int gold)>(claims.Count);
+                    for (int i = 0; i < claims.Count; i++)
+                    {
+                        int pays = (int)Math.Min(int.MaxValue, Math.Round(paid[i]));
+                        settled.Add((claims[i].days, pays));
+                        if (pays > 0) draws.Add((claims[i].days, pays));
+                    }
+                    _tillPaid[id] = settled;
+                    if (_landing.TryGetValue(id, out List<Landing> listed)) PaidFor(listed, claims, paid);
+                }
+                if (shops != null)
+                {
+                    foreach (Landing one in made)
+                        Note(site, shops.Standing[one.Category].stands.StringId, shops.Kinds[one.Category], one.Units, one.Worth, one.Days,
+                             0, Projection.FromWorkshops);
+                    foreach (Draw one in taken)
+                        NoteADraw(site, shops.Kinds[one.Category], one.Worth, one.Days);
+                }
+            }
+            if (_unseenPaysOut.TryGetValue(id, out List<(float days, int gold)> unseenDraws)) draws.AddRange(unseenDraws);
+            if (_unseenTakesIn.TryGetValue(id, out List<(float days, int gold)> unseenTakes)) takings.AddRange(unseenTakes);
+            _tillAhead[id] = draws;
+            _tillTakesAhead[id] = takings;
+        }
+
+        private static void PaidFor(List<Landing> listed, List<(float days, int gold)> claims, double[] paid)
+        {
+            for (int k = listed.Count - 1; k >= 0; k--)
+            {
+                Landing one = listed[k];
+                int at = one.Draw - 1;
+                if (at < 0 || at >= claims.Count || claims[at].gold <= 0) continue;
+                double share = paid[at] / claims[at].gold;
+                if (!(share < 1d)) continue;
+                if (share < 0d) share = 0d;
+                one.Units = (int)Math.Round(one.Units * share, MidpointRounding.AwayFromZero);
+                one.Worth = (int)Math.Round(one.Worth * share, MidpointRounding.AwayFromZero);
+                if (one.Units <= 0 && one.Worth <= 0) listed.RemoveAt(k);
+                else listed[k] = one;
             }
         }
 
@@ -720,10 +848,12 @@ namespace TradeLord
                     int sold = TradeMath.WhatVillagersSell(units, till, price);
                     if (sold <= 0) continue;
                     till -= sold * price;
-                    NoteTheTillPays(town, sold * price, load.Days, TillDraw.VillagesNextTrips, Naming ? home.Name?.ToString() : null);
+                    int draw = NoteTheTillPays(town, sold * price, load.Days, TradeMath.TillDraw.VillagesNextTrips,
+                                               Naming ? home.Name?.ToString() : null, home.StringId);
                     if (!TradePolicy.Priced(item)) continue;
                     int worth = TradeMath.WorthOf(sold, item.Value);
-                    Note(town, item.StringId, item.ItemCategory, sold, worth, load.Days);
+                    Note(town, item.StringId, item.ItemCategory, sold, worth, load.Days, draw,
+                         (int)TradeMath.TillDraw.VillagesNextTrips);
                     _villageWorth = TradeMath.AddedUp(_villageWorth, worth);
                     landed = true;
                 }
@@ -875,14 +1005,16 @@ namespace TradeLord
                     if (units <= 0) continue;
                     sold[k] = units;
                     till -= units * price;
-                    NoteTheTillPays(bound, units * price, days, TillDraw.Caravans,
-                                    Naming ? caravan.Name + " (" + caravan.StringId + ")" : null);
+                    int draw = NoteTheTillPays(bound, units * price, days, TradeMath.TillDraw.Caravans,
+                                               Naming ? caravan.Name + " (" + caravan.StringId + ")" : null,
+                                               caravan.StringId);
                     earned += (long)units * price;
                     shed += units * item.Weight;
                     if (haul) hauling -= units;
                     else if (livestock) herd -= units;
                     if (TradePolicy.Priced(item))
-                        Note(bound, item.StringId, kind, units, TradeMath.WorthOf(units, item.Value), days);
+                        Note(bound, item.StringId, kind, units, TradeMath.WorthOf(units, item.Value), days, draw,
+                             (int)TradeMath.TillDraw.Caravans);
                 }
 
             for (int k = 0; k < carried.Count; k++)
@@ -993,7 +1125,6 @@ namespace TradeLord
                 Warehouse = new int[shops.Length]
             };
             WorkshopModel pace = Campaign.Current.Models.WorkshopModel;
-            double lastRun = double.MinValue;
             for (int k = 0; k < shops.Length; k++)
             {
                 Workshop shop = shops[k];
@@ -1007,7 +1138,6 @@ namespace TradeLord
                 float toTown = yours && warehouse != null
                     ? 1f - MathF.Clamp(TradeMath.Finite(warehouse.GetStockProductionInWarehouseRatio(shop), 0f), 0f, 1f)
                     : 1f;
-                if (shop.LastRunCampaignTime.ToDays > lastRun) lastRun = shop.LastRunCampaignTime.ToDays;
                 for (int p = 0; p < type.Productions.Count; p++)
                 {
                     WorkshopType.Production production = type.Productions[p];
@@ -1063,14 +1193,16 @@ namespace TradeLord
                     if (one.Category != null && standing.ContainsKey(one.Category))
                         bought.Add((one.Days, one.Category, Projection.UnitsLeaving(one.Worth, book.UnitValue[one.Category])));
 
-            var made = new List<Landing>();
-            var taken = new List<Draw>();
-            WorkshopRuns.Follow(lines, book, TradeMath.NextDailyTickIn(CampaignTime.Now.ToDays - lastRun), watch,
-                                arriving, bought, price, made, taken);
-            foreach (Landing one in made)
-                Note(site, standing[one.Category].stands.StringId, kinds[one.Category], one.Units, one.Worth, one.Days);
-            foreach (Draw one in taken)
-                NoteADraw(site, kinds[one.Category], one.Worth, one.Days);
+            WorkshopRuns.Days days = WorkshopRuns.Begin(lines, book, arriving, bought, price);
+            if (days == null) return;
+            _shopsAhead[site.StringId] = new ShopsAhead
+            {
+                Days = days,
+                First = WorkshopRuns.FirstDay(TradeMath.NextDailyTickIn(DaysSinceTheTick(site))),
+                Watch = watch,
+                Standing = standing,
+                Kinds = kinds
+            };
         }
 
         private static bool Listed(MBReadOnlyList<(ItemCategory, int)> said, List<(string category, int count)> into,
@@ -1242,10 +1374,8 @@ namespace TradeLord
             taken.Add((days, kept));
         }
 
-        internal enum TillDraw { Caravans, Villagers, VillagesNextTrips }
-
-        private static readonly Dictionary<string, List<(float days, int gold, TillDraw from, string who)>> _tillPaysBy =
-            new Dictionary<string, List<(float, int, TillDraw, string)>>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, List<(float days, int gold, TradeMath.TillDraw from, string who, string id)>>
+            _tillPaysBy = new Dictionary<string, List<(float, int, TradeMath.TillDraw, string, string)>>(StringComparer.Ordinal);
 
         private static readonly Dictionary<string, List<(float days, int gold)>> _unseenPaysOut =
             new Dictionary<string, List<(float, int)>>(StringComparer.Ordinal);
@@ -1255,22 +1385,25 @@ namespace TradeLord
 
         private static bool Naming => Options.Current.ExtendedDebugLogging;
 
-        private static void NoteTheTillPays(Settlement site, int gold, float days, TillDraw from, string who)
+        private static int NoteTheTillPays(Settlement site, int gold, float days, TradeMath.TillDraw from, string who,
+                                           string id)
         {
-            if (site == null || gold <= 0) return;
+            if (site == null || gold <= 0) return 0;
             if (!_tillPays.TryGetValue(site.StringId, out List<(float days, int gold)> paid))
             {
                 paid = new List<(float, int)>();
                 _tillPays[site.StringId] = paid;
             }
             paid.Add((days, gold));
-            if (!Naming) return;
-            if (!_tillPaysBy.TryGetValue(site.StringId, out List<(float days, int gold, TillDraw from, string who)> by))
+            if (!Naming) return paid.Count;
+            if (!_tillPaysBy.TryGetValue(site.StringId,
+                                         out List<(float days, int gold, TradeMath.TillDraw from, string who, string id)> by))
             {
-                by = new List<(float, int, TillDraw, string)>();
+                by = new List<(float, int, TradeMath.TillDraw, string, string)>();
                 _tillPaysBy[site.StringId] = by;
             }
-            by.Add((days, gold, from, who ?? "?"));
+            by.Add((days, gold, from, who ?? "?", id));
+            return paid.Count;
         }
 
         internal static string WhoDrawsTheTill(Settlement site, float withinDays)
@@ -1279,12 +1412,14 @@ namespace TradeLord
             Build();
             int unseenDraw = WhatCounts(_unseenPaysOut, site.StringId, withinDays);
             int unseenTake = WhatCounts(_unseenTakesIn, site.StringId, withinDays);
-            var draws = new List<(int gold, int from, string who)>();
-            if (_tillPaysBy.TryGetValue(site.StringId, out List<(float days, int gold, TillDraw from, string who)> by))
+            var draws = new List<(int gold, TradeMath.TillDraw from, string who, string id)>();
+            if (_tillPaysBy.TryGetValue(site.StringId,
+                                        out List<(float days, int gold, TradeMath.TillDraw from, string who, string id)> by))
                 foreach (var one in by)
                 {
                     double counts = TradeMath.TheShareThatCounts(one.gold, one.days, withinDays);
-                    if (counts >= 0.5d) draws.Add(((int)Math.Min(int.MaxValue, Math.Round(counts)), (int)one.from, one.who));
+                    if (counts >= 0.5d)
+                        draws.Add(((int)Math.Min(int.MaxValue, Math.Round(counts)), one.from, one.who, one.id));
                 }
             if (draws.Count == 0 && unseenDraw == 0 && unseenTake == 0) return null;
             var split = TradeMath.TillDrawsBySource(draws, TopDrawers);
@@ -1322,9 +1457,11 @@ namespace TradeLord
                                                TheTownTicksIn(site), ConsumptionIncome(site));
         }
 
-        internal static float TheTownTicksIn(Settlement site)
+        internal static float TheTownTicksIn(Settlement site) => TradeMath.ATownTicksIn(DaysSinceTheTick(site));
+
+        private static double DaysSinceTheTick(Settlement site)
         {
-            if (site?.Town == null) return float.NaN;
+            if (site?.Town == null || site.StringId == null) return double.NaN;
             double lastRun = double.MinValue;
             Workshop[] shops = site.Town.Workshops;
             for (int k = 0; shops != null && k < shops.Length; k++)
@@ -1333,9 +1470,12 @@ namespace TradeLord
                 if (shop?.WorkshopType != null && shop.LastRunCampaignTime.ToDays > lastRun)
                     lastRun = shop.LastRunCampaignTime.ToDays;
             }
-            return lastRun > double.MinValue
-                ? TradeMath.ATownTicksIn(CampaignTime.Now.ToDays - lastRun)
-                : float.NaN;
+            double now = CampaignTime.Now.ToDays;
+            double since = lastRun > double.MinValue ? now - lastRun : double.NaN;
+            if (since >= 0d && since <= TradeMath.DaysARunTellsTheTickFor) _runSeen[site.StringId] = lastRun;
+            return TradeMath.DaysSinceTheTick(since, _runSeen.TryGetValue(site.StringId, out double seen)
+                                                         ? now - seen
+                                                         : double.NaN);
         }
 
         private static int ConsumptionIncome(Settlement site)
@@ -1400,6 +1540,45 @@ namespace TradeLord
             return (int)Math.Min(Math.Round(sum), int.MaxValue);
         }
 
+        internal static List<(string id, string name, float days, int want, int paid)> TheCaravansDrawing(Settlement site)
+        {
+            if (!On || site == null) return null;
+            Build();
+            if (!_tillPaysBy.TryGetValue(site.StringId,
+                                         out List<(float days, int gold, TradeMath.TillDraw from, string who, string id)> by))
+                return null;
+            _tillPaid.TryGetValue(site.StringId, out List<(float days, int gold)> paid);
+            bool aligned = paid != null && paid.Count == by.Count;
+            var at = new Dictionary<string, int>(StringComparer.Ordinal);
+            var drawing = new List<(string id, string name, float days, int want, int paid)>();
+            for (int i = 0; i < by.Count; i++)
+            {
+                var one = by[i];
+                if (one.from != TradeMath.TillDraw.Caravans || one.id == null || one.gold <= 0) continue;
+                int gets = aligned ? paid[i].gold : one.gold;
+                if (!at.TryGetValue(one.id, out int k))
+                {
+                    at[one.id] = drawing.Count;
+                    drawing.Add((one.id, one.who, one.days, one.gold, gets));
+                    continue;
+                }
+                var had = drawing[k];
+                drawing[k] = (had.id, had.name, Math.Min(had.days, one.days), TradeMath.AddedUp(had.want, one.gold),
+                              TradeMath.AddedUp(had.paid, gets));
+            }
+            return drawing;
+        }
+
+        internal static int TillPaidOutBefore(Settlement site, float withinDays)
+        {
+            if (!On || site == null) return 0;
+            Build();
+            if (!_tillPaid.TryGetValue(site.StringId, out List<(float days, int gold)> paid)) return 0;
+            double sum = 0d;
+            for (int i = 0; i < paid.Count; i++) sum += TradeMath.TheShareThatCounts(paid[i].gold, paid[i].days, withinDays);
+            return (int)Math.Min(Math.Round(sum), int.MaxValue);
+        }
+
         internal static int TillPaysOutBefore(Settlement site, float withinDays)
         {
             if (!On || site == null) return 0;
@@ -1433,7 +1612,7 @@ namespace TradeLord
         }
 
         private static void Note(Settlement site, string item, ItemCategory category,
-                                 int units, int worth, float days)
+                                 int units, int worth, float days, int draw, int from)
         {
             if (site == null || units <= 0) return;
             if (!_landing.TryGetValue(site.StringId, out List<Landing> listed))
@@ -1447,7 +1626,9 @@ namespace TradeLord
                 Category = category == null ? null : category.StringId,
                 Units = units,
                 Worth = worth,
-                Days = days
+                Days = days,
+                Draw = draw,
+                From = from
             });
         }
     }
