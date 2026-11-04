@@ -341,5 +341,6 @@
 		<string id="TL513" text="TradeLord 仍在测量 {COUNT} 条道路"/>
 		<string id="TL514" text="账簿会随着道路被测量而陆续填满，每帧测一点，所以地图不会卡住"/>
 		<string id="TL515" text="它每天的收益不到此处最值得买的货物的十分之一"/>
+		<string id="TL516" text=" | 天数? = 按扫描时的数值，你所在之处出发的道路仍在测量"/>
 	</strings>
 </base>

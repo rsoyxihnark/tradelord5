@@ -226,6 +226,10 @@ namespace TradeLord.Tests
             Marks.RememberABeatenMark(beaten, "atphynia", 102, true, true, true);
             Assert.True(Marks.ComesBackTooSoon(beaten, "vostrum", 103, true, 300f, 261f));
             Assert.True(Marks.ComesBackTooSoon(beaten, "atphynia", 103, true, 300f, 261f));
+            Assert.False(Marks.AtAGate(true, false, true));
+            Assert.True(Marks.AtAGate(true, true, true));
+            Assert.True(Marks.AtAGate(false, false, true));
+            Assert.True(Marks.AtAGate(true, false, false));
         }
 
         [Fact]
@@ -308,6 +312,18 @@ namespace TradeLord.Tests
             Assert.Equal(100f, Marks.SellSideWithItsOwnRoute(10f, -50f, 300f, 3f));
             Assert.Equal(36f, Marks.SellSideWithItsOwnRoute(36f, 93f, float.NaN, 3f));
             Assert.Equal(36f, Marks.SellSideWithItsOwnRoute(36f, 93f, -20f, 3f));
+        }
+
+        [Fact]
+        public void The_shadow_marker_leaves_its_market_on_the_road_only_for_half_as_much_again_and_300_more_profit()
+        {
+            Assert.True(Marks.AGreatDealBeatsTheShadow(150f, 1300L, 100f, 1000L));
+            Assert.False(Marks.AGreatDealBeatsTheShadow(149f, 1300L, 100f, 1000L));
+            Assert.False(Marks.AGreatDealBeatsTheShadow(150f, 1299L, 100f, 1000L));
+            Assert.False(Marks.AGreatDealBeatsTheShadow(0f, 5000L, 0f, 0L));
+            Assert.True(Marks.AGreatDealBeatsTheShadow(10f, 300L, 0f, 0L));
+            Assert.Equal(1.5f, Marks.AGreatDealBeatsTheShadowBy);
+            Assert.Equal(300L, Marks.AGreatDealEarnsTheShadowAtLeast);
         }
     }
 }

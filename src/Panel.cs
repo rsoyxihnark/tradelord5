@@ -22,12 +22,22 @@ namespace TradeLord
         private readonly TradeRoute _route;
         private readonly Action<Settlement> _centerMap;
         private readonly float _rank;
+        private readonly float _days;
+        private readonly float _key;
+        private readonly bool _asScanned;
 
         public RouteRowVM(TradeRoute route, bool alternate, float rank, Action<Settlement> centerMap)
+            : this(route, alternate, rank, centerMap, route.TravelDays, route.Key, false) { }
+
+        internal RouteRowVM(TradeRoute route, bool alternate, float rank, Action<Settlement> centerMap, float days,
+                            float key, bool asScanned)
         {
             _route = route;
             _centerMap = centerMap;
             _rank = rank;
+            _days = days;
+            _key = key;
+            _asScanned = asScanned;
             IsAlternateRow = alternate;
         }
 
@@ -49,7 +59,7 @@ namespace TradeLord
         [DataSourceProperty] public string Quantity =>
             "x" + _route.Quantity + (_route.StillComing ? "!" : "");
         [DataSourceProperty] public string Profit => "+" + _route.TotalProfit;
-        [DataSourceProperty] public string Days => "~" + _route.TravelDays.ToString("0.#");
+        [DataSourceProperty] public string Days => "~" + _days.ToString("0.#") + (_asScanned ? "?" : "");
 
         [DataSourceProperty] public string RunsOut
         {
@@ -70,7 +80,7 @@ namespace TradeLord
             (int)Math.Round(_route.Confidence * 100f) + (_route.Simulated ? "%" : "%*");
 
         [DataSourceProperty] public string Score =>
-            _route.Key < 10f ? _route.Key.ToString("0.#") : ((int)_route.Key).ToString();
+            _key < 10f ? _key.ToString("0.#") : ((int)_key).ToString();
 
         public void ExecuteClickBuyTown() => _centerMap?.Invoke(_route.From);
         public void ExecuteClickSellTown() => _centerMap?.Invoke(_route.To);
@@ -484,11 +494,30 @@ namespace TradeLord
             TradeXpText = Line("{=TL448}Trade XP: {AMOUNT}", "AMOUNT", earned.ToString("N0"));
 
             var rows = new MBBindingList<RouteRowVM>();
-            var routes = LedgerBehavior.Instance?.BestRoutes(30);
-            if (routes != null)
-                for (int i = 0; i < routes.Count; i++)
-                    rows.Add(new RouteRowVM(routes[i], i % 2 == 1,
-                        Ranks.Of(i, routes.Count), _centerMap));
+            bool onTheRoad = party != null && party.CurrentSettlement == null;
+            bool anyAsScanned = false;
+            if (!onTheRoad)
+            {
+                var routes = LedgerBehavior.Instance?.BestRoutes(RoutesShown);
+                if (routes != null)
+                    for (int i = 0; i < routes.Count; i++)
+                        rows.Add(new RouteRowVM(routes[i], i % 2 == 1,
+                            Ranks.Of(i, routes.Count), _centerMap));
+            }
+            else
+            {
+                var shown = FromWhereYouStand(LedgerBehavior.Instance?.BestRoutes(int.MaxValue));
+                var keys = new List<float>(shown.Count);
+                for (int i = 0; i < shown.Count; i++) keys.Add(shown[i].key);
+                List<int> order = TradeMath.ByShownScore(keys, RoutesShown);
+                for (int i = 0; i < order.Count; i++)
+                {
+                    var one = shown[order[i]];
+                    if (one.asScanned) anyAsScanned = true;
+                    rows.Add(new RouteRowVM(one.route, i % 2 == 1, Ranks.Of(i, order.Count), _centerMap,
+                                            one.days, one.key, one.asScanned));
+                }
+            }
             Routes = rows;
             bool empty = rows.Count == 0;
             LedgerBehavior ledger = LedgerBehavior.Instance;
@@ -537,6 +566,7 @@ namespace TradeLord
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
                           + Tongue.Text("{=TL417} | Left = how long from now that shelf still holds this Qty, and a shelf that empties first lowers Conf").ToString()
                         : ""))
+                + (anyAsScanned ? Tongue.Text("{=TL516} | Days? = as scanned, while the road from where you stand is still being measured").ToString() : "")
                 + (measuring && !empty ? " | " + roadsComing : "")
                 + HowThePromiseHasHeld()
                 + ResaleSafetyInUse()
@@ -598,6 +628,29 @@ namespace TradeLord
             return ago <= 0
                 ? Tongue.Text("{=TL442}Today").ToString()
                 : Line("{=TL420}{DAYS} day(s) ago", "DAYS", ago.ToString("N0"));
+        }
+
+        private const int RoutesShown = 30;
+
+        private static List<(TradeRoute route, float days, float key, bool asScanned)> FromWhereYouStand(
+            List<TradeRoute> routes)
+        {
+            var shown = new List<(TradeRoute route, float days, float key, bool asScanned)>(routes?.Count ?? 0);
+            for (int i = 0; routes != null && i < routes.Count; i++)
+            {
+                TradeRoute r = routes[i];
+                if (r == null) continue;
+                if (r.From == null || r.To == null)
+                {
+                    shown.Add((r, r.TravelDays, r.Key, false));
+                    continue;
+                }
+                float ride = Travel.EstimateDaysFromParty(r.From);
+                float days = TradeMath.OutOfReach(ride) ? ride : ride + Travel.EstimateDaysBetween(r.From, r.To, ride);
+                if (TradeMath.OutOfReach(days)) shown.Add((r, r.TravelDays, r.Key, true));
+                else shown.Add((r, days, TradeMath.KeyRetimed(r.Key, r.TravelDays, days), false));
+            }
+            return shown;
         }
 
         private static string WhatHeldQtyBack(LedgerBehavior ledger)

@@ -19,6 +19,8 @@ namespace TradeLord
             internal int WorthThen;
             internal int[] StockAhead;
             internal int[] WorthAhead;
+            internal int[][] PartsAhead;
+            internal float[] Soonest;
             internal int StockYours;
             internal int WorthYours;
         }
@@ -327,6 +329,7 @@ namespace TradeLord
             }
             int steps = Scoring.StepsItIsReadOver(withinDays);
             int[] stockAhead = null, worthAhead = null;
+            int[][] partsAhead = null;
             for (int step = Scoring.FirstStepJudged(withinDays); step < steps; step++)
             {
                 var (stock, worth) = Forecast.ShiftAt(site, item, Scoring.DaysAtStep(step));
@@ -335,9 +338,11 @@ namespace TradeLord
                 {
                     stockAhead = new int[steps];
                     worthAhead = new int[steps];
+                    if (Writing) partsAhead = new int[steps][];
                 }
                 stockAhead[step] = stock;
                 worthAhead[step] = worth;
+                if (partsAhead != null) partsAhead[step] = Forecast.WorthParts(site, item, Scoring.DaysAtStep(step), out _);
             }
             if (stockAhead == null) return;
             _said.Put(site.StringId, item.StringId, new Said
@@ -348,7 +353,9 @@ namespace TradeLord
                 StockThen = LedgerBehavior.StockOf(site, item),
                 WorthThen = WorthOnTheShelf(site, item),
                 StockAhead = stockAhead,
-                WorthAhead = worthAhead
+                WorthAhead = worthAhead,
+                PartsAhead = partsAhead,
+                Soonest = partsAhead == null ? null : Forecast.SoonestLanding(site, item)
             });
         }
 
@@ -404,6 +411,8 @@ namespace TradeLord
                 }
                 lines.Add(line + "; " + WorthShifted(said.worth, how.Moved) + Shared(how.Share) +
                           Yours(kept.WorthYours, true));
+                string parts = Scoring.MadeOf(Scoring.PartsAtTheWalkIn(kept.PartsAhead, since), kept.Soonest, since);
+                if (parts != null) lines.Add(parts);
             }
             foreach (KeyValuePair<string, Said> one in stillToCome) _said.Put(site.StringId, one.Key, one.Value);
             if (!Writing || scored + stale + early == 0) return;

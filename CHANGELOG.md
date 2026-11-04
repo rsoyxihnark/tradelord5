@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.9.0
+
+- Fixed Count what is on its way to a market counting goods as landing in a town whose purse could no longer pay for them
+- Fixed Count what is on its way to a market leaving out the gold a town pays its workshops for their goods and takes for their inputs
+- Fixed Count what is on its way to a market expecting a workshop to run on a day its town's purse could not pay for its goods
+- Fixed TradeLord refilling a poor town's purse bit by bit instead of at its daily tick once no workshop there had run for two days
+- Fixed the forecast counting goods that land hours after you arrive at a market less than six hours away
+- Fixed the forecast stock of a market jumping every six hours as your ride to it got shorter
+- The TradeLord ledger now shows Days and Score from where your party stands when you open it on the road, and orders its routes by that Score
+- On the road, a TradeLord ledger route whose road is still being measured shows its Days and Score as scanned, and says so
+- Fixed TradeLord.log describing the ride from the market you stand in along an old road
+- Fixed TradeLord.log taking two villages that share a name for one village counted twice
+- With Enable extended debug logging on, TradeLord.log now says what sellers on the road want from a town's purse and what it can pay them
+- With Enable extended debug logging on, TradeLord.log now says what each caravan Count what is on its way counted was to sell and what it sold
+- With Enable extended debug logging on, TradeLord.log now checks each hour how close its forecast of every town's purse came
+- With Enable extended debug logging on, TradeLord.log now says what other parties buying food and horses and selling loot do to a town's purse and stock
+- With Enable extended debug logging on, TradeLord.log now breaks each forecast check figure down into workshops, villagers, caravans and the town's own use
+- With Enable extended debug logging on, TradeLord.log now compares the map marker with one that believes good news only at the next market
+- With Enable extended debug logging on, TradeLord.log now counts each day the hours a new Buy From waited for you to enter or leave a market
+
 ## 2.8.9
 
 - Fixed the map marker sending you back and forth between two markets on the road while nothing had changed
