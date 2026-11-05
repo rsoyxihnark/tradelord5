@@ -367,6 +367,7 @@ namespace TradeLord
             _toldBoard.Clear();
             _gateWaits = 0;
             _gateWaitHour = -1;
+            _gateWeighHour = -1;
             Shadow.Forget();
         }
 
@@ -600,7 +601,7 @@ namespace TradeLord
         private static readonly Dictionary<string, int> _beatenOnTheRoad = new Dictionary<string, int>(System.StringComparer.Ordinal);
         private static bool _atAGate, _gatePending;
         private static int _moves, _secondHourMoves, _comebacksHeld, _comebacksLetThrough, _buyFromsTaken, _buyFromsDropped;
-        private static int _gateWaits, _gateWaitHour = -1;
+        private static int _gateWaits, _gateWaitHour = -1, _gateWeighHour = -1;
         private static float _turnedAwayHours;
 
         internal static void NoteATurnAway(float hours)
@@ -615,7 +616,8 @@ namespace TradeLord
                           "hour on the road with the same cargo; " + _comebacksHeld + " hour(s) it held back a comeback to a market " +
                           "it left on the road and " + _comebacksLetThrough + " comeback(s) let through; " + _buyFromsTaken + " Buy From(s) taken up " +
                           "and " + _buyFromsDropped + " dropped before you got there; " + _gateWaits + " hour(s) a new " +
-                          "Buy From waited for you to enter or leave a market; and " +
+                          "Buy From earning half again as much as what the map marker offered waited for you to enter " +
+                          "or leave a market; and " +
                           _turnedAwayHours.ToString("0.#", CultureInfo.InvariantCulture) +
                           " h of rides you turned away from");
             _moves = _secondHourMoves = _comebacksHeld = _comebacksLetThrough = _buyFromsTaken = _buyFromsDropped = 0;
@@ -840,16 +842,19 @@ namespace TradeLord
             var sold = new Dictionary<string, (float rate, float earned)>(System.StringComparer.Ordinal);
             var rows = new List<(string from, string to, float profit, float days)>();
             var own = new List<(string from, string to, float profit, float days)>();
+            var waiting = new List<(string from, string to, float profit, float days)>();
+            int hourNow = (int)CampaignTime.Now.ToHours;
+            bool weighTheWaiting = Options.Current.ExtendedDebugLogging && hourNow != _gateWeighHour;
             bool heldAtTheGate = false;
             foreach (TradeRoute r in scan.rows)
             {
                 if (r?.From == null || r.To == null || r.Leg == null || r.TotalProfit <= 0) continue;
                 if (!Marks.RowStillServes(age, r.Leg.ToBuy)) continue;
-                if (r.From != target && !Marks.MayTakeUpABuyFrom(_atAGate, r.From.StringId, _buyMark?.StringId))
+                bool held = r.From != target && !Marks.MayTakeUpABuyFrom(_atAGate, r.From.StringId, _buyMark?.StringId);
+                if (held)
                 {
-                    if (!heldAtTheGate) CountAGateWait();
                     heldAtTheGate = true;
-                    continue;
+                    if (!weighTheWaiting) continue;
                 }
                 if (!rides.TryGetValue(r.From, out float ride))
                 {
@@ -861,7 +866,20 @@ namespace TradeLord
                 float days = ride + Travel.EstimateDaysBetween(r.From, r.To, ride);
                 if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(r.To, days)) continue;
                 float profit = atConf ? r.TotalProfit * r.Confidence * r.Trust : r.TotalProfit;
-                (r.From == target ? own : rows).Add((r.From.StringId, r.To.StringId, profit, days));
+                (held ? waiting : r.From == target ? own : rows).Add((r.From.StringId, r.To.StringId, profit, days));
+            }
+            if (weighTheWaiting && heldAtTheGate)
+            {
+                _gateWeighHour = hourNow;
+                if (target != null && !sold.ContainsKey(target.StringId))
+                    sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure);
+                float youHave = target == null ? 0f : sold[target.StringId].rate;
+                var shown = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);
+                if (shown.from != null && shown.rate > youHave) youHave = shown.rate;
+                var yours = Marks.BestPlaceToGo(own, sold, null);
+                if (yours.from != null && yours.rate > youHave) youHave = yours.rate;
+                var waits = Marks.BestPlaceToGo(waiting, sold, null);
+                if (waits.from != null && Marks.AGreatBuyFromWaits(waits.rate, youHave)) CountAGateWait();
             }
             var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);
             if (best.from == null)
