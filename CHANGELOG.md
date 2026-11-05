@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.9.1
+
+- Fixed TradeLord.log counting nearly every hour on the road as an hour a new Buy From waited for you to enter or leave a market
+- Fixed TradeLord.log's weather step check reading a turn of the weather as a mismatch when night fell or day broke with it
+
 ## 2.9.0
 
 - Fixed Count what is on its way to a market counting goods as landing in a town whose purse could no longer pay for them

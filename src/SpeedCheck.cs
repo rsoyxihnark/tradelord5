@@ -54,6 +54,7 @@ namespace TradeLord
             internal float Factors;
             internal float Base;
             internal int Face;
+            internal bool Night;
         }
 
         private static PartyBefore _party;
@@ -250,6 +251,7 @@ namespace TradeLord
             _sky.Factors = speed.SumOfFactors;
             _sky.Base = speed.BaseNumber;
             _sky.Face = main.CurrentNavigationFace.FaceIndex;
+            _sky.Night = Campaign.Current.IsNight;
         }
 
         private static void ReadTheTurn(MobileParty main, int now)
@@ -259,6 +261,8 @@ namespace TradeLord
             if (pace == null || pace.Even) why = "your party's pace was not read from the game this hour";
             else if (main.CurrentNavigationFace.FaceIndex != _sky.Face)
                 why = "your party crossed onto other ground as the weather turned";
+            else if (Campaign.Current.IsNight != _sky.Night)
+                why = "night fell or day broke as the weather turned";
             ExplainedNumber speed = why == null ? Explained(main) : default(ExplainedNumber);
             if (why == null && Math.Abs(speed.BaseNumber - _sky.Base) > PacesAgreeWithin)
                 why = "your party's own pace changed as the weather turned";

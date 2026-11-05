@@ -174,6 +174,11 @@ namespace TradeLord
         internal static bool MayTakeUpABuyFrom(bool atAGate, string candidateId, string shownId) =>
             atAGate || (candidateId != null && candidateId == shownId);
 
+        internal const float AWaitingBuyFromBeatsWhatYouHaveBy = 1.5f;
+
+        internal static bool AGreatBuyFromWaits(float waitingRate, float rateYouHave) =>
+            waitingRate > 0f && waitingRate > rateYouHave * AWaitingBuyFromBeatsWhatYouHaveBy;
+
         internal static bool HoldsForASecondLook(bool holderPriced, bool afresh, bool cargoSame, int lostAt,
                                                  int hourNow) =>
             holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);

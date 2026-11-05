@@ -10990,7 +10990,7 @@ def every_extra_line_is_behind_the_one_log_switch_that_ships_on():
             and '[SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]\n'
                 '        public bool ExtensiveCursorDebugLogging' in M
             and screen.count("_o.ExtendedDebugLogging") == 2
-            and marker.count("Options.Current.ExtendedDebugLogging") == 10
+            and marker.count("Options.Current.ExtendedDebugLogging") == 11
             and "if (on && Options.Current.ExtendedDebugLogging)\n                Shadow.Weigh(how, how.Unheld == null ? was : null, _atAGate, hour, onTheRoad, target);" in marker
             and "if (ultra) how.Board = new List<Weighing>();" in marker
             and "if (_buyMark == null && Options.Current.ExtendedDebugLogging)" in method_body(marker, "private static string NoBuyFrom")
@@ -23084,13 +23084,13 @@ def the_sell_mark_and_every_buy_from_are_weighed_on_what_you_sell_there_and_buy_
     rule = method_body(S['Rules.cs'], "internal static (string from, string to, float profit, float sold, float days, float rate, int rows) BestPlaceToGo(")
     plain = method_body(S['Rules.cs'], "internal static (string from, string to, float profit, float days, float rate, int rows) BestBuyFrom(")
     return (show and earns and rule and plain
-            and ordered(show, "sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure, target);",
+            and ordered_last(show, "sold[r.From.StringId] = WhatYourCargoEarnsThere(r.From, ride, party, cargo, pressure, target);",
                         "var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);",
                         "sold[target.StringId] = WhatYourCargoEarnsThere(target, how.Days, party, cargo, pressure);",
                         "float sellRate = target == null ? 0f : sold[target.StringId].rate;",
                         "var mine = Marks.BestPlaceToGo(own, sold, null);",
                         "float sell = mine.from != null && mine.rate > sellRate ? mine.rate : sellRate;")
-            and show.count("Marks.BestPlaceToGo(") == 2 and "Marks.BestBuyFrom(" not in show
+            and show.count("Marks.BestPlaceToGo(") == 5 and "Marks.BestBuyFrom(" not in show
             and "how.Rate" not in show and "how.Value" not in show
             and ordered(earns, "int purse = PurseOf(s, ride);",
                         "Takings took = WhatItWouldSell(s, market, party, ride, cargo, purse, null, sellMark);",
@@ -23564,8 +23564,9 @@ def the_marker_holds_its_course_on_the_road():
             and "_beatenOnTheRoad.Clear();\n            _gatePending = true;" in method_body(m, "internal static void NoteTheWayOut")
             and "_beatenOnTheRoad.Clear();\n            _gatePending = true;" in method_body(m, "internal static void NoteTheWalkIn")
             and ordered(method_body(m, "private static string TheBuyTownToShow"), "bool heldAtTheGate = false;",
-                        "if (r.From != target && !Marks.MayTakeUpABuyFrom(_atAGate, r.From.StringId, _buyMark?.StringId))\n"
-                        "                {\n                    if (!heldAtTheGate) CountAGateWait();\n                    heldAtTheGate = true;\n                    continue;\n                }",
+                        "bool held = r.From != target && !Marks.MayTakeUpABuyFrom(_atAGate, r.From.StringId, _buyMark?.StringId);\n"
+                        "                if (held)\n                {\n                    heldAtTheGate = true;\n                    if (!weighTheWaiting) continue;\n                }",
+                        "(held ? waiting : r.From == target ? own : rows).Add(",
                         "var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);",
                         "return heldAtTheGate", '? NoBuyFrom(target, "gate",', ': NoBuyFrom(target, "reach",')
             and "TheHolderStays(ref how);\n                how.HeldForAComeback = true;\n                target = _picked;\n"
@@ -23927,16 +23928,51 @@ chk("2.9.0", "with extended debug logging on, TradeLord.log compares the map mar
 def the_marker_counts_the_hours_a_new_buy_from_waited_for_a_gate():
     m = S['Marker.cs']
     wait = method_body(m, "private static void CountAGateWait()")
-    return (wait
+    show = method_body(m, "private static string TheBuyTownToShow")
+    return (wait and show
             and ordered(wait, "if (hour == _gateWaitHour) return;", "_gateWaitHour = hour;", "_gateWaits++;")
             and '_gateWaits + " hour(s) a new " +' in m
-            and '"Buy From waited for you to enter or leave a market; and " +' in m
+            and '"Buy From earning half again as much as what the map marker offered waited for you to enter " +' in m
             and "_gateWaits = 0;" in method_body(m, "internal static void SayHowItHeldToday()")
+            and ordered(show, "bool weighTheWaiting = Options.Current.ExtendedDebugLogging && hourNow != _gateWeighHour;",
+                        "if (!weighTheWaiting) continue;",
+                        "(held ? waiting : r.From == target ? own : rows).Add(",
+                        "if (weighTheWaiting && heldAtTheGate)", "_gateWeighHour = hourNow;",
+                        "var shown = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);",
+                        "var yours = Marks.BestPlaceToGo(own, sold, null);",
+                        "var waits = Marks.BestPlaceToGo(waiting, sold, null);",
+                        "if (waits.from != null && Marks.AGreatBuyFromWaits(waits.rate, youHave)) CountAGateWait();",
+                        "var best = Marks.BestPlaceToGo(rows, sold, _buyMark?.StringId);")
+            and "_gateWeighHour = -1;" in method_body(m, "internal static void Forget()")
+            and "waitingRate > 0f && waitingRate > rateYouHave * AWaitingBuyFromBeatsWhatYouHaveBy;" in S['Rules.cs']
+            and "internal const float AWaitingBuyFromBeatsWhatYouHaveBy = 1.5f;" in S['Rules.cs']
+            and "A_Buy_From_held_for_a_gate_counts_as_waiting_only_when_it_earns_half_again_as_much" in BUYMARKTESTS
             and m.count("CountAGateWait();") == 1)
 
 
 chk("2.9.0", "with extended debug logging on, the map marker's daily line in TradeLord.log counts the hours a new Buy From waited for you to enter or leave a market",
     the_marker_counts_the_hours_a_new_buy_from_waited_for_a_gate())
+
+
+chk("2.9.1", "the hours a new Buy From waited for a gate count only an hour when a held Buy From earns half again as much as what the map marker offered, weighed the way the marker would weigh it",
+    the_marker_counts_the_hours_a_new_buy_from_waited_for_a_gate())
+
+
+def the_weather_step_is_not_read_across_nightfall():
+    check = S['SpeedCheck.cs']
+    turn = method_body(check, "private static void ReadTheTurn(MobileParty main, int now)")
+    watch = method_body(check, "private static void WatchTheWeather()")
+    return (turn and watch
+            and "internal bool Night;" in check
+            and ordered(watch, "_sky.Face = main.CurrentNavigationFace.FaceIndex;", "_sky.Night = Campaign.Current.IsNight;")
+            and ordered(turn, 'why = "your party crossed onto other ground as the weather turned";',
+                        "else if (Campaign.Current.IsNight != _sky.Night)",
+                        'why = "night fell or day broke as the weather turned";',
+                        "TradeMath.WeatherSteps("))
+
+
+chk("2.9.1", "the weather step check in TradeLord.log does not read a turn of the weather as a step when night falls or day breaks in the same hour",
+    the_weather_step_is_not_read_across_nightfall())
 
 
 def every_trade_ride_is_timed_through_the_two_ride_functions():

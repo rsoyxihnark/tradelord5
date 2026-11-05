@@ -243,6 +243,18 @@ namespace TradeLord.Tests
             Assert.False(Marks.MayTakeUpABuyFrom(false, null, null));
         }
 
+        [Fact]
+        public void A_Buy_From_held_for_a_gate_counts_as_waiting_only_when_it_earns_half_again_as_much()
+        {
+            Assert.True(Marks.AGreatBuyFromWaits(151f, 100f));
+            Assert.False(Marks.AGreatBuyFromWaits(150f, 100f));
+            Assert.False(Marks.AGreatBuyFromWaits(120f, 100f));
+            Assert.True(Marks.AGreatBuyFromWaits(10f, 0f));
+            Assert.False(Marks.AGreatBuyFromWaits(0f, 0f));
+            Assert.False(Marks.AGreatBuyFromWaits(-5f, 0f));
+            Assert.Equal(1.5f, Marks.AWaitingBuyFromBeatsWhatYouHaveBy);
+        }
+
         private static Dictionary<string, (float rate, float earned)> Sold(
             params (string town, float rate, float earned)[] sold)
         {
