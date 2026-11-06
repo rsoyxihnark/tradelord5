@@ -7,8 +7,8 @@
 
 ## 2.9.1
 
-- Fixed TradeLord.log counting nearly every hour on the road as an hour a new Buy From waited for you to enter or leave a market
-- Fixed TradeLord.log's weather step check reading a turn of the weather as a mismatch when night fell or day broke with it
+- Fixed TradeLord.log counting nearly every hour on the road as an hour a new Buy From waited for you to enter or leave a market (#108)
+- Fixed TradeLord.log's weather step check reading a turn of the weather as a mismatch when night fell or day broke with it (#164)
 
 ## 2.9.0
 
