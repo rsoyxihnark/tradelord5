@@ -1236,6 +1236,48 @@ namespace TradeLord
             return order;
         }
 
+        public const float ACaravanLeavesATownAnHourWith = 1f / 3f;
+
+        public static float ACaravanLeavesAnHourWith(float woundedShare)
+        {
+            float wounded = Finite(woundedShare, 1f);
+            float fit = wounded > 0.4f ? 0f : wounded > 0.2f ? 0.1f : wounded > 0.1f ? 0.2f
+                : wounded > 0.05f ? 0.3f : wounded > 0.025f ? 0.4f : 1f;
+            return ACaravanLeavesATownAnHourWith * fit;
+        }
+
+        public const int MostTownTicksFollowed = 64;
+
+        public static List<float> TownTicksBefore(float firstTick, float days)
+        {
+            var ticks = new List<float>();
+            float until = Finite(days, 0f);
+            if (!(until > 0f)) return ticks;
+            float first = firstTick > 0f && firstTick <= 1f ? firstTick : TickTimeUnknown;
+            for (float at = first; at < until && ticks.Count < MostTownTicksFollowed; at += 1f) ticks.Add(at);
+            return ticks;
+        }
+
+        public static (float demand, float substituteDemand) DemandShiftedToASubstitute(
+            float supply, float demand, float substituteSupply, float substituteDemand, float factor)
+        {
+            if (!(demand > 0f) || !(substituteDemand > 0f)) return (demand, substituteDemand);
+            if (supply / demand > substituteSupply / substituteDemand && substituteDemand > demand)
+            {
+                float moved = (substituteDemand - demand) * Finite(factor, 0f);
+                return (demand + moved, substituteDemand - moved);
+            }
+            return (demand, substituteDemand);
+        }
+
+        public static int StockAfterAShelfShift(int stock, int inStoreValueNow, int inStoreValueThen, int unitValue)
+        {
+            long shift = (long)inStoreValueThen - inStoreValueNow;
+            long units = unitValue > 0 ? (long)Math.Round(shift / (double)unitValue, MidpointRounding.AwayFromZero) : 0L;
+            long after = (long)Math.Max(0, stock) + units;
+            return after <= 0L ? 0 : after > int.MaxValue ? int.MaxValue : (int)after;
+        }
+
         public static int AnimalsACaravanSellsOff(int animals, int men) =>
             Math.Max(0, (int)(animals - men * ACaravanDrivesThisManyAnimalsAMan));
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.9.10
+
+- Fixed Count what is on its way pricing what a caravan buys before its own sale reaches the shelf instead of as it leaves the town (#168)
+- Fixed Count what is on its way leaving out your own sale at the market the map marker sends you to when a caravan comes after you (#168)
+- Fixed Count what is on its way holding a town's supply and demand where they stand instead of moving them each day as the game does (#168)
+- Fixed Count what is on its way reading the prices caravans weigh a market against every hour instead of once a day as the game does (#168)
+
 ## 2.9.9
 
 - Fixed Count what is on its way counting caravans' sales and purchases at today's prices instead of the prices they meet on arrival (#168)

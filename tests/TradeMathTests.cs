@@ -3197,6 +3197,45 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_caravan_leaves_a_town_a_third_of_its_hours_and_less_often_the_more_of_its_men_are_wounded()
+        {
+            Assert.Equal(1f / 3f, TradeMath.ACaravanLeavesAnHourWith(0f), 4);
+            Assert.Equal(0.4f / 3f, TradeMath.ACaravanLeavesAnHourWith(0.03f), 4);
+            Assert.Equal(0.1f / 3f, TradeMath.ACaravanLeavesAnHourWith(0.3f), 4);
+            Assert.Equal(0f, TradeMath.ACaravanLeavesAnHourWith(0.5f));
+            Assert.Equal(3f / 24f, TradeMath.DaysVillagersWaitFor(TradeMath.ACaravanLeavesAnHourWith(0f)), 4);
+            Assert.True(float.IsPositiveInfinity(TradeMath.DaysVillagersWaitFor(TradeMath.ACaravanLeavesAnHourWith(0.5f))));
+        }
+
+        [Fact]
+        public void A_towns_daily_ticks_before_a_moment_are_counted_from_its_next_tick()
+        {
+            Assert.Equal(new List<float> { 0.3f, 1.3f }, TradeMath.TownTicksBefore(0.3f, 2f));
+            Assert.Empty(TradeMath.TownTicksBefore(0.3f, 0.3f));
+            Assert.Equal(new List<float> { 0.5f }, TradeMath.TownTicksBefore(float.NaN, 1f));
+            Assert.Empty(TradeMath.TownTicksBefore(0.3f, float.NaN));
+        }
+
+        [Fact]
+        public void Demand_moves_to_a_substitute_only_when_the_substitute_is_scarcer_and_more_wanted_as_the_game_does_it()
+        {
+            var (demand, other) = TradeMath.DemandShiftedToASubstitute(100f, 10f, 10f, 30f, 0.5f);
+            Assert.Equal(20f, demand, 4);
+            Assert.Equal(20f, other, 4);
+            Assert.Equal((10f, 30f), TradeMath.DemandShiftedToASubstitute(10f, 10f, 100f, 30f, 0.5f));
+            Assert.Equal((30f, 10f), TradeMath.DemandShiftedToASubstitute(100f, 30f, 10f, 10f, 0.5f));
+            Assert.Equal((0f, 30f), TradeMath.DemandShiftedToASubstitute(100f, 0f, 10f, 30f, 0.5f));
+        }
+
+        [Fact]
+        public void A_shelf_that_gains_or_loses_worth_gains_or_loses_the_units_that_worth_stands_for()
+        {
+            Assert.Equal(15, TradeMath.StockAfterAShelfShift(10, 1000, 1500, 100));
+            Assert.Equal(0, TradeMath.StockAfterAShelfShift(10, 1000, 0, 100));
+            Assert.Equal(10, TradeMath.StockAfterAShelfShift(10, 1000, 1500, 0));
+        }
+
+        [Fact]
         public void A_price_index_read_back_from_the_game_counts_as_the_same_only_within_a_hair()
         {
             Assert.True(TradeMath.SameIndex(1.25f, 1.25005f));

@@ -203,6 +203,18 @@ namespace TradeLord
             CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);
             CampaignEvents.OnCaravanTransactionCompletedEvent.AddNonSerializedListener(this, OnCaravanTraded);
             CampaignEvents.DailyTickSettlementEvent.AddNonSerializedListener(this, OnSettlementDailyTick);
+            CampaignEvents.OnGameLoadFinishedEvent.AddNonSerializedListener(this, OnGameLoadFinished);
+            CampaignEvents.OnNewGameCreatedPartialFollowUpEndEvent.AddNonSerializedListener(this, OnNewGameMade);
+        }
+
+        private void OnGameLoadFinished()
+        {
+            Guard.Run("Forecast.PriceIndexesOnLoad", Forecast.ReadThePriceIndexesAsTheCaravansDo);
+        }
+
+        private void OnNewGameMade(CampaignGameStarter starter)
+        {
+            Guard.Run("Forecast.PriceIndexesOnANewGame", Forecast.ReadThePriceIndexesAsTheCaravansDo);
         }
 
         private void OnHourlyTick()
@@ -668,6 +680,7 @@ namespace TradeLord
 
         private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", () =>
         {
+            Guard.Run("Forecast.PriceIndexesADay", Forecast.ReadThePriceIndexesAsTheCaravansDo);
             MatchPurchasesToWhatIsHeld();
             NoteWhatCameWithoutAPurchase();
             PruneObservations();
