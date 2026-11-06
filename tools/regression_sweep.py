@@ -8246,9 +8246,9 @@ def a_workshop_run_lands_by_how_far_along_it_already_is():
     return (shops and follow and day and since and settle and tick
             and "Progress = shop.GetProductionProgress(p)," in shops
             and "First = WorkshopRuns.FirstDay(TradeMath.NextDailyTickIn(DaysSinceTheTick(site)))," in shops
-            and ordered(since, "if (shop?.WorkshopType != null && shop.LastRunCampaignTime.ToDays > lastRun)",
-                        "lastRun = shop.LastRunCampaignTime.ToDays;",
-                        "double since = lastRun > double.MinValue ? now - lastRun : double.NaN;")
+            and ordered(since, "if (shop?.WorkshopType != null) _runsRead.Add(shop.LastRunCampaignTime.ToDays);",
+                        "double lastRun = TradeMath.TheRunThatTellsTheTick(_runsRead, now,",
+                        "double since = double.IsNaN(lastRun) ? double.NaN : now - lastRun;")
             and "for (float at = shops.First; at <= shops.Watch; at += 1f) shopDays.Add(at);" in settle
             and "for (float at = FirstDay(firstTick); at <= watch; at += 1f) Day(days, at, null, made, taken);" in follow
             and ordered(day, "float progress = TradeMath.Finite(line.Progress, 0f);",
@@ -8739,8 +8739,10 @@ def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
             and "if (curve[i].shelf < wanted) return curve[i].days;" in reads
             and "return NeverRunsOut;" in reads
             and "when.Sort();" in moments
-            and "float at = TradeMath.UpToTheQuarterDay(days);" in note
-            and "if (at <= afterDays || !already.Add(at)) return;" in note
+            and ordered(note, "float at = Math.Max(0f, TradeMath.Finite(days, 0f));",
+                        "if (at > afterDays && already.Add(at)) when.Add(at);",
+                        "float settled = TradeMath.UpToTheQuarterDay(days);",
+                        "if (settled > afterDays && already.Add(settled)) when.Add(settled);")
             and "double steps = Math.Ceiling(days / HorizonStep);" in
                 method_body(S['TradeMath.cs'], "public static float UpToTheQuarterDay")
             and all(one in PROJECTIONTESTS for one in
@@ -8748,7 +8750,8 @@ def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
                      "A_shelf_runs_out_at_the_moment_a_caravan_takes_the_last_of_it",
                      "A_load_landing_first_holds_the_shelf_up_past_a_caravan_buying",
                      "Nothing_that_lands_before_you_arrive_can_expire_the_deal",
-                     "Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day",
+                     "Every_moment_counted_is_after_you_arrive_at_its_own_time_and_the_quarter_day_after_it",
+                     "A_shelf_runs_out_at_the_moment_a_buyer_comes_rather_than_at_the_next_quarter_day",
                      "A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed",
                      "The_shelf_a_town_will_hold_is_the_same_whatever_size_deal_asks_for_it",
                      "The_shelf_a_town_will_hold_is_read_once_for_every_moment_it_changes",
@@ -9594,7 +9597,8 @@ def a_moment_is_looked_up_rather_than_searched_for():
     note = between(S['Projection.cs'], "private static void Note(List<float> when,", "\n        }")
     return ("HashSet<float>" in moments
             and "already" in moments
-            and "!already.Add(at)" in note
+            and "already.Add(at)" in note
+            and "already.Add(settled)" in note
             and "when.Contains(" not in note
             and "when.Sort();" in moments)
 
@@ -23510,8 +23514,8 @@ def a_towns_purse_refills_at_its_daily_tick_as_the_game_does():
             and "wouldHold > 0 ? (long)wouldHold + 3L * Math.Max(0, income) : 0L);" in
                 method_body(m, "public static int MostATillCanHold(")
             and "internal static float TheTownTicksIn(Settlement site) => TradeMath.ATownTicksIn(DaysSinceTheTick(site));" in f
-            and ordered(ticks, "Workshop[] shops = site.Town.Workshops;", "shop.LastRunCampaignTime.ToDays > lastRun",
-                        "double since = lastRun > double.MinValue ? now - lastRun : double.NaN;",
+            and ordered(ticks, "Workshop[] shops = site.Town.Workshops;", "_runsRead.Add(shop.LastRunCampaignTime.ToDays);",
+                        "double since = double.IsNaN(lastRun) ? double.NaN : now - lastRun;",
                         "return TradeMath.DaysSinceTheTick(since,")
             and ordered(income, "float inStore = town.MarketData.GetCategoryData(kind).InStoreValue;",
                         "float budget = economy.CalculateDailySettlementBudgetForItemCategory(",
@@ -24048,6 +24052,67 @@ def the_log_says_how_the_ledger_timed_its_routes_when_opened_on_the_road():
 
 chk("2.9.3", "with Enable extended debug logging on, TradeLord.log says, each time you open or refresh the TradeLord ledger on the road, how many routes it timed from where your party stands and how its top row changed",
     the_log_says_how_the_ledger_timed_its_routes_when_opened_on_the_road())
+
+
+def the_shadow_check_compares_profit_a_day_with_where_you_went():
+    m = S['Marker.cs']
+    check = method_body(m, "private static void CheckWhatItWouldHavePaid(MobileParty party, int hour)")
+    each = method_body(m, "private static string ADayEach(")
+    walk = method_body(m, "internal static void NoteAWalkIn(Settlement at)")
+    sale = method_body(m, "internal static void NoteASale(Settlement site, int profit)")
+    weigh = method_body(m, "internal static void Weigh(in Reckoning how, Settlement holder, bool atAGate, int hour, bool onTheRoad,")
+    return (check and each and walk and sale and weigh
+            and ordered(weigh, "_checkCargo = _cargo;", "_checkFromId = here.StringId;",
+                        "_checkLeft = _walkedOutOf == null ? -1 : _outAt;", "_checkIn = hour;")
+            and ordered(walk, "if (_checkAt != null && !_checkSoldKept && _soldAt != null && _soldAt == _checkFromId)",
+                        "_checkSold = _soldEarned;", "_soldAt = at?.StringId;", "_soldEarned = 0L;")
+            and "if (site?.StringId != null && site.StringId == _soldAt) _soldEarned += profit;" in sale
+            and "long sold = _checkSoldKept ? _checkSold : _soldAt != null && _soldAt == _checkFromId ? _soldEarned : 0L;" in check
+            and "ADayEach(value - took.Cost, sold, from, leftFrom, left, walkedIn, there));" in check
+            and ordered(each, "if (left < 0 || leftFrom == null || walkedIn < left || there < walkedIn) return \"\";",
+                        "float toThere = TradeMath.DaysSince(left, there);",
+                        "float toHere = TradeMath.DaysSince(left, walkedIn);",
+                        "TradeMath.PerDay(shadowEarned, toThere)", "TradeMath.PerDay(sold, toHere)")
+            and "Shadow.NoteAWalkIn(at);" in method_body(m, "internal static void NoteTheWalkIn(Settlement at)")
+            and ordered(method_body(m, "internal static void ScoreTheMark(Settlement site, int units, int gold, int profit)"),
+                        "if (!Options.Current.ExtendedDebugLogging) return;", "Shadow.NoteASale(site, profit);"))
+
+
+chk("2.9.4", "with Enable extended debug logging on, the shadow marker check sets the profit a day the shadow marker's market would have made against what you made selling where you went, both counted from when you left the last market",
+    the_shadow_check_compares_profit_a_day_with_where_you_went())
+
+
+def a_shelf_runs_out_when_it_runs_out_not_at_the_next_quarter_day():
+    note = between(S['Projection.cs'], "private static void Note(List<float> when,", "\n        }")
+    return (note
+            and ordered(note, "float at = Math.Max(0f, TradeMath.Finite(days, 0f));",
+                        "if (at > afterDays && already.Add(at)) when.Add(at);",
+                        "float settled = TradeMath.UpToTheQuarterDay(days);")
+            and "A_shelf_runs_out_at_the_moment_a_buyer_comes_rather_than_at_the_next_quarter_day" in PROJECTIONTESTS
+            and "return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);" in S['Forecast.cs']
+            and "float runsOut = Forecast.RunsOutIn(leg.From, leg.Item, leg.OnTheShelfNow, q.Units, leg.ToBuy);" in S['Plan.cs'])
+
+
+chk("2.9.4", "a market's shelf is read at the very moment a buyer or a landing changes it as well as at the quarter day after, so the Left column and Conf never count a shelf as lasting up to six hours longer than it does",
+    a_shelf_runs_out_when_it_runs_out_not_at_the_next_quarter_day())
+
+
+def a_workshop_that_changed_owner_never_moves_the_tick():
+    rule = method_body(S['TradeMath.cs'], "public static double TheRunThatTellsTheTick(")
+    since = method_body(S['Forecast.cs'], "private static double DaysSinceTheTick(Settlement site)")
+    return (rule and since
+            and ordered(rule, "if (ARecentRun(runs[i], now) && (double.IsNaN(earliest) || runs[i] < earliest)) earliest = runs[i];",
+                        "OnTheSameHourOfTheDay(earliest, seenRun))", "return earliest;",
+                        "if (ARecentRun(runs[i], now) && OnTheSameHourOfTheDay(runs[i], earliest)) agreeing++;",
+                        "return agreeing >= 2 ? earliest : double.NaN;")
+            and "public const double ATickRunAgreesWithin = 1d / 24d;" in S['TradeMath.cs']
+            and "double lastRun = TradeMath.TheRunThatTellsTheTick(_runsRead, now," in since
+            and "LastRunCampaignTime.ToDays > lastRun" not in since
+            and "A_workshop_that_changed_owner_never_moves_the_hour_a_town_ticks" in MATHTESTS)
+
+
+chk("2.9.4", "a town's daily tick is read off the earliest recent workshop run, and a run at another hour of the day than the tick already seen counts only when two workshops agree on it, so a workshop that changed owner never moves it",
+    a_workshop_that_changed_owner_never_moves_the_tick())
 
 
 def the_weather_step_is_not_read_across_nightfall():

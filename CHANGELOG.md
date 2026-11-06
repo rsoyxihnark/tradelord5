@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.4
+
+- Fixed the TradeLord ledger's Left column and Conf counting a market's shelf as lasting until the next quarter day after it ran short (#146)
+- Fixed Count what is on its way to a market putting a town's daily tick at the hour one of its workshops changed owner (#133)
+- With Enable extended debug logging on, TradeLord.log's shadow marker check now compares profit a day with where you really sold (#103)
+
 ## 2.9.3
 
 - With Enable extended debug logging on, TradeLord.log now says how the TradeLord ledger timed its routes when you open it on the road (#117)

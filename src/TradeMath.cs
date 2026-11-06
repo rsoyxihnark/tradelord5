@@ -2723,6 +2723,34 @@ namespace TradeLord
 
         public const double DaysARunTellsTheTickFor = 2d;
 
+        public const double ATickRunAgreesWithin = 1d / 24d;
+
+        public static double TheRunThatTellsTheTick(IList<double> runs, double now, double seenRun)
+        {
+            double earliest = double.NaN;
+            for (int i = 0; runs != null && i < runs.Count; i++)
+                if (ARecentRun(runs[i], now) && (double.IsNaN(earliest) || runs[i] < earliest)) earliest = runs[i];
+            if (double.IsNaN(earliest) || double.IsNaN(seenRun) || double.IsInfinity(seenRun) ||
+                OnTheSameHourOfTheDay(earliest, seenRun))
+                return earliest;
+            int agreeing = 0;
+            for (int i = 0; runs != null && i < runs.Count; i++)
+                if (ARecentRun(runs[i], now) && OnTheSameHourOfTheDay(runs[i], earliest)) agreeing++;
+            return agreeing >= 2 ? earliest : double.NaN;
+        }
+
+        private static bool ARecentRun(double run, double now)
+        {
+            double since = now - run;
+            return since >= 0d && since <= DaysARunTellsTheTickFor;
+        }
+
+        private static bool OnTheSameHourOfTheDay(double one, double other)
+        {
+            double apart = Math.Abs((one - Math.Floor(one)) - (other - Math.Floor(other)));
+            return Math.Min(apart, 1d - apart) <= ATickRunAgreesWithin;
+        }
+
         public static float ATownTicksIn(double daysSinceTheLastTick)
         {
             if (double.IsNaN(daysSinceTheLastTick) || daysSinceTheLastTick < 0d ||
