@@ -389,6 +389,7 @@ namespace TradeLord
 
         private struct Share
         {
+            internal ItemObject Item;
             internal string Good;
             internal int Amount;
             internal int Moved;
@@ -558,6 +559,7 @@ namespace TradeLord
 
             string buySaid = on ? TheBuyTownToShow(target, how) : LetTheBuyMarkGo(target, "the map marker is switched off");
             ShowOnTheMap(tracker, _buyMark ?? target);
+            Guard.Run("Marker.YourSale", () => TellTheForecastYourSale(on && _buyMark == null ? target : null));
 
             if (target == _picked)
             {
@@ -589,6 +591,29 @@ namespace TradeLord
             Ultra(how, board: true);
             Told(how);
             Remember(target, how);
+        }
+
+        private static void TellTheForecastYourSale(Settlement target)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (target == null || party == null || party.CurrentSettlement == target || !Forecast.On)
+            {
+                Forecast.TakeYourSale(null, 0f, null);
+                return;
+            }
+            float ride = Travel.EstimateDaysFromParty(target);
+            int gold = TradeMath.OutOfReach(ride) ? 0 : PurseOf(target, ride);
+            var sold = new List<(ItemObject item, int units)>();
+            if (gold > 0)
+            {
+                var bill = new List<Share>();
+                HoldThePayings();
+                try { WhatItWouldSell(target, target.SettlementComponent, party, ride, WhatYouCarryToSell(party), gold, bill); }
+                finally { LetThePayingsGo(); }
+                foreach (Share one in bill)
+                    if (one.Item != null && one.Moved > 0) sold.Add((one.Item, one.Moved));
+            }
+            Forecast.TakeYourSale(target, ride, sold);
         }
 
         internal static List<(string good, int amount, bool food)> WhatYouHoldNow()
@@ -1720,6 +1745,7 @@ namespace TradeLord
                 EquipmentElement item = cargo[at].item;
                 bill?.Add(new Share
                 {
+                    Item = item.Item,
                     Good = item.Item == null ? "" : Tongue.Named(item.Item.Name, item.Item.StringId),
                     Amount = cargo[at].amount,
                     Moved = line.Moved,

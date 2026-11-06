@@ -1886,9 +1886,9 @@ def a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot():
             and 'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days, trust));' in
                 method_body(S['Forecast.cs'], "private static void FollowTheCaravans()")
             and "Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days, draw," in road
-            and ordered(follow, "float factor = IndexOnArrival(town, kind, shift);",
+            and ordered(follow, "float factor = IndexAt(town, kind, at);",
                         "amount, factor, index.average, index.lowest, worth,",
-                        "economy.CalculateDailySettlementBudgetForItemCategory(town, town.MarketData.GetDemand(kind),",
+                        "economy.CalculateDailySettlementBudgetForItemCategory(town, at.demand, kind),",
                         "units = Math.Min(units, Math.Min(amount, till / price));",
                         "Note(bound, item.StringId, kind, units, TradeMath.WorthOf(units, item.Value), days, draw,")
             and "A_caravan_sells_nothing_where_a_kind_sells_below_its_limit_against_the_average" in MATHTESTS
@@ -6050,7 +6050,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 16 and settled in S['Trading.cs']
+    return held == 18 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -7795,12 +7795,13 @@ def a_caravans_gold_goes_on_the_kinds_the_game_has_it_buy():
             and "int bought = WorthBought(site, item, withinDays);" in
                 method_body(S['Forecast.cs'], "internal static int WorthLeaving")
             and ordered(follow, "if (kind == null || (!kind.IsTradeGood && !kind.IsAnimal)) continue;",
-                        "if (town.MarketData.GetItemCountOfCategory(kind) <= 0) continue;",
+                        "int stock = TradeMath.StockAfterAShelfShift(town.MarketData.GetItemCountOfCategory(kind),",
+                        "if (stock <= 0) continue;",
                         "float wants = TradeMath.WhatACaravanThinksAKindIsWorth(",
                         "wanted.Sort((x, y) => x.worth != y.worth ? y.worth.CompareTo(x.worth) : x.at.CompareTo(y.at));",
                         "int kindsBought = convoy ? TradeMath.AConvoyBuysThisManyKinds : TradeMath.ACaravanBuysThisManyKinds;",
                         "for (int i = 0; i < kindsBought && i < wanted.Count; i++) Buy(wanted[i].kind);")
-            and "NoteWhatACaravanBuys(bound, kind, TradeMath.WorthOf(units, stands.Value), days);" in follow
+            and "NoteWhatACaravanBuys(bound, kind, TradeMath.WorthOf(units, stands.Value), buyAt);" in follow
             and "float under = average * (1f - WhatHoldingAKindTakesOff(heldWorth)) - factor;" in worth
             and "if (under < 0f) return 0f;" in worth
             and "public const int ACaravanBuysThisManyKinds = 5;" in S['TradeMath.cs']
@@ -8206,9 +8207,9 @@ def what_each_kind_fetches_across_the_towns_is_read_once_an_hour():
     leaving = method_body(f, "internal static int WorthLeaving")
     return (build and follow and leaving
             and "private static readonly Dictionary<string, (float average, float lowest)> _indexes =" in f
-            and ordered(build, "_indexes.Clear();", "_coastIndexes.Clear();",
-                        'Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);',
+            and ordered(build, 'if (_indexes.Count == 0) Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);',
                         'Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);')
+            and "_indexes.Clear();" not in build
             and "_indexes.Clear();" in method_body(f, "internal static void Forget")
             and "Town.AllTowns" not in follow
             and "if (!indexes.TryGetValue(kind.StringId, out var index)) continue;" in follow
@@ -8298,7 +8299,7 @@ def reading_what_the_shops_will_make_leaves_nothing_behind_to_clear_away():
 chk("1.81.5", "an hour's reading of what the workshops will make builds up no list or key of its own to be cleared away afterwards",
     reading_what_the_shops_will_make_leaves_nothing_behind_to_clear_away())
 
-chk("1.64.1", "what each kind fetches on average across the towns is read once an hour rather than once for every caravan or good priced",
+chk("1.64.1", "what each kind fetches on average across the towns is read once and kept rather than once for every caravan or good priced",
     what_each_kind_fetches_across_the_towns_is_read_once_an_hour())
 chk("1.64.1", "the days to a market are read between the quarter days either side of the ride, and at the ride itself under a quarter day, so a forecast moves smoothly and each quarter day's figure is worked out once",
     two_routes_that_land_within_a_few_hours_share_one_price_ladder())
@@ -19922,14 +19923,13 @@ def a_caravan_is_counted_at_the_price_that_caravan_gets():
     return (road and follow
             and "private static void FollowACaravan(MobileParty caravan, Settlement bound, float days, float trust)" in S['Forecast.cs']
             and "_caravansAhead.Add((party, bound, days));" in road
-            and ordered(follow, "int price = PriceOnArrival(town, item, caravan, true, shift,",
-                        "Priced.At(town, item, caravan, selling: true));", "item.Value, price, convoy, haul);")
-            and ordered(follow, "int price = PriceOnArrival(town, stands, caravan, false, ShiftOf(stands),",
-                        "Priced.At(town, stands, caravan, selling: false));")
+            and ordered(follow, "int price = PriceAt(town, item, caravan, true, at, Priced.At(town, item, caravan, selling: true));",
+                        "item.Value, price, convoy, haul);")
+            and "int price = PriceAt(town, stands, caravan, false, shelf.at, Priced.At(town, stands, caravan, selling: false));" in follow
             and "model.GetPrice(el, caravan, merchant, selling," in
-                method_body(S['Forecast.cs'], "private static int PriceOnArrival(")
+                method_body(S['Forecast.cs'], "private static int PriceAt(")
             and "MainParty" not in follow
-            and "MainParty" not in method_body(S['Forecast.cs'], "private static int PriceOnArrival("))
+            and "MainParty" not in method_body(S['Forecast.cs'], "private static int PriceAt("))
 
 chk("1.104.15", "what a caravan is counted as leaving in a town is priced for that caravan, never at the price you would get",
     a_caravan_is_counted_at_the_price_that_caravan_gets())
@@ -23377,8 +23377,8 @@ def a_towns_purse_counts_what_caravans_pay_into_it_buying_there_after_the_games_
     caravan = method_body(f, "private static void FollowACaravan(MobileParty caravan, Settlement bound, float days, float trust)")
     settle = method_body(f, "private static void SettleThePurse(")
     return (till and unseen and caravan and settle
-            and ordered(caravan, "gold -= units * price;", "NoteTheTillTakesIn(bound, units * price, days);",
-                        "NoteWhatACaravanBuys(bound, kind, TradeMath.WorthOf(units, stands.Value), days);")
+            and ordered(caravan, "gold -= units * price;", "NoteTheTillTakesIn(bound, units * price, buyAt);",
+                        "NoteWhatACaravanBuys(bound, kind, TradeMath.WorthOf(units, stands.Value), buyAt);")
             and caravan.count("NoteTheTillTakesIn(") == 1
             and ordered(method_body(f, "private static float TaxOnASaleAt(Settlement site)"),
                         "if (site?.Town == null) return 1f;",
@@ -24314,8 +24314,8 @@ def a_caravan_sells_and_buys_at_the_prices_it_meets_on_arrival():
     build = method_body(f, "private static void Build()")
     follow = method_body(f, "private static void FollowACaravan(MobileParty caravan, Settlement bound, float days, float trust)")
     caravans = method_body(f, "private static void FollowTheCaravans()")
-    index = method_body(f, "private static float IndexOnArrival(Town town, ItemCategory kind, int shift)")
-    price = method_body(f, "private static int PriceOnArrival(")
+    index = method_body(f, "private static float IndexAt(Town town, ItemCategory kind, (int inStore, float supply, float demand) at)")
+    price = method_body(f, "private static int PriceAt(")
     came = method_body(c, "private static void ACountedCaravanCame(")
     judge = method_body(c, "private static void JudgeTheCounted(double now)")
     return (build and follow and caravans and index and price and came and judge
@@ -24329,20 +24329,23 @@ def a_caravan_sells_and_buys_at_the_prices_it_meets_on_arrival():
             and "_caravansAhead.Clear();" in method_body(f, "internal static void Forget()")
             and ordered(caravans, "float trust = TrustEarned();", "foreach (int i in TradeMath.InTheOrderTheyArrive(arrive))",
                         'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days, trust));')
-            and "shifts[key] = shift = TradeMath.WorthShiftTrusted(WorthShift(bound, stands, days), trust);" in follow
-            and ordered(follow, "int shift = ShiftOf(item);", "int price = PriceOnArrival(town, item, caravan, true, shift,",
-                        "float factor = IndexOnArrival(town, kind, shift);",
+            and "TradeMath.WorthShiftTrusted(WorthShift(site, stands, days), trust);" in
+                method_body(f, "private static int ShelfShiftAt(")
+            and "arriving[kind.StringId] = at = CategoryAt(town, bound, kind, days, trust, null, 0f);" in follow
+            and ordered(follow, "var at = OnArrival(kind);",
+                        "int price = PriceAt(town, item, caravan, true, at, Priced.At(town, item, caravan, selling: true));",
+                        "float factor = IndexAt(town, kind, at);",
                         "amount, factor, index.average, index.lowest, worth,",
                         "_caravanMeets[caravan.StringId] = (bound.StringId, biggest, biggestNow, biggestSaid);",
-                        "IndexOnArrival(town, kind, ShiftOf(StandsForAt(bound, kind))), index.average, worth,",
-                        "int price = PriceOnArrival(town, stands, caravan, false, ShiftOf(stands),")
+                        "IndexAt(town, kind, then), index.average, worth, then.demand,",
+                        "int price = PriceAt(town, stands, caravan, false, shelf.at, Priced.At(town, stands, caravan, selling: false));")
             and "town.GetItemCategoryPriceIndex(kind), index.average" not in follow
-            and ordered(index, "if (shift == 0) return now;",
+            and ordered(index, "if (at.inStore == data.InStoreValue && at.supply == data.Supply && at.demand == data.Demand) return now;",
                         "if (!TradeMath.SameIndex(model.GetBasePriceFactor(kind, data.InStoreValue, data.Supply, data.Demand, false, 0),",
-                        "return model.GetBasePriceFactor(kind, TradeMath.ShelfAfterLanding(data.InStoreValue, shift), data.Supply,")
-            and ordered(price, "if (shift == 0 || now <= 0 || item?.ItemCategory == null) return now;",
+                        "return model.GetBasePriceFactor(kind, at.inStore, at.supply, at.demand, false, 0);")
+            and ordered(price, "if (now <= 0 || item?.ItemCategory == null) return now;",
                         "if (model.GetPrice(el, caravan, merchant, selling, data.InStoreValue, data.Supply, data.Demand) != now)",
-                        "TradeMath.ShelfAfterLanding(data.InStoreValue, shift),")
+                        "int then = model.GetPrice(el, caravan, merchant, selling, at.inStore, at.supply, at.demand);")
             and re.search(r'data\.Demand\) != now\)\s*return now;', price) is not None
             and "var meets = Forecast.WhatACaravanWasCountedToMeet(one.id, to);" in method_body(c, "private static void CountTheCaravans(")
             and "if (!one.Villagers && one.Kind != null && at.Town != null)" in came
@@ -24359,6 +24362,68 @@ def a_caravan_sells_and_buys_at_the_prices_it_meets_on_arrival():
 
 chk("2.9.9", "Count what is on its way counts what a caravan sells and buys at the prices it meets on arrival, after what lands in that market before it, and TradeLord.log's caravan check says how close that came",
     a_caravan_sells_and_buys_at_the_prices_it_meets_on_arrival())
+
+
+def a_caravans_prices_follow_its_own_sale_your_sale_the_daily_supply_and_demand_and_the_games_daily_averages():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    led = S['Ledger.cs']
+    at = method_body(f, "private static (int inStore, float supply, float demand) CategoryAt(")
+    follow = method_body(f, "private static void FollowACaravan(MobileParty caravan, Settlement bound, float days, float trust)")
+    yours = method_body(f, "private static int YourSaleBy(")
+    take = method_body(f, "internal static void TakeYourSale(")
+    shift = method_body(f, "private static int ShelfShiftAt(")
+    tell = method_body(S['Marker.cs'], "private static void TellTheForecastYourSale(")
+    leaves = method_body(m, "public static float ACaravanLeavesAnHourWith(")
+    return (at and follow and yours and take and shift and tell and leaves
+            and ordered(at, "List<float> ticks = TradeMath.TownTicksBefore(TheTownTicksIn(site), days);",
+                        "float wanted = economy.GetEstimatedDemandForCategory(town, data[g], group[g]);",
+                        "(supply[g], demand[g]) = economy.GetSupplyDemandForCategory(town, group[g], InStoreAt(g, ticks[j]),",
+                        "(demand[one], demand[other]) = TradeMath.DemandShiftedToASubstitute(supply[one], demand[one],",
+                        "if (mine) continue;", "return (InStoreAt(0, days), supply[0], demand[0]);")
+            and "int mine = own != null && ownAt <= at && own.TryGetValue(group[g].StringId, out int sold) ? sold : 0;" in at
+            and "if (kind?.CanSubstitute != null) _substitutes.Add((kind, kind.CanSubstitute, kind.SubstitutionFactor));" in
+                method_body(f, "private static List<(ItemCategory kind, ItemCategory substitute, float factor)> Substitutes()")
+            and "return TradeMath.AddedUp(shift, YourSaleBy(site, kind.StringId, days));" in shift
+            and ordered(yours, "if (_yourSaleAt == null || site?.StringId != _yourSaleAt || kind == null) return 0;",
+                        "if (MobileParty.MainParty?.CurrentSettlement == site) return 0;",
+                        "if (!(_yourSaleWhen - CampaignTime.Now.ToDays <= days)) return 0;")
+            and "_yourSaleWhen = CampaignTime.Now.ToDays + ride;" in take
+            and 'Guard.Run("Marker.YourSale", () => TellTheForecastYourSale(on && _buyMark == null ? target : null));' in S['Marker.cs']
+            and ordered(tell, "float ride = Travel.EstimateDaysFromParty(target);",
+                        "WhatItWouldSell(target, target.SettlementComponent, party, ride, WhatYouCarryToSell(party), gold, bill);",
+                        "if (one.Item != null && one.Moved > 0) sold.Add((one.Item, one.Moved));",
+                        "Forecast.TakeYourSale(target, ride, sold);")
+            and ordered(follow, "soldHere[kind.StringId] = TradeMath.AddedUp(soldBefore, TradeMath.WorthOf(units, item.Value));",
+                        "float wounded = men > 0 ? caravan.MemberRoster.TotalWounded / (float)men : 1f;",
+                        "float buyAt = days + TradeMath.DaysVillagersWaitFor(TradeMath.ACaravanLeavesAnHourWith(wounded));",
+                        "if (float.IsInfinity(buyAt) || float.IsNaN(buyAt))",
+                        "var then = CategoryAt(town, bound, kind, buyAt, trust, soldHere, days);",
+                        "int stock = TradeMath.StockAfterAShelfShift(town.MarketData.GetItemCountOfCategory(kind),",
+                        "NoteTheTillTakesIn(bound, units * price, buyAt);")
+            and "economy.CalculateDailySettlementBudgetForItemCategory(town, at.demand, kind)," in follow
+            and "public const float ACaravanLeavesATownAnHourWith = 1f / 3f;" in m
+            and "float fit = wounded > 0.4f ? 0f : wounded > 0.2f ? 0.1f : wounded > 0.1f ? 0.2f" in leaves
+            and ": wounded > 0.05f ? 0.3f : wounded > 0.025f ? 0.4f : 1f;" in leaves
+            and ordered(method_body(f, "internal static void ReadThePriceIndexesAsTheCaravansDo()"),
+                        "ReadThePriceIndexes();", "_readStamp.Stale();")
+            and 'if (_indexes.Count == 0) Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);' in
+                method_body(f, "private static void Build()")
+            and 'Guard.Run("Forecast.PriceIndexesADay", Forecast.ReadThePriceIndexesAsTheCaravansDo);' in
+                method_body(led, "private void OnDailyTick()")
+            and "CampaignEvents.OnGameLoadFinishedEvent.AddNonSerializedListener(this, OnGameLoadFinished);" in led
+            and "CampaignEvents.OnNewGameCreatedPartialFollowUpEndEvent.AddNonSerializedListener(this, OnNewGameMade);" in led
+            and 'Guard.Run("Forecast.PriceIndexesOnLoad", Forecast.ReadThePriceIndexesAsTheCaravansDo);' in led
+            and 'Guard.Run("Forecast.PriceIndexesOnANewGame", Forecast.ReadThePriceIndexesAsTheCaravansDo);' in led
+            and all(one in MATHTESTS for one in
+                    ("A_caravan_leaves_a_town_a_third_of_its_hours_and_less_often_the_more_of_its_men_are_wounded",
+                     "A_towns_daily_ticks_before_a_moment_are_counted_from_its_next_tick",
+                     "Demand_moves_to_a_substitute_only_when_the_substitute_is_scarcer_and_more_wanted_as_the_game_does_it",
+                     "A_shelf_that_gains_or_loses_worth_gains_or_loses_the_units_that_worth_stands_for")))
+
+
+chk("2.9.10", "a caravan buys at the prices it meets as it leaves, after its own sale, and Count what is on its way counts your sale before it, the town's daily supply and demand and the game's daily averages",
+    a_caravans_prices_follow_its_own_sale_your_sale_the_daily_supply_and_demand_and_the_games_daily_averages())
 
 
 def the_weather_step_is_not_read_across_nightfall():
