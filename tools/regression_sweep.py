@@ -13365,8 +13365,15 @@ def a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_
     return (held and shift and shelf and village and game and first
             and "PriceShift(site != null && site.IsVillage ? Hindsight.PricedFrom(site) : site," in held
             and ordered(shift, "if (!On || site == null || item == null || item.ItemCategory == null) return 0;",
-                        "Build();", "TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);",
-                        "int below = low >= TradeMath.HorizonStep ? ShiftCachedAt(site, item, low) : WorthShift(site, item, low);")
+                        "Build();", "return TradeMath.ShiftOverTheHorizon(withinDays, (site, item),",
+                        "(at, days) => ShiftCachedAt(at.Item1, at.Item2, days),",
+                        "(at, days) => WorthShift(at.Item1, at.Item2, days));")
+            and ordered(method_body(S['TradeMath.cs'], "public static int ShiftOverTheHorizon<T>("),
+                        "ForecastHorizon(withinDays, out float low, out float high, out float share);",
+                        "int below = low >= HorizonStep ? cachedAt(at, low) : freshAt(at, low);",
+                        "return share > 0f ? BlendedShift(below, cachedAt(at, high), share) : below;")
+            and "A_forecast_price_reads_an_uncached_shift_under_a_quarter_day_and_cached_ones_above_it" in MATHTESTS
+            and "TradeMath.ShiftOverTheHorizon(days, 0," in MATHTESTS
             and ordered(method_body(f, "private static int ShiftCachedAt"),
                         "var key = (site.StringId, item.ItemCategory.StringId, quarterDay);",
                         "if (_shifts.TryGetValue(key, out int shift)) return shift;")
@@ -20052,7 +20059,9 @@ def a_ride_too_short_to_round_up_is_still_a_ride_the_forecast_counts():
             and S['Projection.cs'].count("TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);") == 4
             and "TradeMath.ARideToTheQuarterDay(" not in S['Projection.cs']
             and "TradeMath.ToTheQuarterDay(" not in S['Projection.cs']
-            and "TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);" in
+            and "ForecastHorizon(withinDays, out float low, out float high, out float share);" in
+                method_body(S['TradeMath.cs'], "public static int ShiftOverTheHorizon<T>(")
+            and "return TradeMath.ShiftOverTheHorizon(withinDays, (site, item)," in
                 method_body(S['Forecast.cs'], "private static int PriceShift")
             and "float brought = TradeMath.WhatUnseenCaravansBring(turns, within);" in S['Forecast.cs']
             and "TradeMath.ToTheQuarterDay(" not in S['Forecast.cs']
@@ -22843,7 +22852,9 @@ def a_scan_and_a_weighing_price_each_offer_once_and_skip_what_cannot_win():
             and "Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride)" in paying
             and "var key = (site.StringId, item.ItemCategory.StringId, quarterDay);" in
                 method_body(S['Forecast.cs'], "private static int ShiftCachedAt(")
-            and "return share > 0f ? TradeMath.BlendedShift(below, ShiftCachedAt(site, item, high), share) : below;" in
+            and "return share > 0f ? BlendedShift(below, cachedAt(at, high), share) : below;" in
+                method_body(S['TradeMath.cs'], "public static int ShiftOverTheHorizon<T>(")
+            and "(at, days) => ShiftCachedAt(at.Item1, at.Item2, days)," in
                 method_body(S['Forecast.cs'], "private static int PriceShift(")
             and ordered(most, "if (float.IsNaN(travelDays)) return 1f;", "float haste = Haste(travelDays);",
                         "return haste < Least ? Least : (haste > 1f ? 1f : haste);")
@@ -23462,10 +23473,14 @@ chk("2.8.9", "every travel time is one calculation, from where your party stands
 def the_forecast_price_glides_with_the_ride_instead_of_jumping_each_quarter_day():
     f = S['Forecast.cs']
     shift = method_body(f, "private static int PriceShift(")
-    return (shift
-            and ordered(shift, "TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);",
-                        "int below = low >= TradeMath.HorizonStep ? ShiftCachedAt(site, item, low) : WorthShift(site, item, low);",
-                        "return share > 0f ? TradeMath.BlendedShift(below, ShiftCachedAt(site, item, high), share) : below;")
+    over = method_body(S['TradeMath.cs'], "public static int ShiftOverTheHorizon<T>(")
+    return (shift and over
+            and ordered(shift, "return TradeMath.ShiftOverTheHorizon(withinDays, (site, item),",
+                        "(at, days) => ShiftCachedAt(at.Item1, at.Item2, days),",
+                        "(at, days) => WorthShift(at.Item1, at.Item2, days));")
+            and ordered(over, "ForecastHorizon(withinDays, out float low, out float high, out float share);",
+                        "int below = low >= HorizonStep ? cachedAt(at, low) : freshAt(at, low);",
+                        "return share > 0f ? BlendedShift(below, cachedAt(at, high), share) : below;")
             and "float brought = TradeMath.WhatUnseenCaravansBring(turns, within);" in f
             and "var key = (site, el.Item, el.ItemModifier, party, ride);" in S['Marker.cs']
             and "if (!(days > HorizonStep)) return ARideToTheQuarterDay(days);" in
@@ -23664,7 +23679,9 @@ def a_forecast_under_a_quarter_day_is_read_at_the_ride_itself():
                     method_body(S['Projection.cs'], sig)
                     for sig in ("internal static int UnitsLanding(", "internal static int WorthLanding(",
                                 "internal static int WorthBought(", "internal static int WorthUsedUp("))
-            and "TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);" in
+            and "ForecastHorizon(withinDays, out float low, out float high, out float share);" in
+                method_body(S['TradeMath.cs'], "public static int ShiftOverTheHorizon<T>(")
+            and "return TradeMath.ShiftOverTheHorizon(withinDays, (site, item)," in
                 method_body(S['Forecast.cs'], "private static int PriceShift(")
             and "ARideToTheQuarterDay" not in S['Projection.cs'] and "ARideToTheQuarterDay" not in S['Forecast.cs']
             and "A_forecast_under_a_quarter_day_is_read_at_the_ride_itself_and_above_it_between_two_quarter_days" in MATHTESTS
