@@ -202,11 +202,17 @@ namespace TradeLord
             CampaignEvents.ItemsLooted.AddNonSerializedListener(this, OnItemsLooted);
             CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);
             CampaignEvents.OnCaravanTransactionCompletedEvent.AddNonSerializedListener(this, OnCaravanTraded);
+            CampaignEvents.DailyTickSettlementEvent.AddNonSerializedListener(this, OnSettlementDailyTick);
         }
 
         private void OnHourlyTick()
         {
             Guard.Run("Forecast.Watch", Forecast.WatchTheCaravansTurn);
+        }
+
+        private void OnSettlementDailyTick(Settlement settlement)
+        {
+            Guard.Run("Forecast.VillageTick", () => Forecast.ASettlementTicked(settlement));
         }
 
         private void OnCaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)

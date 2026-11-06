@@ -1639,6 +1639,12 @@ namespace TradeLord
 
         public const int MostLoadsAVillageIsFollowedFor = 3;
 
+        public const float AVillagesTickUnseen = 0.5f;
+
+        public const float AVillagesLeastHearth = 10f;
+
+        public const float RoomEachVillagerAdds = 20f;
+
         public struct VillageLoad
         {
             public float Days;
@@ -1654,28 +1660,79 @@ namespace TradeLord
         public static float DaysVillagersWaitFor(float chanceAnHour) =>
             chanceAnHour > 0f ? 1f / chanceAnHour / 24f : float.PositiveInfinity;
 
-        public static float DaysUntilAVillageIsFull(float held, int warehouse, float madeADay)
+        public static int HearthLevelOf(float hearth) => hearth >= 600f ? 2 : hearth >= 200f ? 1 : 0;
+
+        public static float AVillageGrowsItsHearthBy(float hearth) => hearth < 300f ? 4f : hearth < 600f ? 1.2f : 0.2f;
+
+        public static float AVillageHealsADayBy(float factionStrength)
         {
-            if (held >= warehouse) return 0f;
-            return madeADay > 0f ? (warehouse - held) / madeADay : float.PositiveInfinity;
+            float strength = Math.Min(7000f, Math.Max(1000f, Finite(factionStrength, 0f)));
+            return 0.06f + (7000f - strength) / 100000f;
         }
 
-        public static float HeldAfter(float held, float madeADay, float days, int warehouse)
+        public static int TicksAVillageHealsIn(float hitPoints, float aDay)
         {
-            float most = warehouse * AVillageStopsMakingPastItsWarehouseBy;
-            if (held >= most || !(madeADay > 0f) || !(days > 0f)) return held;
-            return Math.Min(most, held + madeADay * days);
+            float missing = 1f - Math.Max(0f, Math.Min(1f, Finite(hitPoints, 0f)));
+            if (missing <= 1E-5f) return 1;
+            if (!(Finite(aDay, 0f) > 0f)) return int.MaxValue;
+            return Math.Max(1, (int)Math.Ceiling(missing / aDay - 1E-4f));
+        }
+
+        public static float DaysToAVillagesNextTick(double now, double tickedAt)
+        {
+            double since = now - tickedAt;
+            if (double.IsNaN(since) || double.IsInfinity(since) || since < 0d) return AVillagesTickUnseen;
+            double left = 1d - (since - Math.Floor(since));
+            return (float)Math.Max(left, 1E-6d);
+        }
+
+        public static float[] WhatAVillageMakesEachTick(float hearth, float hearthChange, bool looted, int healsIn,
+                                                        int ticks)
+        {
+            int count = Math.Max(0, ticks);
+            var scale = new float[count + 1];
+            float h = Math.Max(AVillagesLeastHearth, Finite(hearth, AVillagesLeastHearth));
+            float change = Finite(hearthChange, 0f);
+            int levelNow = HearthLevelOf(h);
+            float extra = looted ? 0f : change - AVillageGrowsItsHearthBy(h);
+            scale[0] = looted ? 0f : 1f;
+            for (int j = 1; j <= count; j++)
+            {
+                bool lootedBefore = looted && j <= healsIn;
+                h = Math.Max(AVillagesLeastHearth, h + (lootedBefore ? change : AVillageGrowsItsHearthBy(h) + extra));
+                bool normal = !looted || j >= healsIn;
+                scale[j] = normal ? (HearthLevelOf(h) + 1f) / (levelNow + 1f) : 0f;
+            }
+            return scale;
+        }
+
+        public static int IdealVillagers(int least, float hearth, float goodsADay)
+        {
+            float goods = Finite(goodsADay, 0f);
+            float each = goods > 10f ? 40f * (1f - (Math.Min(40f, goods) - 10f) / 60f) : 40f;
+            return least + (int)(Math.Max(0f, Finite(hearth, 0f)) / each);
+        }
+
+        public static float RoomOnceToppedUp(float room, int men, int ideal, float hearth)
+        {
+            float now = Math.Max(0f, Finite(room, 0f));
+            int added = Math.Min(ideal - men, (int)Math.Max(0f, Finite(hearth, 0f)));
+            return added > 0 ? now + added * RoomEachVillagerAdds : now;
         }
 
         public static List<VillageLoad> WhatAVillageSends(float[] held, float[] made, float[] weight, bool[] onHoof,
-                                                         int warehouse, float room, float home, bool raised,
-                                                         float ride, float watch)
+                                                         float room, float home, bool raised, float ride, float watch,
+                                                         float nextTick, float[] scale)
         {
             var loads = new List<VillageLoad>();
-            if (held == null || made == null || weight == null || onHoof == null || warehouse <= 0) return loads;
+            if (held == null || made == null || weight == null || onHoof == null) return loads;
             int n = held.Length;
             if (made.Length != n || weight.Length != n || onHoof.Length != n) return loads;
             if (!(ride >= 0f) || float.IsInfinity(ride) || !(watch > 0f)) return loads;
+            float first = nextTick > 0f && nextTick <= 1f ? nextTick : AVillagesTickUnseen;
+            float[] scales = scale != null && scale.Length > 0 ? scale : new[] { 1f };
+            float Scale(int j) => Math.Max(0f, Finite(scales[Math.Min(j, scales.Length - 1)], 0f));
+            float TickAt(int j) => first + (j - 1);
             var at = new float[n];
             float heldAll = 0f, madeAll = 0f;
             for (int i = 0; i < n; i++)
@@ -1684,6 +1741,21 @@ namespace TradeLord
                 heldAll += at[i];
                 madeAll += Math.Max(0f, Finite(made[i], 0f));
             }
+            int Warehouse(int j) => AVillagesWarehouse(madeAll * Scale(j));
+            int ticked = 0;
+            void Make()
+            {
+                ticked++;
+                float s = Scale(ticked);
+                if (!(s > 0f) || !(madeAll > 0f) || heldAll >= Warehouse(ticked) * AVillageStopsMakingPastItsWarehouseBy)
+                    return;
+                for (int i = 0; i < n; i++)
+                {
+                    float more = Math.Max(0f, Finite(made[i], 0f)) * s;
+                    at[i] += more;
+                    heldAll += more;
+                }
+            }
             float share = ShareVillagersLoad();
             float wait = DaysVillagersWaitFor(VillagersSetOutAnHourWith);
             float stay = DaysVillagersWaitFor(VillagersLeaveATownAnHourWith);
@@ -1691,15 +1763,22 @@ namespace TradeLord
             float back = Math.Max(0f, Finite(home, 0f));
             for (int k = 0; k < MostLoadsAVillageIsFollowedFor; k++)
             {
-                float full = since + DaysUntilAVillageIsFull(heldAll, warehouse, madeAll);
-                float setOut = Math.Max(back, full) + (k == 0 && !raised ? wait + wait : wait);
-                if (float.IsInfinity(setOut) || setOut + ride > watch) break;
-                float grown = HeldAfter(heldAll, madeAll, setOut - since, warehouse) - heldAll;
+                float ready = Math.Max(since, back);
+                if (float.IsInfinity(ready) || ready > watch) break;
+                while (TickAt(ticked + 1) <= ready) Make();
+                while (!(Scale(ticked) > 0f && heldAll >= Warehouse(ticked)))
+                {
+                    if (TickAt(ticked + 1) > watch) return loads;
+                    ready = TickAt(ticked + 1);
+                    Make();
+                }
+                float setOut = ready + (k == 0 && !raised ? wait + wait : wait);
+                if (setOut + ride > watch) break;
+                while (TickAt(ticked + 1) <= setOut) Make();
                 var units = new float[n];
                 float carried = 0f;
                 for (int i = 0; i < n; i++)
                 {
-                    if (grown > 0f && madeAll > 0f) at[i] += grown * Math.Max(0f, Finite(made[i], 0f)) / madeAll;
                     units[i] = at[i] * share;
                     if (!onHoof[i]) carried += units[i] * Math.Max(0f, Finite(weight[i], 0f));
                 }

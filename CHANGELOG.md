@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.8
+
+- Fixed Count what is on its way timing a village's next trip as if it made goods all day instead of once a day at its own hour (#173)
+- Fixed Count what is on its way leaving out what a looted village sends once it recovers before you arrive (#173)
+- Fixed Count what is on its way missing that a village makes more or less once its hearth crosses into a new level (#173)
+- Fixed Count what is on its way expecting villagers short of men to carry less than they do once their village tops them up (#173)
+- With Enable extended debug logging on, TradeLord.log now says for how many villages it knows the hour they make their goods (#173)
+- With Enable extended debug logging on, TradeLord.log now says how many looted villages it follows until they recover (#173)
+
 ## 2.9.7
 
 - With Enable extended debug logging on, TradeLord.log now checks what villagers sold where you set off for against what was counted (#148)

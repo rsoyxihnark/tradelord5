@@ -6047,7 +6047,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 15 and settled in S['Trading.cs']
+    return held == 16 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -22435,12 +22435,13 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
             and "if (party.StringId != null) _villagersReach[party.StringId] = days;" in
                 method_body(f, "private static void ReadWhatIsOnTheRoad()")
             and ordered(follow, "if (town == null || !town.IsTown || town.Town == null || town.IsUnderSiege) return;",
-                        "if (village.VillageState != Village.VillageStates.Normal || home.Party?.MapEvent != null) return;",
+                        "bool looted = village.VillageState == Village.VillageStates.Looted;",
+                        "if ((village.VillageState != Village.VillageStates.Normal && !looted) || home.Party?.MapEvent != null) return;",
                         "if (FactionManager.IsAtWarAgainstFaction(home.MapFaction, town.MapFaction)) return;",
-                        "? each * (village.GetHearthLevel() + 1) * 0.5f",
+                        "float rate = item.IsMountable || looted", "? each * (level + 1) * 0.5f",
                         ": model.CalculateDailyProductionAmount(village, item).ResultNumber;",
                         "float ride = TradeMath.EtaDays(RoadBetween(home, town), speed);",
-                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch);",
+                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch, next, scale);",
                         "if (item.IsMountable || item.ItemCategory == null) continue;",
                         "int sold = TradeMath.WhatVillagersSell(units, till, price);",
                         "NoteTheTillPays(town, sold * price, load.Days,",
@@ -22455,8 +22456,9 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
             and "public const int VillagersLoadInPasses = 4;" in m
             and "public const float AVillageWarehouseHoldsDays = 5f;" in m
             and "public const float AVillageStopsMakingPastItsWarehouseBy = 1.5f;" in m
-            and ordered(sends, "float setOut = Math.Max(back, full) + (k == 0 && !raised ? wait + wait : wait);",
-                        "if (float.IsInfinity(setOut) || setOut + ride > watch) break;",
+            and ordered(sends, "float ready = Math.Max(since, back);",
+                        "float setOut = ready + (k == 0 && !raised ? wait + wait : wait);",
+                        "if (setOut + ride > watch) break;",
                         "units[i] = at[i] * share;",
                         "float cut = room > 0f && carried > room ? room / carried : 1f;",
                         "back = setOut + ride + stay + ride;")
@@ -24236,6 +24238,66 @@ def each_counted_villager_party_is_judged_against_what_it_sold():
 
 chk("2.9.7", "with Enable extended debug logging on, TradeLord.log checks what Count what is on its way said villagers on the road and each village's next trip would sell at the market you set off for, against what they sold",
     each_counted_villager_party_is_judged_against_what_it_sold())
+
+
+def a_villages_next_trip_follows_its_hour_its_hearth_and_its_healing():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    follow = method_body(f, "private static void FollowAVillage(Village village, float watch, float speed)")
+    sends = method_body(m, "public static List<VillageLoad> WhatAVillageSends(")
+    each = method_body(m, "public static float[] WhatAVillageMakesEachTick(")
+    heal = method_body(f, "private static float HealsADay(Village village)")
+    ticked = method_body(f, "internal static void ASettlementTicked(Settlement settlement)")
+    return (follow and sends and each and heal and ticked
+            and "CampaignEvents.DailyTickSettlementEvent.AddNonSerializedListener(this, OnSettlementDailyTick);"
+                in method_body(S['Ledger.cs'], "public override void RegisterEvents")
+            and 'Guard.Run("Forecast.VillageTick", () => Forecast.ASettlementTicked(settlement));'
+                in method_body(S['Ledger.cs'], "private void OnSettlementDailyTick(Settlement settlement)")
+            and ordered(ticked, "if (settlement == null || !settlement.IsVillage || settlement.StringId == null) return;",
+                        "_villageMadeAt[settlement.StringId] = CampaignTime.Now.ToDays;")
+            and "_villageMadeAt.Clear();" in method_body(f, "internal static void Forget()")
+            and "_villageMadeAt" not in method_body(f, "private static void Build()")
+            and ordered(follow, "float rate = item.IsMountable || looted", "float food = looted ? level + 1f :",
+                        "TradeMath.RoomOnceToppedUp(villagers.InventoryCapacity, villagers.MemberRoster.TotalManCount,",
+                        "MinimumNumberOfVillagersAtVillagerParty,", "village.Hearth, goodsADay),",
+                        "int heals = looted ? TradeMath.TicksAVillageHealsIn(home.SettlementHitPoints, HealsADay(village)) : 0;",
+                        "TradeMath.WhatAVillageMakesEachTick(village.Hearth, village.HearthChange, looted, heals,",
+                        "bool known = _villageMadeAt.TryGetValue(home.StringId, out double madeAt);",
+                        "? TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)",
+                        ": TradeMath.AVillagesTickUnseen;",
+                        "held.ToArray(), made.ToArray(), weight, onHoof, room, back, villagers != null, ride, watch, next, scale);",
+                        "if (known) _villageHoursKnown++;", "if (looted) _villagesHealing++;")
+            and ordered(heal, "new ExplainedNumber(TradeMath.AVillageHealsADayBy(home.MapFaction?.CurrentTotalStrength ?? 0f));",
+                        "PerkHelper.AddPerkBonusForTown(DefaultPerks.Medicine.CleanInfrastructure, village.TradeBound.Town, false,",
+                        "if (leader != null && leader.GetPerkValue(DefaultPerks.Roguery.InBestLight))",
+                        "heal.AddFactor(DefaultPerks.Roguery.InBestLight.SecondaryBonus);")
+            and ordered(each, "bool lootedBefore = looted && j <= healsIn;",
+                        "h = Math.Max(AVillagesLeastHearth, h + (lootedBefore ? change : AVillageGrowsItsHearthBy(h) + extra));",
+                        "bool normal = !looted || j >= healsIn;",
+                        "scale[j] = normal ? (HearthLevelOf(h) + 1f) / (levelNow + 1f) : 0f;")
+            and ordered(sends, "float first = nextTick > 0f && nextTick <= 1f ? nextTick : AVillagesTickUnseen;",
+                        "int Warehouse(int j) => AVillagesWarehouse(madeAll * Scale(j));",
+                        "heldAll >= Warehouse(ticked) * AVillageStopsMakingPastItsWarehouseBy)",
+                        "while (TickAt(ticked + 1) <= ready) Make();",
+                        "while (!(Scale(ticked) > 0f && heldAll >= Warehouse(ticked)))",
+                        "while (TickAt(ticked + 1) <= setOut) Make();")
+            and "public static int HearthLevelOf(float hearth) => hearth >= 600f ? 2 : hearth >= 200f ? 1 : 0;" in m
+            and "public static float AVillageGrowsItsHearthBy(float hearth) => hearth < 300f ? 4f : hearth < 600f ? 1.2f : 0.2f;" in m
+            and "return 0.06f + (7000f - strength) / 100000f;" in method_body(m, "public static float AVillageHealsADayBy(")
+            and "public const float RoomEachVillagerAdds = 20f;" in m
+            and "public const float AVillagesLeastHearth = 10f;" in m
+            and all(one in MATHTESTS for one in
+                    ("A_village_sends_again_on_the_day_its_own_hour_fills_the_warehouse",
+                     "A_looted_village_sends_nothing_until_the_day_it_recovers_and_makes_its_goods_again",
+                     "A_village_whose_hearth_reaches_a_new_level_makes_more_and_its_warehouse_holds_more",
+                     "A_villages_hearth_level_and_growth_follow_the_games_steps",
+                     "A_looted_village_heals_each_day_by_how_weak_its_faction_is",
+                     "A_village_makes_its_goods_once_a_day_at_the_hour_it_was_last_seen_making_them",
+                     "Villagers_short_of_men_are_topped_up_before_they_load_and_carry_more")))
+
+
+chk("2.9.8", "Count what is on its way times a village's next trip by the hour of the day it makes its goods, the level of its hearth, how long a looted village takes to recover, and the men it is topped up with",
+    a_villages_next_trip_follows_its_hour_its_hearth_and_its_healing())
 
 
 def the_weather_step_is_not_read_across_nightfall():
