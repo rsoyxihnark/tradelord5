@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.9.2
+
+- Fixed TradeLord.log leaving the marker check out for a Staged Trading deal taken at the market the map marker had marked (#150)
+- Fixed TradeLord.log counting a ride as turned away from when a fight or a trade on the road only paused it (#171)
+
 ## 2.9.1
 
 - Fixed TradeLord.log counting nearly every hour on the road as an hour a new Buy From waited for you to enter or leave a market

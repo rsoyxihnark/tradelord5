@@ -10182,7 +10182,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 40
+            and ALL.count("Tongue.Named(") == 42
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -21767,7 +21767,8 @@ def every_ride_is_judged_in_the_log_against_what_tradelord_said():
             and S['TradeMath.cs'].count("tally?.Count(") == 2
             and S['TradeMath.cs'].count(", road[i].Ground, dark, wet, snow, slow);") == 2
             and ordered(tick, "Settlement to = party.DefaultBehavior == AiBehavior.GoToSettlement ? party.TargetSettlement : null;",
-                        '"ride check: you turned away from "', "if (!_riding && to != null) SetOff(to, now);",
+                        '"ride check: your party stopped heading for "', "else TurnedAway(_ride.To, after);",
+                        "TookUpTheRoad(to);", "SetOff(to, now);",
                         "_ride.Moving += step;", "Travel.SkyOver(party, out bool wet, out bool snowy);",
                         "int ground = Travel.GroundUnder(party);")
             and ordered(off, "Travel.Said said = Travel.WhatWasSaidAbout(to);", "if (!said.Known) return;",
@@ -23591,7 +23592,8 @@ def the_marker_holds_its_course_on_the_road():
             and "internal const float AComebackMustBeatTheMarkBy = 1.25f;" in S['Rules.cs']
             and "internal const int ABeatenMarkIsRememberedFor = 24;" in S['Rules.cs']
             and 'Guard.Run("Action.MarkerToday", Marker.SayHowItHeldToday);' in S['Trading.cs']
-            and "Marker.NoteATurnAway((float)(now - _ride.From));" in S['RideCheck.cs']
+            and ordered(method_body(S['RideCheck.cs'], "private static void TurnedAway(Settlement from, float after)"),
+                        "Marker.NoteATurnAway(after);", '"ride check: you turned away from "')
             and all(one in BUYMARKTESTS for one in (
                 "A_market_left_at_a_gate_or_as_your_cargo_changed_is_not_held_back",
                 "A_market_beaten_on_the_road_needs_a_quarter_more_to_win_the_mark_back_within_the_day",
@@ -23956,6 +23958,59 @@ chk("2.9.0", "with extended debug logging on, the map marker's daily line in Tra
 
 chk("2.9.1", "the hours a new Buy From waited for a gate count only an hour when a held Buy From earns half again as much as what the map marker offered, weighed the way the marker would weigh it",
     the_marker_counts_the_hours_a_new_buy_from_waited_for_a_gate())
+
+
+def a_staged_trading_deal_is_scored_on_the_figure_held_as_you_walked_in():
+    m = S['Marker.cs']
+    front = method_body(m, "internal static void ScoreTheMark(Settlement site, int units, int gold, int profit)")
+    walk = method_body(m, "internal static void NoteTheWalkIn(Settlement at)")
+    out = method_body(m, "internal static void NoteTheWayOut(Settlement from)")
+    forget = method_body(m, "internal static void Forget()")
+    hold = method_body(m, "private static void HoldTheFigure(HeldFigure figure)")
+    return (front and walk and out and forget and hold
+            and ordered(front, "if (!Options.Current.ExtendedDebugLogging) return;",
+                        "bool wayIn = Marks.TheFigureOnTheWayInScores(site?.StringId, _markedId, _wayIn.Id, _wayIn.Value);",
+                        "HeldFigure held = TheFigureItHolds();", "if (wayIn) HoldTheFigure(_wayIn);",
+                        "ScoreTheFigureItHeld(site, units, gold);", "if (wayIn) HoldTheFigure(held);",
+                        "_wayIn = default(HeldFigure);", "ScoreWhatItSaidOnTheWayOut(site, units, gold, profit);")
+            and "_wayIn = _markedId != null && _markedId == at?.StringId ? TheFigureItHolds() : default(HeldFigure);" in walk
+            and "_wayIn = default(HeldFigure);" in out
+            and "_wayIn = default(HeldFigure);" in forget
+            and all(one in hold for one in ("_markedId = figure.Id;", "_markedValue = figure.Value;",
+                                            "_lastValue = figure.Last;", "_lastAt = figure.LastAt;"))
+            and ordered(S['Trading.cs'], "private void OnSettlementEntered(", "Marker.NoteTheWalkIn(settlement);",
+                        "is held back: the deal is laid out")
+            and "site != null && site != markedId && site == wayInId && wayInValue > 0L;" in S['Rules.cs']
+            and "A_Staged_Trading_deal_is_scored_on_the_figure_the_marker_held_as_you_walked_in" in BUYMARKTESTS)
+
+
+chk("2.9.2", "a Staged Trading deal you take is scored against the figure the map marker held for that market as you walked in, even though the marker has moved on by the time the deal is taken",
+    a_staged_trading_deal_is_scored_on_the_figure_held_as_you_walked_in())
+
+
+def a_ride_broken_off_and_taken_up_again_is_not_a_turn_away():
+    check = S['RideCheck.cs']
+    tick = method_body(check, "internal static void Tick(float dt)")
+    took = method_body(check, "private static void TookUpTheRoad(Settlement to)")
+    away = method_body(check, "private static void TurnedAway(Settlement from, float after)")
+    forget = method_body(check, "internal static void Forget()")
+    return (tick and took and away and forget
+            and ordered(tick, "if (_riding && to != _ride.To && party.CurrentSettlement == null)",
+                        "if (to == null)", "_brokeOffFrom = _ride.To;", "_brokeOffAfter = after;",
+                        '"ride check: your party stopped heading for "', "else TurnedAway(_ride.To, after);",
+                        "if (!_riding && to != null)", "TookUpTheRoad(to);", "SetOff(to, now);")
+            and ordered(took, "if (from == null) return;", "_brokeOffFrom = null;",
+                        "if (Marks.TurnedAwayAfterABreak(from.StringId, to.StringId)) TurnedAway(from, _brokeOffAfter);",
+                        '" again, so the "')
+            and check.count("Marker.NoteATurnAway(") == 1
+            and "Marker.NoteATurnAway(after);" in away
+            and "_brokeOffFrom = null;" in forget
+            and "brokeOffFrom != null && setOffFor != brokeOffFrom;" in S['Rules.cs']
+            and "A_ride_broken_off_is_turned_away_from_only_when_you_set_off_for_another_market" in BUYMARKTESTS)
+
+
+chk("2.9.2", "a ride broken off by a fight, a trade on the road or a stop counts as one you turned away from only when your party sets off for another market, not when it takes up the road to the same one again",
+    a_ride_broken_off_and_taken_up_again_is_not_a_turn_away())
 
 
 def the_weather_step_is_not_read_across_nightfall():

@@ -152,6 +152,8 @@ namespace TradeLord
         private static Open _ride;
         private static bool _riding;
         private static Settlement _triedTo;
+        private static Settlement _brokeOffFrom;
+        private static float _brokeOffAfter;
         private static int _judged, _close, _pastCeiling;
         private static float _offTotal;
         private static readonly Dictionary<string, Followed> _followed = new Dictionary<string, Followed>();
@@ -166,6 +168,8 @@ namespace TradeLord
             _ride = default(Open);
             _riding = false;
             _triedTo = null;
+            _brokeOffFrom = null;
+            _brokeOffAfter = 0f;
             _judged = 0;
             _close = 0;
             _pastCeiling = 0;
@@ -186,6 +190,24 @@ namespace TradeLord
             party != null && (party.MapEvent != null || party.ShortTermBehavior == AiBehavior.FleeToPoint ||
                               party.ShortTermBehavior == AiBehavior.FleeToGate);
 
+        private static void TurnedAway(Settlement from, float after)
+        {
+            Marker.NoteATurnAway(after);
+            Log.Write("ride check: you turned away from " + Tongue.Named(from.Name, from.StringId) +
+                      " after " + Hours(after) + " h, so that ride is not judged");
+        }
+
+        private static void TookUpTheRoad(Settlement to)
+        {
+            Settlement from = _brokeOffFrom;
+            if (from == null) return;
+            _brokeOffFrom = null;
+            if (Marks.TurnedAwayAfterABreak(from.StringId, to.StringId)) TurnedAway(from, _brokeOffAfter);
+            else
+                Log.Write("ride check: your party took up the road to " + Tongue.Named(from.Name, from.StringId) +
+                          " again, so the " + Hours(_brokeOffAfter) + " h before it stopped are not a ride you turned away from");
+        }
+
         internal static void Tick(float dt)
         {
             MobileParty party = MobileParty.MainParty;
@@ -199,14 +221,24 @@ namespace TradeLord
             if (_riding && to != _ride.To && party.CurrentSettlement == null)
             {
                 _riding = false;
-                Marker.NoteATurnAway((float)(now - _ride.From));
-                Log.Write("ride check: you turned away from " + Tongue.Named(_ride.To.Name, _ride.To.StringId) +
-                          " after " + Hours((float)(now - _ride.From)) + " h, so that ride is not judged");
+                float after = (float)(now - _ride.From);
+                if (to == null)
+                {
+                    _brokeOffFrom = _ride.To;
+                    _brokeOffAfter = after;
+                    Log.Write("ride check: your party stopped heading for " + Tongue.Named(_ride.To.Name, _ride.To.StringId) +
+                              " after " + Hours(after) + " h, so that ride is not judged");
+                }
+                else TurnedAway(_ride.To, after);
             }
             if (to != _triedTo && party.CurrentSettlement == null)
             {
                 _triedTo = to;
-                if (!_riding && to != null) SetOff(to, now);
+                if (!_riding && to != null)
+                {
+                    TookUpTheRoad(to);
+                    SetOff(to, now);
+                }
             }
             if (!_riding) return;
             double step = now - _ride.LastAt;
