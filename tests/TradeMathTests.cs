@@ -4346,11 +4346,8 @@ namespace TradeLord.Tests
             Assert.Equal(-100, TradeMath.BlendedShift(-100, -200, 0f));
             Assert.Equal(-200, TradeMath.BlendedShift(-100, -200, 1f));
             int ShiftAt(float horizon) => (int)Math.Round(-1000d * horizon);
-            int Priced(float days)
-            {
-                TradeMath.ForecastHorizon(days, out float low, out float high, out float share);
-                return share > 0f ? TradeMath.BlendedShift(ShiftAt(low), ShiftAt(high), share) : ShiftAt(low);
-            }
+            int Priced(float days) =>
+                TradeMath.ShiftOverTheHorizon(days, 0, (at, h) => ShiftAt(h), (at, h) => ShiftAt(h));
             int before = Priced(0.01f);
             for (float days = 0.02f; days <= 3f; days += 0.01f)
             {
@@ -4358,6 +4355,26 @@ namespace TradeLord.Tests
                 Assert.True(Math.Abs(now - before) <= 12, "the price jumped by " + (now - before) + " at " + days);
                 before = now;
             }
+        }
+
+        [Fact]
+        public void A_forecast_price_reads_an_uncached_shift_under_a_quarter_day_and_cached_ones_above_it()
+        {
+            var cached = new List<float>();
+            var fresh = new List<float>();
+            int Cached(int at, float h) { cached.Add(h); return (int)Math.Round(-1000d * h); }
+            int Fresh(int at, float h) { fresh.Add(h); return -7; }
+            Assert.Equal(-7, TradeMath.ShiftOverTheHorizon(0.1f, 0, Cached, Fresh));
+            Assert.Empty(cached);
+            Assert.Equal(0.1f, fresh[0], 4);
+            fresh.Clear();
+            Assert.Equal(-250, TradeMath.ShiftOverTheHorizon(0.25f, 0, Cached, Fresh));
+            Assert.Single(cached);
+            Assert.Empty(fresh);
+            cached.Clear();
+            Assert.Equal(-300, TradeMath.ShiftOverTheHorizon(0.3f, 0, Cached, Fresh));
+            Assert.Equal(new[] { 0.25f, 0.5f }, cached.ToArray());
+            Assert.Empty(fresh);
         }
 
         [Fact]

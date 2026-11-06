@@ -262,9 +262,9 @@ namespace TradeLord
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
             Build();
-            TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);
-            int below = low >= TradeMath.HorizonStep ? ShiftCachedAt(site, item, low) : WorthShift(site, item, low);
-            return share > 0f ? TradeMath.BlendedShift(below, ShiftCachedAt(site, item, high), share) : below;
+            return TradeMath.ShiftOverTheHorizon(withinDays, (site, item),
+                                                 (at, days) => ShiftCachedAt(at.Item1, at.Item2, days),
+                                                 (at, days) => WorthShift(at.Item1, at.Item2, days));
         }
 
         private static int ShiftCachedAt(Settlement site, ItemObject item, float quarterDay)

@@ -2686,6 +2686,14 @@ namespace TradeLord
             share = ShareOfTheQuarterDayAbove(d, low);
         }
 
+        public static int ShiftOverTheHorizon<T>(float withinDays, T at, Func<T, float, int> cachedAt,
+                                                 Func<T, float, int> freshAt)
+        {
+            ForecastHorizon(withinDays, out float low, out float high, out float share);
+            int below = low >= HorizonStep ? cachedAt(at, low) : freshAt(at, low);
+            return share > 0f ? BlendedShift(below, cachedAt(at, high), share) : below;
+        }
+
         public static int BlendedShift(int below, int above, float share)
         {
             if (!(share > 0f)) return below;
