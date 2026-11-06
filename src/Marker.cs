@@ -256,6 +256,21 @@ namespace TradeLord
         private static long _lastValue;
         private static int _lastAt = -1;
 
+        private struct HeldFigure
+        {
+            internal string Id;
+            internal long Value;
+            internal long Earned;
+            internal int Units;
+            internal float Rate;
+            internal float Days;
+            internal int At;
+            internal long Last;
+            internal int LastAt;
+        }
+
+        private static HeldFigure _wayIn;
+
         private static long _saidValue = -1L;
         private static float _saidRate = -1f;
         private static long _toldValue = -1L;
@@ -355,6 +370,7 @@ namespace TradeLord
             _outAt = -1;
             _lastValue = 0L;
             _lastAt = -1;
+            _wayIn = default(HeldFigure);
             _saidValue = -1L;
             _saidRate = -1f;
             _toldValue = -1L;
@@ -1123,6 +1139,7 @@ namespace TradeLord
             _justWalkedOut = true;
             _beatenOnTheRoad.Clear();
             _gatePending = true;
+            _wayIn = default(HeldFigure);
         }
 
         private static void WhatItSaidOnTheWayOut(Settlement target, in Reckoning how)
@@ -1141,8 +1158,39 @@ namespace TradeLord
         internal static void ScoreTheMark(Settlement site, int units, int gold, int profit)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
+            bool wayIn = Marks.TheFigureOnTheWayInScores(site?.StringId, _markedId, _wayIn.Id, _wayIn.Value);
+            HeldFigure held = TheFigureItHolds();
+            if (wayIn) HoldTheFigure(_wayIn);
             ScoreTheFigureItHeld(site, units, gold);
+            if (wayIn) HoldTheFigure(held);
+            _wayIn = default(HeldFigure);
             ScoreWhatItSaidOnTheWayOut(site, units, gold, profit);
+        }
+
+        private static HeldFigure TheFigureItHolds() => new HeldFigure
+        {
+            Id = _markedId,
+            Value = _markedValue,
+            Earned = _markedEarned,
+            Units = _markedUnits,
+            Rate = _markedRate,
+            Days = _markedDays,
+            At = _markedAt,
+            Last = _lastValue,
+            LastAt = _lastAt
+        };
+
+        private static void HoldTheFigure(HeldFigure figure)
+        {
+            _markedId = figure.Id;
+            _markedValue = figure.Value;
+            _markedEarned = figure.Earned;
+            _markedUnits = figure.Units;
+            _markedRate = figure.Rate;
+            _markedDays = figure.Days;
+            _markedAt = figure.At;
+            _lastValue = figure.Last;
+            _lastAt = figure.LastAt;
         }
 
         private static void ScoreWhatItSaidOnTheWayOut(Settlement site, int units, int gold, int profit)
@@ -1973,6 +2021,7 @@ namespace TradeLord
             if (at?.StringId != _keptForItsSellAt) _keptForItsSellAt = null;
             _walkedInto = at?.StringId;
             _markedOnTheWayIn = _picked?.StringId;
+            _wayIn = _markedId != null && _markedId == at?.StringId ? TheFigureItHolds() : default(HeldFigure);
         }
 
         internal static void NoteALoadInside(Settlement at)

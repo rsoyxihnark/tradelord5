@@ -255,6 +255,25 @@ namespace TradeLord.Tests
             Assert.Equal(1.5f, Marks.AWaitingBuyFromBeatsWhatYouHaveBy);
         }
 
+        [Fact]
+        public void A_Staged_Trading_deal_is_scored_on_the_figure_the_marker_held_as_you_walked_in()
+        {
+            Assert.True(Marks.TheFigureOnTheWayInScores("lageta", "jaculan", "lageta", 7552L));
+            Assert.False(Marks.TheFigureOnTheWayInScores("lageta", "lageta", "lageta", 7552L));
+            Assert.False(Marks.TheFigureOnTheWayInScores("lageta", "jaculan", "ortysia", 7552L));
+            Assert.False(Marks.TheFigureOnTheWayInScores("lageta", "jaculan", "lageta", 0L));
+            Assert.False(Marks.TheFigureOnTheWayInScores("lageta", "jaculan", null, 0L));
+            Assert.False(Marks.TheFigureOnTheWayInScores(null, "jaculan", "lageta", 7552L));
+        }
+
+        [Fact]
+        public void A_ride_broken_off_is_turned_away_from_only_when_you_set_off_for_another_market()
+        {
+            Assert.False(Marks.TurnedAwayAfterABreak("qasira", "qasira"));
+            Assert.True(Marks.TurnedAwayAfterABreak("qasira", "razih"));
+            Assert.False(Marks.TurnedAwayAfterABreak(null, "razih"));
+        }
+
         private static Dictionary<string, (float rate, float earned)> Sold(
             params (string town, float rate, float earned)[] sold)
         {

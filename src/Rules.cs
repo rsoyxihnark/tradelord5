@@ -179,6 +179,12 @@ namespace TradeLord
         internal static bool AGreatBuyFromWaits(float waitingRate, float rateYouHave) =>
             waitingRate > 0f && waitingRate > rateYouHave * AWaitingBuyFromBeatsWhatYouHaveBy;
 
+        internal static bool TheFigureOnTheWayInScores(string site, string markedId, string wayInId, long wayInValue) =>
+            site != null && site != markedId && site == wayInId && wayInValue > 0L;
+
+        internal static bool TurnedAwayAfterABreak(string brokeOffFrom, string setOffFor) =>
+            brokeOffFrom != null && setOffFor != brokeOffFrom;
+
         internal static bool HoldsForASecondLook(bool holderPriced, bool afresh, bool cargoSame, int lostAt,
                                                  int hourNow) =>
             holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);
