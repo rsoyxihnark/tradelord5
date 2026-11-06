@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Helpers;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.Extensions;
@@ -77,7 +79,9 @@ namespace TradeLord
         private static readonly Dictionary<string, float> _villagersReach =
             new Dictionary<string, float>(StringComparer.Ordinal);
 
-        private static int _villagesFollowed, _villageLoads, _villageWorth;
+        private static int _villagesFollowed, _villageLoads, _villageWorth, _villageHoursKnown, _villagesHealing;
+
+        private static readonly Dictionary<string, double> _villageMadeAt = new Dictionary<string, double>(StringComparer.Ordinal);
 
         private static float _villageSoonest;
 
@@ -181,6 +185,7 @@ namespace TradeLord
             _shopsAhead.Clear();
             _tillPaid.Clear();
             _runSeen.Clear();
+            _villageMadeAt.Clear();
             ForgetTheTurns();
             _saidItCouldNotRead = false;
         }
@@ -740,6 +745,8 @@ namespace TradeLord
         private static void ReadWhatTheVillagesWillSend()
         {
             _villagesFollowed = 0;
+            _villageHoursKnown = 0;
+            _villagesHealing = 0;
             _villageLoads = 0;
             _villageWorth = 0;
             _villageSoonest = float.PositiveInfinity;
@@ -763,7 +770,8 @@ namespace TradeLord
             Settlement home = village.Settlement;
             Settlement town = village.TradeBound;
             if (town == null || !town.IsTown || town.Town == null || town.IsUnderSiege) return;
-            if (village.VillageState != Village.VillageStates.Normal || home.Party?.MapEvent != null) return;
+            bool looted = village.VillageState == Village.VillageStates.Looted;
+            if ((village.VillageState != Village.VillageStates.Normal && !looted) || home.Party?.MapEvent != null) return;
             if (FactionManager.IsAtWarAgainstFaction(home.MapFaction, town.MapFaction)) return;
             MobileParty villagers = village.VillagerPartyComponent?.MobileParty;
             if (villagers != null && (villagers.MapEvent != null || villagers.IsInRaftState)) return;
@@ -792,19 +800,21 @@ namespace TradeLord
                 if (item != null && amount > 0) held[At(item)] += amount;
             }
             VillageProductionCalculatorModel model = Campaign.Current.Models.VillageProductionCalculatorModel;
-            float madeADay = 0f;
+            int level = village.GetHearthLevel();
+            float madeADay = 0f, goodsADay = 0f;
             foreach (var (item, each) in village.VillageType.Productions)
             {
                 if (item == null) continue;
-                float rate = item.IsMountable
-                    ? each * (village.GetHearthLevel() + 1) * 0.5f
+                float rate = item.IsMountable || looted
+                    ? each * (level + 1) * 0.5f
                     : model.CalculateDailyProductionAmount(village, item).ResultNumber;
                 rate = TradeMath.Finite(rate, 0f);
                 if (rate <= 0f) continue;
                 made[At(item)] += rate;
                 madeADay += rate;
+                goodsADay += rate;
             }
-            float food = TradeMath.Finite(model.CalculateDailyFoodProductionAmount(village), 0f);
+            float food = looted ? level + 1f : TradeMath.Finite(model.CalculateDailyFoodProductionAmount(village), 0f);
             IList<ItemObject> foods = Campaign.Current.DefaultVillageTypes?.ConsumableRawItems;
             if (food > 0f && foods != null)
             {
@@ -826,13 +836,27 @@ namespace TradeLord
             }
             float ride = TradeMath.EtaDays(RoadBetween(home, town), speed);
             float back = WhenTheVillagersAreHome(villagers, home, town, ride, speed);
-            float room = villagers != null ? villagers.InventoryCapacity : 0f;
+            float room = villagers != null
+                ? TradeMath.RoomOnceToppedUp(villagers.InventoryCapacity, villagers.MemberRoster.TotalManCount,
+                                             TradeMath.IdealVillagers(
+                                                 Campaign.Current.Models.PartySizeLimitModel.MinimumNumberOfVillagersAtVillagerParty,
+                                                 village.Hearth, goodsADay),
+                                             village.Hearth)
+                : 0f;
+            int heals = looted ? TradeMath.TicksAVillageHealsIn(home.SettlementHitPoints, HealsADay(village)) : 0;
+            float[] scale = TradeMath.WhatAVillageMakesEachTick(village.Hearth, village.HearthChange, looted, heals,
+                                                                (int)Math.Ceiling(watch) + 1);
+            bool known = _villageMadeAt.TryGetValue(home.StringId, out double madeAt);
+            float next = known
+                ? TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)
+                : TradeMath.AVillagesTickUnseen;
             List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
-                held.ToArray(), made.ToArray(), weight, onHoof, TradeMath.AVillagesWarehouse(madeADay), room, back,
-                villagers != null, ride, watch);
+                held.ToArray(), made.ToArray(), weight, onHoof, room, back, villagers != null, ride, watch, next, scale);
             if (loads.Count == 0) return;
 
             _villagesFollowed++;
+            if (known) _villageHoursKnown++;
+            if (looted) _villagesHealing++;
             Town market = town.Town;
             foreach (TradeMath.VillageLoad load in loads)
             {
@@ -861,6 +885,25 @@ namespace TradeLord
                 _villageLoads++;
                 if (load.Days < _villageSoonest) _villageSoonest = load.Days;
             }
+        }
+
+        private static float HealsADay(Village village)
+        {
+            Settlement home = village.Settlement;
+            var heal = new ExplainedNumber(TradeMath.AVillageHealsADayBy(home.MapFaction?.CurrentTotalStrength ?? 0f));
+            if (village.TradeBound?.Town != null)
+                PerkHelper.AddPerkBonusForTown(DefaultPerks.Medicine.CleanInfrastructure, village.TradeBound.Town, false,
+                                               ref heal);
+            Hero leader = home.OwnerClan?.Leader;
+            if (leader != null && leader.GetPerkValue(DefaultPerks.Roguery.InBestLight))
+                heal.AddFactor(DefaultPerks.Roguery.InBestLight.SecondaryBonus);
+            return heal.ResultNumber;
+        }
+
+        internal static void ASettlementTicked(Settlement settlement)
+        {
+            if (settlement == null || !settlement.IsVillage || settlement.StringId == null) return;
+            _villageMadeAt[settlement.StringId] = CampaignTime.Now.ToDays;
         }
 
         private static float WhenTheVillagersAreHome(MobileParty villagers, Settlement home, Settlement town, float ride,
@@ -898,7 +941,8 @@ namespace TradeLord
             Build();
             return "villages this hour: " + _villageLoads + " load(s) from " + _villagesFollowed +
                    " village(s) whose villagers have not set out yet, goods worth " + _villageWorth +
-                   " denars for the towns they sell to" +
+                   " denars for the towns they sell to; the hour of the day a village makes its goods known for " +
+                   _villageHoursKnown + " of them, and " + _villagesHealing + " of them looted and followed until they recover" +
                    (_villageLoads > 0
                        ? ", the soonest landing in " +
                          _villageSoonest.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " day(s)"
