@@ -1389,6 +1389,8 @@ namespace TradeLord
                 said.Add("    " + Travel.TheRoadsOthersRide());
                 string villages = Forecast.TheVillagesSend();
                 if (villages != null) said.Add("    " + villages);
+                string caravans = Forecast.TheCaravansMeet();
+                if (caravans != null) said.Add("    " + caravans);
                 string unseen = Forecast.TheCaravansNotYetBound();
                 if (unseen != null) said.Add("    " + unseen);
                 if (how.Bill != null)

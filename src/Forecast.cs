@@ -81,6 +81,16 @@ namespace TradeLord
 
         private static int _villagesFollowed, _villageLoads, _villageWorth, _villageHoursKnown, _villagesHealing;
 
+        private static readonly List<(MobileParty party, Settlement bound, float days)> _caravansAhead =
+            new List<(MobileParty, Settlement, float)>();
+
+        private static readonly Dictionary<string, (string site, ItemCategory kind, float now, float said)> _caravanMeets =
+            new Dictionary<string, (string, ItemCategory, float, float)>(StringComparer.Ordinal);
+
+        private static int _caravansFollowed, _caravansMet;
+
+        private static long _caravanTicks;
+
         private static readonly Dictionary<string, double> _villageMadeAt = new Dictionary<string, double>(StringComparer.Ordinal);
 
         private static float _villageSoonest;
@@ -186,6 +196,8 @@ namespace TradeLord
             _tillPaid.Clear();
             _runSeen.Clear();
             _villageMadeAt.Clear();
+            _caravansAhead.Clear();
+            _caravanMeets.Clear();
             ForgetTheTurns();
             _saidItCouldNotRead = false;
         }
@@ -420,11 +432,14 @@ namespace TradeLord
             _unseenBought.Clear();
             _shopsAhead.Clear();
             _tillPaid.Clear();
+            _caravansAhead.Clear();
+            _caravanMeets.Clear();
             Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);
-            Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
             Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);
+            Guard.Run("Forecast.CaravansOnArrival", FollowTheCaravans);
+            Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
             Guard.Run("Forecast.Purses", SettleThePurses);
             foreach (List<(float days, int gold)> paid in _tillPays.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
             foreach (List<(float days, int gold)> paid in _tillAhead.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
@@ -452,7 +467,7 @@ namespace TradeLord
                 RideCheck.Saw(party, bound, days);
                 if (caravan)
                 {
-                    Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));
+                    _caravansAhead.Add((party, bound, days));
                     continue;
                 }
                 if (party.StringId != null) _villagersReach[party.StringId] = days;
@@ -995,11 +1010,86 @@ namespace TradeLord
             return _averageValues.TryGetValue(kind.StringId, out float value) ? value : 1f;
         }
 
-        private static void FollowACaravan(MobileParty caravan, Settlement bound, float days)
+        private static void FollowTheCaravans()
+        {
+            _caravansFollowed = _caravansAhead.Count;
+            _caravansMet = 0;
+            long started = Stopwatch.GetTimestamp();
+            var arrive = new List<float>(_caravansAhead.Count);
+            foreach (var one in _caravansAhead) arrive.Add(one.days);
+            float trust = TrustEarned();
+            foreach (int i in TradeMath.InTheOrderTheyArrive(arrive))
+            {
+                var (party, bound, days) = _caravansAhead[i];
+                Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days, trust));
+            }
+            _caravanTicks = Stopwatch.GetTimestamp() - started;
+        }
+
+        internal static string TheCaravansMeet()
+        {
+            if (!On) return null;
+            Build();
+            return "caravans this hour: " + _caravansFollowed + " caravan(s) on the road followed to the market they " +
+                   "are bound for, " + _caravansMet + " of them counted at prices moved by what lands there first, " +
+                   "worked out in " + (_caravanTicks * 1000d / Stopwatch.Frequency)
+                       .ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms";
+        }
+
+        private static float IndexOnArrival(Town town, ItemCategory kind, int shift)
+        {
+            float now = town.GetItemCategoryPriceIndex(kind);
+            if (shift == 0) return now;
+            ItemData data = town.MarketData.GetCategoryData(kind);
+            TradeItemPriceFactorModel model = Campaign.Current.Models.TradeItemPriceFactorModel;
+            if (!TradeMath.SameIndex(model.GetBasePriceFactor(kind, data.InStoreValue, data.Supply, data.Demand, false, 0),
+                                     now))
+                return now;
+            return model.GetBasePriceFactor(kind, TradeMath.ShelfAfterLanding(data.InStoreValue, shift), data.Supply,
+                                            data.Demand, false, 0);
+        }
+
+        private static int PriceOnArrival(Town town, ItemObject item, MobileParty caravan, bool selling, int shift, int now)
+        {
+            if (shift == 0 || now <= 0 || item?.ItemCategory == null) return now;
+            ItemData data = town.MarketData.GetCategoryData(item.ItemCategory);
+            TradeItemPriceFactorModel model = Campaign.Current.Models.TradeItemPriceFactorModel;
+            var el = new EquipmentElement(item);
+            PartyBase merchant = Priced.Merchant(town.Settlement);
+            if (model.GetPrice(el, caravan, merchant, selling, data.InStoreValue, data.Supply, data.Demand) != now)
+                return now;
+            int after = model.GetPrice(el, caravan, merchant, selling, TradeMath.ShelfAfterLanding(data.InStoreValue, shift),
+                                       data.Supply, data.Demand);
+            return after > 0 ? after : now;
+        }
+
+        internal static (ItemCategory kind, float now, float said)? WhatACaravanWasCountedToMeet(string caravan,
+                                                                                                Settlement site)
+        {
+            if (!On || caravan == null || site == null) return null;
+            Build();
+            if (!_caravanMeets.TryGetValue(caravan, out var met) || met.site != site.StringId || met.kind == null)
+                return null;
+            return (met.kind, met.now, met.said);
+        }
+
+        private static void FollowACaravan(MobileParty caravan, Settlement bound, float days, float trust)
         {
             Town town = bound.IsTown ? bound.Town : null;
             ItemRoster carried = caravan.ItemRoster;
             if (town == null || carried == null) return;
+            var shifts = new Dictionary<string, int>(StringComparer.Ordinal);
+            int ShiftOf(ItemObject stands)
+            {
+                if (stands?.ItemCategory == null) return 0;
+                string key = stands.ItemCategory.StringId;
+                if (!shifts.TryGetValue(key, out int shift))
+                    shifts[key] = shift = TradeMath.WorthShiftTrusted(WorthShift(bound, stands, days), trust);
+                return shift;
+            }
+            ItemCategory biggest = null;
+            long biggestGold = 0L;
+            float biggestNow = 0f, biggestSaid = 0f;
             bool convoy = caravan.HasNavalNavigationCapability;
             bool onLand = caravan.HasLandNavigationCapability;
             var indexes = caravan.CaravanPartyComponent != null &&
@@ -1035,13 +1125,16 @@ namespace TradeLord
                     int haulOver = TradeMath.AnimalsACaravanSellsOff(hauling, men);
                     int herdOver = TradeMath.AnimalsACaravanSellsOff(herd, men);
                     if (haul && onLand && haulOver <= 0) continue;
-                    int price = Priced.At(town, item, caravan, selling: true);
+                    int shift = ShiftOf(item);
+                    int price = PriceOnArrival(town, item, caravan, true, shift,
+                                               Priced.At(town, item, caravan, selling: true));
                     if (price <= 0) continue;
                     held.TryGetValue(kind.StringId, out int worth);
+                    float factor = IndexOnArrival(town, kind, shift);
                     int units = onLand && haul ? haulOver
                         : onLand && livestock && herdOver > 0 ? herdOver
                         : TradeMath.WhatACaravanUnloads(
-                              amount, town.GetItemCategoryPriceIndex(kind), index.average, index.lowest, worth,
+                              amount, factor, index.average, index.lowest, worth,
                               economy.CalculateDailySettlementBudgetForItemCategory(town, town.MarketData.GetDemand(kind),
                                                                                     kind),
                               item.Value, price, convoy, haul);
@@ -1049,6 +1142,13 @@ namespace TradeLord
                     if (units <= 0) continue;
                     sold[k] = units;
                     till -= units * price;
+                    if ((long)units * price > biggestGold)
+                    {
+                        biggestGold = (long)units * price;
+                        biggest = kind;
+                        biggestNow = town.GetItemCategoryPriceIndex(kind);
+                        biggestSaid = factor;
+                    }
                     int draw = NoteTheTillPays(bound, units * price, days, TradeMath.TillDraw.Caravans,
                                                Naming ? caravan.Name + " (" + caravan.StringId + ")" : null,
                                                caravan.StringId);
@@ -1061,6 +1161,14 @@ namespace TradeLord
                              (int)TradeMath.TillDraw.Caravans);
                 }
 
+            if (biggest != null && caravan.StringId != null)
+                _caravanMeets[caravan.StringId] = (bound.StringId, biggest, biggestNow, biggestSaid);
+            foreach (int moved in shifts.Values)
+                if (moved != 0)
+                {
+                    _caravansMet++;
+                    break;
+                }
             for (int k = 0; k < carried.Count; k++)
             {
                 ItemObject item = carried.GetItemAtIndex(k);
@@ -1083,7 +1191,8 @@ namespace TradeLord
                 if (town.MarketData.GetItemCountOfCategory(kind) <= 0) continue;
                 held.TryGetValue(kind.StringId, out int worth);
                 float wants = TradeMath.WhatACaravanThinksAKindIsWorth(
-                    town.GetItemCategoryPriceIndex(kind), index.average, worth, town.MarketData.GetDemand(kind),
+                    IndexOnArrival(town, kind, ShiftOf(StandsForAt(bound, kind))), index.average, worth,
+                    town.MarketData.GetDemand(kind),
                     AverageValueOf(kind), budget, room, kind.Properties == ItemCategory.Property.BonusToFoodStores,
                     onLand && kind == DefaultItemCategories.PackAnimal);
                 worthOf[kind.StringId] = wants;
@@ -1100,7 +1209,8 @@ namespace TradeLord
                 if (stocked <= 0 || stands == null) return;
                 int spend = TradeMath.WhatACaravanSpendsOnAKind(
                     gold, wants, Campaign.Current.Models.CaravanModel.GetMaxGoldToSpendOnOneItemCategory(caravan, kind));
-                int price = Priced.At(town, stands, caravan, selling: false);
+                int price = PriceOnArrival(town, stands, caravan, false, ShiftOf(stands),
+                                           Priced.At(town, stands, caravan, selling: false));
                 int most = Campaign.Current.Models.CaravanModel.MaxNumberOfItemsToBuyFromSingleCategory;
                 bool livestock = stands.HorseComponent != null && stands.HorseComponent.IsLiveStock;
                 bool haul = stands.HorseComponent != null && stands.HorseComponent.IsPackAnimal;

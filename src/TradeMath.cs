@@ -1218,6 +1218,24 @@ namespace TradeLord
             return units >= carried ? carried : (int)Math.Round(units, MidpointRounding.AwayFromZero);
         }
 
+        public const float AnIndexReadsTheSameWithin = 1E-4f;
+
+        public static bool SameIndex(float asked, float read) =>
+            !float.IsNaN(asked) && !float.IsNaN(read) && Math.Abs(asked - read) <= AnIndexReadsTheSameWithin;
+
+        public static List<int> InTheOrderTheyArrive(IList<float> days)
+        {
+            var order = new List<int>();
+            if (days == null) return order;
+            for (int i = 0; i < days.Count; i++) order.Add(i);
+            order.Sort((x, y) =>
+            {
+                float a = Finite(days[x], float.MaxValue), b = Finite(days[y], float.MaxValue);
+                return a != b ? a.CompareTo(b) : x.CompareTo(y);
+            });
+            return order;
+        }
+
         public static int AnimalsACaravanSellsOff(int animals, int men) =>
             Math.Max(0, (int)(animals - men * ACaravanDrivesThisManyAnimalsAMan));
 

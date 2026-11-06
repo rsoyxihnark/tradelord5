@@ -3189,6 +3189,22 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Caravans_are_followed_in_the_order_they_reach_their_markets_so_an_earlier_one_moves_the_price_a_later_one_meets()
+        {
+            Assert.Equal(new List<int> { 2, 0, 3, 1 }, TradeMath.InTheOrderTheyArrive(new[] { 1.5f, 3f, 0.2f, 1.5f }));
+            Assert.Equal(new List<int> { 1, 0 }, TradeMath.InTheOrderTheyArrive(new[] { float.NaN, 4f }));
+            Assert.Empty(TradeMath.InTheOrderTheyArrive(null));
+        }
+
+        [Fact]
+        public void A_price_index_read_back_from_the_game_counts_as_the_same_only_within_a_hair()
+        {
+            Assert.True(TradeMath.SameIndex(1.25f, 1.25005f));
+            Assert.False(TradeMath.SameIndex(1.25f, 1.26f));
+            Assert.False(TradeMath.SameIndex(float.NaN, 1.25f));
+        }
+
+        [Fact]
         public void A_villages_warehouse_holds_five_days_of_what_it_makes_and_it_stops_making_past_half_again()
         {
             Assert.Equal(62, TradeMath.AVillagesWarehouse(12.4f));
