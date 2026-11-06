@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.9
+
+- Fixed Count what is on its way counting caravans' sales and purchases at today's prices instead of the prices they meet on arrival (#168)
+- With Enable extended debug logging on, TradeLord.log's caravan check now says what price a caravan was counted to meet and what it met (#168)
+- With Enable extended debug logging on, TradeLord.log now says each hour how many caravans were counted at their arrival prices (#168)
+
 ## 2.9.8
 
 - Fixed Count what is on its way timing a village's next trip as if it made goods all day instead of once a day at its own hour (#173)

@@ -120,6 +120,10 @@ namespace TradeLord
             internal bool Villagers;
             internal bool NextTrip;
             internal int GoldBefore;
+            internal ItemCategory Kind;
+            internal float IndexNow = float.NaN;
+            internal float IndexSaid = float.NaN;
+            internal float IndexMet = float.NaN;
         }
 
         private struct PurseSaid
@@ -142,6 +146,8 @@ namespace TradeLord
         private static readonly Dictionary<string, Counted> _counted = new Dictionary<string, Counted>(StringComparer.Ordinal);
         private static int _countedDay, _soldDay, _lateDay, _neverDay;
         private static long _wantSold, _goldSold, _wantLate, _goldLate, _wantNever;
+        private static int _indexJudged;
+        private static double _indexSaidOff, _indexNowOff;
         private static int _villagersDay, _nextTripsDay, _villagersSold, _villagersLate, _villagersNever;
         private static long _villagersWantSold, _villagersGoldSold, _villagersWantLate, _villagersGoldLate, _villagersWantNever;
         private static readonly Dictionary<int, List<PurseSaid>> _purseDue = new Dictionary<int, List<PurseSaid>>();
@@ -343,6 +349,14 @@ namespace TradeLord
                     DueAt = now + one.days * 24d,
                     YouDueAt = now + days * 24d
                 };
+                var meets = Forecast.WhatACaravanWasCountedToMeet(one.id, to);
+                if (meets.HasValue)
+                {
+                    Counted counted = _counted[one.id];
+                    counted.Kind = meets.Value.kind;
+                    counted.IndexNow = meets.Value.now;
+                    counted.IndexSaid = meets.Value.said;
+                }
                 _countedDay++;
             }
             CountTheVillagers(to, days, now, TradeMath.TillDraw.Villagers);
@@ -392,6 +406,8 @@ namespace TradeLord
             {
                 one.ArrivedAt = CampaignTime.Now.ToHours;
                 if (one.Villagers && party.PartyTradeGold < one.GoldBefore) one.GoldBefore = party.PartyTradeGold;
+                if (!one.Villagers && one.Kind != null && at.Town != null)
+                    one.IndexMet = at.Town.GetItemCategoryPriceIndex(one.Kind);
             }
             else if (at.IsTown) one.Elsewhere = Tongue.Named(at.Name, at.StringId);
         }
@@ -453,6 +469,12 @@ namespace TradeLord
                     TallyTheVillagers(one, came);
                     continue;
                 }
+                if (!float.IsNaN(one.IndexMet) && !float.IsNaN(one.IndexSaid) && !float.IsNaN(one.IndexNow))
+                {
+                    _indexJudged++;
+                    _indexSaidOff += Math.Abs(one.IndexSaid - one.IndexMet);
+                    _indexNowOff += Math.Abs(one.IndexNow - one.IndexMet);
+                }
                 if (came == TradeMath.CaravanCame.Sold)
                 {
                     _soldDay++;
@@ -510,8 +532,17 @@ namespace TradeLord
                    (came == TradeMath.CaravanCame.CameAfterYou
                        ? ", after you got there at " + Hours((float)(one.YouDueAt - one.SetOffAt)) + " h,"
                        : "") +
-                   " and sold " + one.Sold;
+                   " and sold " + one.Sold + IndexMet(one);
         }
+
+        private static string IndexMet(Counted one) =>
+            float.IsNaN(one.IndexMet) || float.IsNaN(one.IndexSaid) || one.Kind == null ? ""
+            : "; its biggest sale, " + Tongue.Named(one.Kind.GetName(), one.Kind.StringId) + ", was counted at a price " +
+              "index of " + Index(one.IndexSaid) + " for its arrival (" + Index(one.IndexNow) + " when it was counted) " +
+              "and met " + Index(one.IndexMet);
+
+        private static string Index(float index) =>
+            float.IsNaN(index) ? "unknown" : index.ToString("0.000", CultureInfo.InvariantCulture);
 
         private static string JudgedVillagers(Counted one, TradeMath.CaravanCame came, bool gone)
         {
@@ -537,7 +568,13 @@ namespace TradeLord
                       "set off for; " + _soldDay + " arrived before you and sold " + _goldSold + " of the " + _wantSold +
                       " counted for them, " + _lateDay + " arrived after you and sold " + _goldLate + " of the " +
                       _wantLate + " counted for them, and " + _neverDay + " never arrived, counted for " + _wantNever +
-                      "; " + _counted.Count + " still awaited");
+                      "; " + _counted.Count + " still awaited" +
+                      (_indexJudged > 0
+                          ? "; for " + _indexJudged + " of them the price index of their biggest sale counted for their " +
+                            "arrival was " + Index((float)(_indexSaidOff / _indexJudged)) + " off what they met on " +
+                            "average, and the index when they were counted " + Index((float)(_indexNowOff / _indexJudged)) +
+                            " off"
+                          : ""));
             ClearTheCounted();
         }
 
@@ -563,6 +600,8 @@ namespace TradeLord
             _villagersWantSold = _villagersGoldSold = _villagersWantLate = _villagersGoldLate = _villagersWantNever = 0L;
             _countedDay = _soldDay = _lateDay = _neverDay = 0;
             _wantSold = _goldSold = _wantLate = _goldLate = _wantNever = 0L;
+            _indexJudged = 0;
+            _indexSaidOff = _indexNowOff = 0d;
         }
 
         private static void CheckThePurses(double now)
