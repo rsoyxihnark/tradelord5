@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.7
+
+- With Enable extended debug logging on, TradeLord.log now checks what villagers sold where you set off for against what was counted (#148)
+
 ## 2.9.6
 
 - Fixed TradeLord timing a ride you set off on in the middle of the hour from where your party stood at the start of that hour (#172)

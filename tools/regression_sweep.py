@@ -10186,7 +10186,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 45
+            and ALL.count("Tongue.Named(") == 47
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -23825,11 +23825,14 @@ def each_counted_caravan_is_judged_against_what_it_sold():
     off = method_body(check, "private static void SetOff(Settlement to, double now)")
     judge = method_body(check, "private static void JudgeTheCounted(double now)")
     traded = method_body(check, "internal static void ACaravanTraded(")
-    drawing = method_body(S['Forecast.cs'], "TheCaravansDrawing(Settlement site)")
+    drawing = method_body(S['Forecast.cs'], "TheCaravansDrawing(Settlement site,")
     did = method_body(S['TradeMath.cs'], "public static CaravanCame WhatACaravanDid(")
     return (off and judge and traded and drawing and did
             and "CountTheCaravans(to, said.Days, now);" in off
-            and "if (one.from != TradeMath.TillDraw.Caravans || one.id == null || one.gold <= 0) continue;" in drawing
+            and "TradeMath.TillDraw kind = TradeMath.TillDraw.Caravans)" in drawing
+            and "if (one.from != kind || one.id == null || one.gold <= 0) continue;" in drawing
+            and "List<(string id, string name, float days, int want, int paid)> drawing = Forecast.TheCaravansDrawing(to);"
+                in method_body(check, "private static void CountTheCaravans(")
             and "bool aligned = paid != null && paid.Count == by.Count;" in drawing
             and 'Guard.Run("RideCheck.CaravanTraded", () => RideCheck.ACaravanTraded(caravan, town, traded));' in S['Ledger.cs']
             and ordered(traded, "if (!Writing ||", "if (double.IsNaN(one.ArrivedAt)) one.ArrivedAt = CampaignTime.Now.ToHours;",
@@ -23876,7 +23879,8 @@ def the_census_counts_what_other_parties_do_to_a_towns_purse_and_shelf():
     left = method_body(check, "internal static void Left(MobileParty party, Settlement at)")
     entered = method_body(check, "private static void Entered(MobileParty party, Settlement at)")
     return (left and entered
-            and "else if (party != MobileParty.MainParty && !party.IsVillager) Entered(party, at);" in check
+            and ordered(check, "if (party.IsCaravan || party.IsVillager) ACountedCaravanCame(party, at);",
+                        "else if (party != MobileParty.MainParty) Entered(party, at);")
             and "if (!Writing || party.StringId == null || !at.IsTown || at.Town == null) return;" in entered
             and "CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);" in check
             and ordered(left, "int moved = one.Value - had;", "int price = Priced.At(at.Town, item, party, selling: moved < 0);",
@@ -24181,6 +24185,57 @@ def a_ride_set_off_on_the_road_is_timed_from_where_your_party_stands_then():
 
 chk("2.9.6", "a ride your party sets off on in the middle of the hour is timed from where it stands as it turns, not from where it stood at the start of the hour",
     a_ride_set_off_on_the_road_is_timed_from_where_your_party_stands_then())
+
+
+def each_counted_villager_party_is_judged_against_what_it_sold():
+    check = S['RideCheck.cs']
+    caravans = method_body(check, "private static void CountTheCaravans(")
+    villagers = method_body(check, "private static void CountTheVillagers(")
+    came = method_body(check, "private static void ACountedCaravanCame(")
+    left = method_body(check, "private static void VillagersLeft(")
+    judge = method_body(check, "private static void JudgeTheCounted(double now)")
+    judged = method_body(check, "private static string JudgedVillagers(")
+    say = method_body(check, "private static void SayTheVillagers()")
+    return (caravans and villagers and came and left and judge and judged and say
+            and ordered_last(caravans, "CountTheVillagers(to, days, now, TradeMath.TillDraw.Villagers);",
+                             "CountTheVillagers(to, days, now, TradeMath.TillDraw.VillagesNextTrips);")
+            and ordered(villagers, "Forecast.TheCaravansDrawing(to, kind);",
+                        "foreach (MobileParty party in MobileParty.AllVillagerParties)",
+                        "byHome[party.HomeSettlement?.StringId ?? party.StringId] = party;",
+                        "if (one.want <= 0 || !byHome.TryGetValue(one.id, out MobileParty party) ||",
+                        "_counted.ContainsKey(party.StringId))", "Villagers = true,",
+                        "NextTrip = kind == TradeMath.TillDraw.VillagesNextTrips,", "GoldBefore = party.PartyTradeGold")
+            and "party.HomeSettlement?.StringId ?? party.StringId);" in method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad()")
+            and "Naming ? home.Name?.ToString() : null, home.StringId);" in method_body(S['Forecast.cs'], "private static void FollowAVillage(")
+            and ordered(check, "if (party.IsCaravan || party.IsVillager) ACountedCaravanCame(party, at);",
+                        "else if (party != MobileParty.MainParty) Entered(party, at);")
+            and ordered(came, "if (at.StringId == one.Town)", "one.ArrivedAt = CampaignTime.Now.ToHours;",
+                        "if (one.Villagers && party.PartyTradeGold < one.GoldBefore) one.GoldBefore = party.PartyTradeGold;")
+            and ordered(left, "!one.Villagers || one.Town != at.StringId || double.IsNaN(one.ArrivedAt))",
+                        "one.Sold = TradeMath.WhatVillagersSoldFor(one.GoldBefore, party.PartyTradeGold);")
+            and ordered(method_body(check, "internal static void Left(MobileParty party, Settlement at)"),
+                        "VillagersLeft(party, at);", "if (party.StringId == null || !_visits.TryGetValue(")
+            and ordered(judge, "foreach (MobileParty party in MobileParty.AllVillagerParties)",
+                        "if (came == TradeMath.CaravanCame.Waiting) continue;",
+                        "if (one.Villagers && !gone && party.CurrentSettlement?.StringId == one.Town)",
+                        "lines.Add(Judged(one, came, gone));", "TallyTheVillagers(one, came);",
+                        "if (came == TradeMath.CaravanCame.Sold)")
+            and re.search(r'if \(one\.Villagers\)\s*\{\s*TallyTheVillagers\(one, came\);\s*continue;\s*\}', judge) is not None
+            and "if (one.Villagers) return JudgedVillagers(one, came, gone);" in method_body(check, "private static string Judged(")
+            and ordered(judged, '"villager check: " + (one.NextTrip ? "the next trip from " : "villagers of ")',
+                        '" and sold " + one.Sold;')
+            and ordered(method_body(check, "internal static void SayTheCounted()"), "SayTheVillagers();",
+                        "if (!Writing || _countedDay + _soldDay + _lateDay + _neverDay == 0) return;")
+            and ordered(say, 'Log.Write("villager check today: "', '" still awaited");',
+                        "_villagersDay = _nextTripsDay = _villagersSold = _villagersLate = _villagersNever = 0;")
+            and "_villagersDay = _nextTripsDay = _villagersSold = _villagersLate = _villagersNever = 0;"
+                in method_body(check, "private static void ClearTheCounted()")
+            and "goldNow > goldBefore ? goldNow - goldBefore : 0;" in method_body(S['TradeMath.cs'], "public static int WhatVillagersSoldFor(int goldBefore, int goldNow)")
+            and "What_villagers_sold_is_the_gold_they_carry_out_of_the_town_over_what_they_carried_in" in MATHTESTS)
+
+
+chk("2.9.7", "with Enable extended debug logging on, TradeLord.log checks what Count what is on its way said villagers on the road and each village's next trip would sell at the market you set off for, against what they sold",
+    each_counted_villager_party_is_judged_against_what_it_sold())
 
 
 def the_weather_step_is_not_read_across_nightfall():
