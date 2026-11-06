@@ -1998,6 +1998,15 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void What_villagers_sold_is_the_gold_they_carry_out_of_the_town_over_what_they_carried_in()
+        {
+            Assert.Equal(840, TradeMath.WhatVillagersSoldFor(0, 840));
+            Assert.Equal(300, TradeMath.WhatVillagersSoldFor(200, 500));
+            Assert.Equal(0, TradeMath.WhatVillagersSoldFor(500, 500));
+            Assert.Equal(0, TradeMath.WhatVillagersSoldFor(500, 0));
+        }
+
+        [Fact]
         public void Wet_ground_takes_three_tenths_of_what_riders_and_footmen_on_horses_add_to_the_pace_as_the_game_counts_it()
         {
             Assert.Equal(-0.09f, TradeMath.WetGroundStep(100, 100, 0, 0), 4);

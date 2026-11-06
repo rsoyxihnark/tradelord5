@@ -1580,6 +1580,9 @@ namespace TradeLord
             return CaravanCame.Waiting;
         }
 
+        public static int WhatVillagersSoldFor(int goldBefore, int goldNow) =>
+            goldNow > goldBefore ? goldNow - goldBefore : 0;
+
         public static float PurseMissedBy(int said, int held)
         {
             double scale = Math.Max(1d, Math.Max((double)said, held));

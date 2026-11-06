@@ -117,6 +117,9 @@ namespace TradeLord
             internal double ArrivedAt = double.NaN;
             internal string Elsewhere;
             internal int Sold;
+            internal bool Villagers;
+            internal bool NextTrip;
+            internal int GoldBefore;
         }
 
         private struct PurseSaid
@@ -139,6 +142,8 @@ namespace TradeLord
         private static readonly Dictionary<string, Counted> _counted = new Dictionary<string, Counted>(StringComparer.Ordinal);
         private static int _countedDay, _soldDay, _lateDay, _neverDay;
         private static long _wantSold, _goldSold, _wantLate, _goldLate, _wantNever;
+        private static int _villagersDay, _nextTripsDay, _villagersSold, _villagersLate, _villagersNever;
+        private static long _villagersWantSold, _villagersGoldSold, _villagersWantLate, _villagersGoldLate, _villagersWantNever;
         private static readonly Dictionary<int, List<PurseSaid>> _purseDue = new Dictionary<int, List<PurseSaid>>();
         private static readonly Dictionary<int, List<float>> _purseOff = new Dictionary<int, List<float>>();
         private static readonly Dictionary<int, (int over, float worst, string at)> _purseWorst =
@@ -313,8 +318,8 @@ namespace TradeLord
         {
             if (party == MobileParty.MainParty) Reached(at);
             else if (party.IsCaravan || party.IsVillager) ACaravanReached(party, at);
-            if (party.IsCaravan) ACountedCaravanCame(party, at);
-            else if (party != MobileParty.MainParty && !party.IsVillager) Entered(party, at);
+            if (party.IsCaravan || party.IsVillager) ACountedCaravanCame(party, at);
+            else if (party != MobileParty.MainParty) Entered(party, at);
         }
 
         private static void CountTheCaravans(Settlement to, float days, double now)
@@ -340,6 +345,42 @@ namespace TradeLord
                 };
                 _countedDay++;
             }
+            CountTheVillagers(to, days, now, TradeMath.TillDraw.Villagers);
+            CountTheVillagers(to, days, now, TradeMath.TillDraw.VillagesNextTrips);
+        }
+
+        private static void CountTheVillagers(Settlement to, float days, double now, TradeMath.TillDraw kind)
+        {
+            List<(string id, string name, float days, int want, int paid)> drawing = Forecast.TheCaravansDrawing(to, kind);
+            if (drawing == null || drawing.Count == 0) return;
+            var byHome = new Dictionary<string, MobileParty>(StringComparer.Ordinal);
+            foreach (MobileParty party in MobileParty.AllVillagerParties)
+                if (party?.StringId != null) byHome[party.HomeSettlement?.StringId ?? party.StringId] = party;
+            foreach (var one in drawing)
+            {
+                if (one.want <= 0 || !byHome.TryGetValue(one.id, out MobileParty party) ||
+                    _counted.ContainsKey(party.StringId))
+                    continue;
+                _counted[party.StringId] = new Counted
+                {
+                    Id = party.StringId,
+                    Name = one.name ?? Tongue.Named(party.Name, party.StringId),
+                    Town = to.StringId,
+                    TownName = Tongue.Named(to.Name, to.StringId),
+                    SaidHours = one.days * 24f,
+                    Want = one.want,
+                    Paid = one.paid,
+                    Share = (float)(TradeMath.TheShareThatCounts(one.want, one.days, days) / one.want),
+                    SetOffAt = now,
+                    DueAt = now + one.days * 24d,
+                    YouDueAt = now + days * 24d,
+                    Villagers = true,
+                    NextTrip = kind == TradeMath.TillDraw.VillagesNextTrips,
+                    GoldBefore = party.PartyTradeGold
+                };
+                if (kind == TradeMath.TillDraw.VillagesNextTrips) _nextTripsDay++;
+                else _villagersDay++;
+            }
         }
 
         private static void ACountedCaravanCame(MobileParty party, Settlement at)
@@ -347,8 +388,20 @@ namespace TradeLord
             if (party.StringId == null || !_counted.TryGetValue(party.StringId, out Counted one) ||
                 !double.IsNaN(one.ArrivedAt))
                 return;
-            if (at.StringId == one.Town) one.ArrivedAt = CampaignTime.Now.ToHours;
+            if (at.StringId == one.Town)
+            {
+                one.ArrivedAt = CampaignTime.Now.ToHours;
+                if (one.Villagers && party.PartyTradeGold < one.GoldBefore) one.GoldBefore = party.PartyTradeGold;
+            }
             else if (at.IsTown) one.Elsewhere = Tongue.Named(at.Name, at.StringId);
+        }
+
+        private static void VillagersLeft(MobileParty party, Settlement at)
+        {
+            if (!party.IsVillager || party.StringId == null || !_counted.TryGetValue(party.StringId, out Counted one) ||
+                !one.Villagers || one.Town != at.StringId || double.IsNaN(one.ArrivedAt))
+                return;
+            one.Sold = TradeMath.WhatVillagersSoldFor(one.GoldBefore, party.PartyTradeGold);
         }
 
         internal static void ACaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
@@ -379,6 +432,8 @@ namespace TradeLord
             var alive = new Dictionary<string, MobileParty>(StringComparer.Ordinal);
             foreach (MobileParty party in MobileParty.AllCaravanParties)
                 if (party?.StringId != null) alive[party.StringId] = party;
+            foreach (MobileParty party in MobileParty.AllVillagerParties)
+                if (party?.StringId != null) alive[party.StringId] = party;
             var done = new List<string>();
             var lines = new List<string>();
             foreach (Counted one in _counted.Values)
@@ -390,7 +445,14 @@ namespace TradeLord
                                                                        one.Elsewhere != null, gone);
                 if (came == TradeMath.CaravanCame.Waiting) continue;
                 done.Add(one.Id);
+                if (one.Villagers && !gone && party.CurrentSettlement?.StringId == one.Town)
+                    one.Sold = TradeMath.WhatVillagersSoldFor(one.GoldBefore, party.PartyTradeGold);
                 lines.Add(Judged(one, came, gone));
+                if (one.Villagers)
+                {
+                    TallyTheVillagers(one, came);
+                    continue;
+                }
                 if (came == TradeMath.CaravanCame.Sold)
                 {
                     _soldDay++;
@@ -413,8 +475,30 @@ namespace TradeLord
             if (lines.Count > 0) Log.WriteMany(lines);
         }
 
+        private static void TallyTheVillagers(Counted one, TradeMath.CaravanCame came)
+        {
+            if (came == TradeMath.CaravanCame.Sold)
+            {
+                _villagersSold++;
+                _villagersWantSold += one.Want;
+                _villagersGoldSold += one.Sold;
+            }
+            else if (came == TradeMath.CaravanCame.CameAfterYou)
+            {
+                _villagersLate++;
+                _villagersWantLate += one.Want;
+                _villagersGoldLate += one.Sold;
+            }
+            else
+            {
+                _villagersNever++;
+                _villagersWantNever += one.Want;
+            }
+        }
+
         private static string Judged(Counted one, TradeMath.CaravanCame came, bool gone)
         {
+            if (one.Villagers) return JudgedVillagers(one, came, gone);
             string said = "caravan check: " + one.Name + " at " + one.TownName + ": Count what is on its way counted it " +
                           "drawing " + one.Want + " from the purse " + Hours(one.SaidHours) + " h after you set off, " +
                           Percent(one.Share) + " of that before you got there, and the purse could pay it " + one.Paid + "; ";
@@ -429,8 +513,25 @@ namespace TradeLord
                    " and sold " + one.Sold;
         }
 
+        private static string JudgedVillagers(Counted one, TradeMath.CaravanCame came, bool gone)
+        {
+            string said = "villager check: " + (one.NextTrip ? "the next trip from " : "villagers of ") + one.Name +
+                          " at " + one.TownName + ": Count what is on its way counted them drawing " + one.Want +
+                          " from the purse " + Hours(one.SaidHours) + " h after you set off, " + Percent(one.Share) +
+                          " of that before you got there, and the purse could pay them " + one.Paid + "; ";
+            if (came == TradeMath.CaravanCame.NeverCame)
+                return said + (gone ? "they never arrived, and are gone from the map"
+                               : "they never arrived within a day of when they were due");
+            return said + "they arrived " + Hours((float)(one.ArrivedAt - one.SetOffAt)) + " h after you set off" +
+                   (came == TradeMath.CaravanCame.CameAfterYou
+                       ? ", after you got there at " + Hours((float)(one.YouDueAt - one.SetOffAt)) + " h,"
+                       : "") +
+                   " and sold " + one.Sold;
+        }
+
         internal static void SayTheCounted()
         {
+            SayTheVillagers();
             if (!Writing || _countedDay + _soldDay + _lateDay + _neverDay == 0) return;
             Log.Write("caravan check today: " + _countedDay + " caravan(s) counted drawing the purse of a market you " +
                       "set off for; " + _soldDay + " arrived before you and sold " + _goldSold + " of the " + _wantSold +
@@ -440,8 +541,26 @@ namespace TradeLord
             ClearTheCounted();
         }
 
+        private static void SayTheVillagers()
+        {
+            if (!Writing || _villagersDay + _nextTripsDay + _villagersSold + _villagersLate + _villagersNever == 0) return;
+            int awaited = 0;
+            foreach (Counted one in _counted.Values) if (one.Villagers) awaited++;
+            Log.Write("villager check today: " + (_villagersDay + _nextTripsDay) + " villager part(ies) counted drawing the " +
+                      "purse of a market you set off for, " + _villagersDay + " on the road and " + _nextTripsDay +
+                      " on their village's next trip; " + _villagersSold + " arrived before you and sold " +
+                      _villagersGoldSold + " of the " + _villagersWantSold + " counted for them, " + _villagersLate +
+                      " arrived after you and sold " + _villagersGoldLate + " of the " + _villagersWantLate +
+                      " counted for them, and " + _villagersNever + " never arrived, counted for " + _villagersWantNever +
+                      "; " + awaited + " still awaited");
+            _villagersDay = _nextTripsDay = _villagersSold = _villagersLate = _villagersNever = 0;
+            _villagersWantSold = _villagersGoldSold = _villagersWantLate = _villagersGoldLate = _villagersWantNever = 0L;
+        }
+
         private static void ClearTheCounted()
         {
+            _villagersDay = _nextTripsDay = _villagersSold = _villagersLate = _villagersNever = 0;
+            _villagersWantSold = _villagersGoldSold = _villagersWantLate = _villagersGoldLate = _villagersWantNever = 0L;
             _countedDay = _soldDay = _lateDay = _neverDay = 0;
             _wantSold = _goldSold = _wantLate = _goldLate = _wantNever = 0L;
         }
@@ -556,6 +675,7 @@ namespace TradeLord
 
         internal static void Left(MobileParty party, Settlement at)
         {
+            VillagersLeft(party, at);
             if (party.StringId == null || !_visits.TryGetValue(party.StringId, out Visit visit)) return;
             _visits.Remove(party.StringId);
             if (!Writing || visit.Town != at.StringId || at.Town == null) return;

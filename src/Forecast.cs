@@ -1545,7 +1545,8 @@ namespace TradeLord
             return (int)Math.Min(Math.Round(sum), int.MaxValue);
         }
 
-        internal static List<(string id, string name, float days, int want, int paid)> TheCaravansDrawing(Settlement site)
+        internal static List<(string id, string name, float days, int want, int paid)> TheCaravansDrawing(Settlement site,
+            TradeMath.TillDraw kind = TradeMath.TillDraw.Caravans)
         {
             if (!On || site == null) return null;
             Build();
@@ -1559,7 +1560,7 @@ namespace TradeLord
             for (int i = 0; i < by.Count; i++)
             {
                 var one = by[i];
-                if (one.from != TradeMath.TillDraw.Caravans || one.id == null || one.gold <= 0) continue;
+                if (one.from != kind || one.id == null || one.gold <= 0) continue;
                 int gets = aligned ? paid[i].gold : one.gold;
                 if (!at.TryGetValue(one.id, out int k))
                 {
