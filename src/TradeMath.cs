@@ -2930,6 +2930,12 @@ namespace TradeLord
 
         public const int Bands = 4;
 
+        public const int UnitBands = 4;
+
+        public const float APromiseFallsShortBelow = 0.8f;
+
+        public static int UnitBandOf(int units) => units <= 1 ? 0 : units <= 4 ? 1 : units <= 19 ? 2 : 3;
+
         public static int BandOf(float confidence)
         {
             if (confidence < 0.25f) return 0;
