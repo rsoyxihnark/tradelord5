@@ -135,6 +135,61 @@ namespace TradeLord
         internal float Held(int band) => TradeMath.MeanOf(_held[band], _scored[band]);
     }
 
+    internal class UnitsTally
+    {
+        private readonly List<float>[] _held = new List<float>[TradeMath.UnitBands];
+
+        private readonly List<float>[] _lowConf = new List<float>[TradeMath.UnitBands];
+
+        internal UnitsTally()
+        {
+            for (int i = 0; i < TradeMath.UnitBands; i++)
+            {
+                _held[i] = new List<float>();
+                _lowConf[i] = new List<float>();
+            }
+        }
+
+        internal void Forget()
+        {
+            for (int i = 0; i < TradeMath.UnitBands; i++)
+            {
+                _held[i].Clear();
+                _lowConf[i].Clear();
+            }
+        }
+
+        internal void Add(int units, float confidence, float held)
+        {
+            if (float.IsNaN(held) || float.IsInfinity(held)) return;
+            int band = TradeMath.UnitBandOf(units);
+            _held[band].Add(held);
+            if (TradeMath.BandOf(confidence) == 0) _lowConf[band].Add(held);
+        }
+
+        internal int Scored(int band) => _held[band].Count;
+
+        internal int LowConf(int band) => _lowConf[band].Count;
+
+        internal List<float> Held(int band) => Sorted(_held[band]);
+
+        internal List<float> HeldAtLowConf(int band) => Sorted(_lowConf[band]);
+
+        internal int Short(int band)
+        {
+            int below = 0;
+            foreach (float one in _held[band]) if (one < TradeMath.APromiseFallsShortBelow) below++;
+            return below;
+        }
+
+        private static List<float> Sorted(List<float> held)
+        {
+            var sorted = new List<float>(held);
+            sorted.Sort();
+            return sorted;
+        }
+    }
+
     internal enum Holding
     {
         NoPrice, NothingToHold, Scored
@@ -190,6 +245,13 @@ namespace TradeLord
             how.Share = how.WorthKept ? TradeMath.OffByShare(worthSaid, how.Moved)
                                       : TradeMath.NoShareToGive;
             return how;
+        }
+
+        internal static string UnitsBanded(int band)
+        {
+            if (band == 0) return "1 unit";
+            if (band == 1) return "2 to 4 units";
+            return band == 2 ? "5 to 19 units" : "20 units and over";
         }
 
         internal static string Banded(int band)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.5
+
+- With Enable extended debug logging on, TradeLord.log now scores the TradeLord ledger's promises by how many units they were for (#169)
+
 ## 2.9.4
 
 - Fixed the TradeLord ledger's Left column and Conf counting a market's shelf as lasting until the next quarter day after it ran short (#146)

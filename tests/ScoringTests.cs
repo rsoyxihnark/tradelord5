@@ -251,6 +251,37 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Promises_are_tallied_by_how_many_units_they_were_for_with_the_low_conf_ones_apart()
+        {
+            Assert.Equal(0, TradeMath.UnitBandOf(1));
+            Assert.Equal(0, TradeMath.UnitBandOf(0));
+            Assert.Equal(1, TradeMath.UnitBandOf(2));
+            Assert.Equal(1, TradeMath.UnitBandOf(4));
+            Assert.Equal(2, TradeMath.UnitBandOf(5));
+            Assert.Equal(2, TradeMath.UnitBandOf(19));
+            Assert.Equal(3, TradeMath.UnitBandOf(20));
+            var units = new UnitsTally();
+            units.Add(1, 0.45f, 0.56f);
+            units.Add(1, 0.12f, 1.25f);
+            units.Add(1, 0.09f, 1.16f);
+            units.Add(1, 0.6f, 1.01f);
+            units.Add(1, 0.5f, float.NaN);
+            units.Add(28, 0.28f, 0.98f);
+            Assert.Equal(4, units.Scored(0));
+            Assert.Equal(new[] { 0.56f, 1.01f, 1.16f, 1.25f }, units.Held(0).ToArray());
+            Assert.Equal(2, units.LowConf(0));
+            Assert.Equal(new[] { 1.16f, 1.25f }, units.HeldAtLowConf(0).ToArray());
+            Assert.Equal(1, units.Short(0));
+            Assert.Equal(1, units.Scored(3));
+            Assert.Equal(0, units.Scored(1));
+            units.Forget();
+            Assert.Equal(0, units.Scored(0));
+            Assert.Equal(0.8f, TradeMath.APromiseFallsShortBelow);
+            Assert.Equal("1 unit", Scoring.UnitsBanded(0));
+            Assert.Equal("20 units and over", Scoring.UnitsBanded(3));
+        }
+
+        [Fact]
         public void A_price_above_its_promise_is_a_miss_in_its_confidence_band_as_much_as_one_below_it()
         {
             var bands = new BandTally();

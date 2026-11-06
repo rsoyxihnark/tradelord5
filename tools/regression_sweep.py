@@ -24115,6 +24115,27 @@ chk("2.9.4", "a town's daily tick is read off the earliest recent workshop run, 
     a_workshop_that_changed_owner_never_moves_the_tick())
 
 
+def promises_are_measured_by_how_many_units_they_were_for():
+    h = S['Hindsight.cs']
+    kept = method_body(h, "private static void Kept(Settlement site)")
+    tally = between(S['Scoring.cs'], "internal class UnitsTally", "internal enum Holding")
+    return (kept and tally
+            and "private static readonly UnitsTally _units = new UnitsTally();" in h
+            and "_units.Forget();" in h
+            and ordered(kept, "_bands.Add(said.Confidence, held);", "_units.Add(said.Units, said.Confidence, held);",
+                        "for (int band = 0; band < TradeMath.UnitBands; band++)",
+                        '"  promises for " + Scoring.UnitsBanded(band) + ": "',
+                        "TradeMath.Quantile(paid, 0.5f)", "TradeMath.Quantile(paid, 0.25f)", "TradeMath.Quantile(paid, 0.75f)",
+                        '" at Conf under 25% paid a median "')
+            and "if (TradeMath.BandOf(confidence) == 0) _lowConf[band].Add(held);" in tally
+            and "public static int UnitBandOf(int units) => units <= 1 ? 0 : units <= 4 ? 1 : units <= 19 ? 2 : 3;" in S['TradeMath.cs']
+            and "Promises_are_tallied_by_how_many_units_they_were_for_with_the_low_conf_ones_apart" in SCORINGTESTS)
+
+
+chk("2.9.5", "with Enable extended debug logging on, each promise check sums up how much of what the TradeLord ledger promised was paid, by how many units the promise was for, with the median, the middle half and the low Conf ones apart",
+    promises_are_measured_by_how_many_units_they_were_for())
+
+
 def the_weather_step_is_not_read_across_nightfall():
     check = S['SpeedCheck.cs']
     turn = method_body(check, "private static void ReadTheTurn(MobileParty main, int now)")

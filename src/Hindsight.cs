@@ -45,6 +45,8 @@ namespace TradeLord
 
         private static readonly BandTally _bands = new BandTally();
 
+        private static readonly UnitsTally _units = new UnitsTally();
+
         private static readonly MethodInfo TheGamesNearestTown =
             typeof(VillageMarketData).GetMethod("get_ClosestTown", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -57,6 +59,7 @@ namespace TradeLord
             _said.Forget();
             _promised.Forget();
             _bands.Forget();
+            _units.Forget();
         }
 
         internal static void Note(TradeRoute route)
@@ -236,6 +239,7 @@ namespace TradeLord
                 keptTotal += TradeMath.HowCloseToThePromise(held);
                 paidTotal += TradeMath.UpToThePromise(held);
                 _bands.Add(said.Confidence, held);
+                _units.Add(said.Units, said.Confidence, held);
                 LedgerBehavior.Instance?.KeepPromiseScore(held);
                 lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
                           " a unit for " + said.Units + " unit(s) within " + Figure(said.WithinDays) +
@@ -282,6 +286,21 @@ namespace TradeLord
                               Share(_bands.Held(band)) + " close to its promise over " +
                               _bands.Scored(band) + " price(s) checked this session, a price above it " +
                               "missing as much as one below it");
+                }
+                for (int band = 0; band < TradeMath.UnitBands; band++)
+                {
+                    if (_units.Scored(band) == 0) continue;
+                    List<float> paid = _units.Held(band);
+                    List<float> low = _units.HeldAtLowConf(band);
+                    lines.Add("  promises for " + Scoring.UnitsBanded(band) + ": " + paid.Count +
+                              " price(s) checked this session paid a median " + Share(TradeMath.Quantile(paid, 0.5f)) +
+                              " of what was promised, the middle half from " + Share(TradeMath.Quantile(paid, 0.25f)) +
+                              " to " + Share(TradeMath.Quantile(paid, 0.75f)) + ", " + _units.Short(band) +
+                              " of them under " + Share(TradeMath.APromiseFallsShortBelow) +
+                              (low.Count == 0
+                                  ? ""
+                                  : "; the " + low.Count + " at Conf under 25% paid a median " +
+                                    Share(TradeMath.Quantile(low, 0.5f))));
                 }
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
