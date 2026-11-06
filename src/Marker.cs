@@ -668,6 +668,7 @@ namespace TradeLord
             private static bool _checkSoldKept;
             private static string _soldAt;
             private static long _soldEarned;
+            private static bool _walkedInOnTheMark;
             private static int _shadowMoves, _shadowGreatDeals, _shadowApart;
 
             internal static void Forget()
@@ -687,11 +688,13 @@ namespace TradeLord
                 _checkSoldKept = false;
                 _soldAt = null;
                 _soldEarned = 0L;
+                _walkedInOnTheMark = false;
                 _shadowMoves = _shadowGreatDeals = _shadowApart = 0;
             }
 
             internal static void NoteAWalkIn(Settlement at)
             {
+                _walkedInOnTheMark = Marks.WalkedInOnTheMark(at?.StringId, _picked?.StringId, _buyMark?.StringId);
                 if (_checkAt != null && !_checkSoldKept && _soldAt != null && _soldAt == _checkFromId)
                 {
                     _checkSold = _soldEarned;
@@ -714,7 +717,7 @@ namespace TradeLord
                 CheckWhatItWouldHavePaid(party, hour);
                 Settlement here = party.CurrentSettlement;
                 if (atAGate && !onTheRoad && here != null && _mark != null && _mark != here && _cargo != null &&
-                    _checkAt == null && _lowest.TryGetValue(_mark.StringId, out var last) &&
+                    _checkAt == null && _walkedInOnTheMark && _lowest.TryGetValue(_mark.StringId, out var last) &&
                     !TradeMath.OutOfReach(last.days))
                 {
                     _checkAt = _mark;
@@ -1195,7 +1198,6 @@ namespace TradeLord
             _justWalkedOut = true;
             _beatenOnTheRoad.Clear();
             _gatePending = true;
-            _wayIn = default(HeldFigure);
         }
 
         private static void WhatItSaidOnTheWayOut(Settlement target, in Reckoning how)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.6
+
+- Fixed TradeLord timing a ride you set off on in the middle of the hour from where your party stood at the start of that hour (#172)
+- Fixed TradeLord.log losing the marker check for a Staged Trading deal taken after going out to the map and back in (#150)
+- Fixed TradeLord.log's shadow marker check weighing markets you went to on your own instead of the map marker's market (#103)
+
 ## 2.9.5
 
 - With Enable extended debug logging on, TradeLord.log now scores the TradeLord ledger's promises by how many units they were for (#169)
