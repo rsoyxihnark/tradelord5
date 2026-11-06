@@ -23995,7 +23995,7 @@ def a_staged_trading_deal_is_scored_on_the_figure_held_as_you_walked_in():
                         "ScoreTheFigureItHeld(site, units, gold);", "if (wayIn) HoldTheFigure(held);",
                         "_wayIn = default(HeldFigure);", "ScoreWhatItSaidOnTheWayOut(site, units, gold, profit);")
             and "_wayIn = _markedId != null && _markedId == at?.StringId ? TheFigureItHolds() : default(HeldFigure);" in walk
-            and "_wayIn = default(HeldFigure);" in out
+            and "_wayIn" not in out
             and "_wayIn = default(HeldFigure);" in forget
             and all(one in hold for one in ("_markedId = figure.Id;", "_markedValue = figure.Value;",
                                             "_lastValue = figure.Last;", "_lastAt = figure.LastAt;"))
@@ -24134,6 +24134,53 @@ def promises_are_measured_by_how_many_units_they_were_for():
 
 chk("2.9.5", "with Enable extended debug logging on, each promise check sums up how much of what the TradeLord ledger promised was paid, by how many units the promise was for, with the median, the middle half and the low Conf ones apart",
     promises_are_measured_by_how_many_units_they_were_for())
+
+
+def a_staged_trading_deal_keeps_its_walk_in_figure_through_the_same_arrival():
+    m = S['Marker.cs']
+    out = method_body(m, "internal static void NoteTheWayOut(Settlement from)")
+    walk = method_body(m, "internal static void NoteTheWalkIn(Settlement at)")
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    return (out and walk and entered
+            and "_wayIn" not in out
+            and "_wayIn = _markedId != null && _markedId == at?.StringId ? TheFigureItHolds() : default(HeldFigure);" in walk
+            and "if (!StillTheSameArrival(settlement)) Marker.NoteTheWalkIn(settlement);" in entered
+            and m.count("_wayIn = default(HeldFigure);") == 2)
+
+
+chk("2.9.6", "a Staged Trading deal taken after leaving the town menu for the map and coming back into the same arrival is still scored against the figure the map marker held as you first walked in",
+    a_staged_trading_deal_keeps_its_walk_in_figure_through_the_same_arrival())
+
+
+def the_shadow_check_counts_only_a_walk_in_the_map_marker_sent_you_to():
+    m = S['Marker.cs']
+    walk = method_body(m, "internal static void NoteAWalkIn(Settlement at)")
+    weigh = method_body(m, "internal static void Weigh(in Reckoning how, Settlement holder, bool atAGate, int hour, bool onTheRoad,")
+    return (walk and weigh
+            and "_walkedInOnTheMark = Marks.WalkedInOnTheMark(at?.StringId, _picked?.StringId, _buyMark?.StringId);" in walk
+            and "_checkAt == null && _walkedInOnTheMark && _lowest.TryGetValue(_mark.StringId, out var last) &&" in weigh
+            and "walkedInto != null && (walkedInto == sellMark || walkedInto == buyMark);" in S['Rules.cs']
+            and "_walkedInOnTheMark = false;" in m
+            and "The_shadow_marker_is_checked_only_on_a_walk_in_the_map_marker_sent_you_to" in BUYMARKTESTS)
+
+
+chk("2.9.6", "the shadow marker check weighs the shadow marker's market only against a market the map marker sent you to, its sell mark or its Buy From, never against a market you went to on your own",
+    the_shadow_check_counts_only_a_walk_in_the_map_marker_sent_you_to())
+
+
+def a_ride_set_off_on_the_road_is_timed_from_where_your_party_stands_then():
+    t = S['Travel.cs']
+    stand = method_body(t, "private static void StandWhereYouAre(MobileParty party)")
+    return (stand
+            and ordered(stand, "string bound = party.DefaultBehavior == AiBehavior.GoToSettlement ? party.TargetSettlement?.StringId : null;",
+                        "if (bound != _partyBound)", "_partyBound = bound;\n                _partyHour = -1;",
+                        "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;")
+            and "private static string _partyBound;" in t
+            and "_partyBound = null;" in t)
+
+
+chk("2.9.6", "a ride your party sets off on in the middle of the hour is timed from where it stands as it turns, not from where it stood at the start of the hour",
+    a_ride_set_off_on_the_road_is_timed_from_where_your_party_stands_then())
 
 
 def the_weather_step_is_not_read_across_nightfall():

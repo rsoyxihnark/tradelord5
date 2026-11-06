@@ -2048,6 +2048,7 @@ namespace TradeLord
             _partyDist.Clear();
             _unwalkable.Clear();
             _partyHour = -1;
+            _partyBound = null;
             _pairDist.Clear();
             _pairDays.Clear();
             _cachedNaval = false;
@@ -2140,6 +2141,7 @@ namespace TradeLord
 
         private static bool _partySlow;
         private static string _partyIn;
+        private static string _partyBound;
 
         private static void StandWhereYouAre(MobileParty party)
         {
@@ -2154,6 +2156,12 @@ namespace TradeLord
                 _partyHour = -1;
                 _speedHour = -1;
                 foreach (Road road in _partyDist.Values) road.Hour = -1;
+            }
+            string bound = party.DefaultBehavior == AiBehavior.GoToSettlement ? party.TargetSettlement?.StringId : null;
+            if (bound != _partyBound)
+            {
+                _partyBound = bound;
+                _partyHour = -1;
             }
             if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;
             if (at.DistanceSquared(_partyAt) > StoodStill)

@@ -267,6 +267,16 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_shadow_marker_is_checked_only_on_a_walk_in_the_map_marker_sent_you_to()
+        {
+            Assert.True(Marks.WalkedInOnTheMark("ostican", "ostican", null));
+            Assert.True(Marks.WalkedInOnTheMark("pravend", "ocs_hall", "pravend"));
+            Assert.False(Marks.WalkedInOnTheMark("alantas", "ostican", null));
+            Assert.False(Marks.WalkedInOnTheMark("alantas", "ostican", "pravend"));
+            Assert.False(Marks.WalkedInOnTheMark(null, null, null));
+        }
+
+        [Fact]
         public void A_ride_broken_off_is_turned_away_from_only_when_you_set_off_for_another_market()
         {
             Assert.False(Marks.TurnedAwayAfterABreak("qasira", "qasira"));

@@ -185,6 +185,9 @@ namespace TradeLord
         internal static bool TurnedAwayAfterABreak(string brokeOffFrom, string setOffFor) =>
             brokeOffFrom != null && setOffFor != brokeOffFrom;
 
+        internal static bool WalkedInOnTheMark(string walkedInto, string sellMark, string buyMark) =>
+            walkedInto != null && (walkedInto == sellMark || walkedInto == buyMark);
+
         internal static bool HoldsForASecondLook(bool holderPriced, bool afresh, bool cargoSame, int lostAt,
                                                  int hourNow) =>
             holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);
