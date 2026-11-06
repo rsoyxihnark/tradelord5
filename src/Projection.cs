@@ -217,9 +217,10 @@ namespace TradeLord
 
         private static void Note(List<float> when, HashSet<float> already, float days, float afterDays)
         {
-            float at = TradeMath.UpToTheQuarterDay(days);
-            if (at <= afterDays || !already.Add(at)) return;
-            when.Add(at);
+            float at = Math.Max(0f, TradeMath.Finite(days, 0f));
+            if (at > afterDays && already.Add(at)) when.Add(at);
+            float settled = TradeMath.UpToTheQuarterDay(days);
+            if (settled > afterDays && already.Add(settled)) when.Add(settled);
         }
 
         internal static List<(float days, int shelf)> ShelfAhead(

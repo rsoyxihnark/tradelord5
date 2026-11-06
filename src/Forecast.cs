@@ -1459,19 +1459,24 @@ namespace TradeLord
 
         internal static float TheTownTicksIn(Settlement site) => TradeMath.ATownTicksIn(DaysSinceTheTick(site));
 
+        private static readonly List<double> _runsRead = new List<double>();
+
         private static double DaysSinceTheTick(Settlement site)
         {
             if (site?.Town == null || site.StringId == null) return double.NaN;
-            double lastRun = double.MinValue;
+            _runsRead.Clear();
             Workshop[] shops = site.Town.Workshops;
             for (int k = 0; shops != null && k < shops.Length; k++)
             {
                 Workshop shop = shops[k];
-                if (shop?.WorkshopType != null && shop.LastRunCampaignTime.ToDays > lastRun)
-                    lastRun = shop.LastRunCampaignTime.ToDays;
+                if (shop?.WorkshopType != null) _runsRead.Add(shop.LastRunCampaignTime.ToDays);
             }
             double now = CampaignTime.Now.ToDays;
-            double since = lastRun > double.MinValue ? now - lastRun : double.NaN;
+            double lastRun = TradeMath.TheRunThatTellsTheTick(_runsRead, now,
+                                                              _runSeen.TryGetValue(site.StringId, out double had)
+                                                                  ? had
+                                                                  : double.NaN);
+            double since = double.IsNaN(lastRun) ? double.NaN : now - lastRun;
             if (since >= 0d && since <= TradeMath.DaysARunTellsTheTickFor) _runSeen[site.StringId] = lastRun;
             return TradeMath.DaysSinceTheTick(since, _runSeen.TryGetValue(site.StringId, out double seen)
                                                          ? now - seen

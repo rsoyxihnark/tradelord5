@@ -660,6 +660,14 @@ namespace TradeLord
             private static string _checkFrom;
             private static int _checkHour = -1;
             private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> _checkCargo;
+            private static string _checkFromId;
+            private static string _checkLeftFrom;
+            private static int _checkLeft = -1;
+            private static int _checkIn = -1;
+            private static long _checkSold;
+            private static bool _checkSoldKept;
+            private static string _soldAt;
+            private static long _soldEarned;
             private static int _shadowMoves, _shadowGreatDeals, _shadowApart;
 
             internal static void Forget()
@@ -671,7 +679,31 @@ namespace TradeLord
                 _checkFrom = null;
                 _checkHour = -1;
                 _checkCargo = null;
+                _checkFromId = null;
+                _checkLeftFrom = null;
+                _checkLeft = -1;
+                _checkIn = -1;
+                _checkSold = 0L;
+                _checkSoldKept = false;
+                _soldAt = null;
+                _soldEarned = 0L;
                 _shadowMoves = _shadowGreatDeals = _shadowApart = 0;
+            }
+
+            internal static void NoteAWalkIn(Settlement at)
+            {
+                if (_checkAt != null && !_checkSoldKept && _soldAt != null && _soldAt == _checkFromId)
+                {
+                    _checkSold = _soldEarned;
+                    _checkSoldKept = true;
+                }
+                _soldAt = at?.StringId;
+                _soldEarned = 0L;
+            }
+
+            internal static void NoteASale(Settlement site, int profit)
+            {
+                if (site?.StringId != null && site.StringId == _soldAt) _soldEarned += profit;
             }
 
             internal static void Weigh(in Reckoning how, Settlement holder, bool atAGate, int hour, bool onTheRoad,
@@ -689,6 +721,11 @@ namespace TradeLord
                     _checkFrom = here.Name?.ToString() ?? here.StringId;
                     _checkHour = hour + System.Math.Max(1, (int)System.Math.Round(last.days * 24f));
                     _checkCargo = _cargo;
+                    _checkFromId = here.StringId;
+                    _checkLeftFrom = _walkedOutOf?.Name?.ToString();
+                    _checkLeft = _walkedOutOf == null ? -1 : _outAt;
+                    _checkIn = hour;
+                    _checkSoldKept = false;
                 }
                 if (onTheRoad) _cargo = WhatYouCarryToSell(party);
                 if (atAGate) _lowest.Clear();
@@ -780,8 +817,13 @@ namespace TradeLord
                 Settlement at = _checkAt;
                 var cargo = _checkCargo;
                 string from = _checkFrom;
+                long sold = _checkSoldKept ? _checkSold : _soldAt != null && _soldAt == _checkFromId ? _soldEarned : 0L;
+                int left = _checkLeft, walkedIn = _checkIn, there = _checkHour;
+                string leftFrom = _checkLeftFrom;
                 _checkAt = null;
                 _checkCargo = null;
+                _checkFromId = null;
+                _checkSoldKept = false;
                 SettlementComponent market = at.SettlementComponent;
                 if (market == null || cargo == null || cargo.Count == 0 || !Options.Current.Omniscient) return;
                 int purse = PurseOf(at, 0f);
@@ -790,7 +832,21 @@ namespace TradeLord
                 Log.Repeatable("shadow marker check", at.StringId + "@" + hour,
                                "shadow marker check: the cargo you carried into " + from + " would have fetched " + value +
                                " at " + at.Name + ", the market the shadow marker held, earning " + (value - took.Cost) +
-                               " over what it cost, at the hour you would have got there, its purse holding " + purse);
+                               " over what it cost, at the hour you would have got there, its purse holding " + purse +
+                               ADayEach(value - took.Cost, sold, from, leftFrom, left, walkedIn, there));
+            }
+
+            private static string ADayEach(long shadowEarned, long sold, string soldAt, string leftFrom, int left,
+                                           int walkedIn, int there)
+            {
+                if (left < 0 || leftFrom == null || walkedIn < left || there < walkedIn) return "";
+                float toThere = TradeMath.DaysSince(left, there);
+                float toHere = TradeMath.DaysSince(left, walkedIn);
+                return "; counted from when you left " + leftFrom + ", the shadow marker's market comes to " +
+                       TradeMath.PerDay(shadowEarned, toThere).ToString("0") + " profit a day over " +
+                       Scoring.Figure(toThere) + " day(s), against " + TradeMath.PerDay(sold, toHere).ToString("0") +
+                       " a day for the " + sold + " profit you made selling at " + soldAt + " over " +
+                       Scoring.Figure(toHere) + " day(s)";
             }
 
             internal static void SayHowItHeldToday()
@@ -1158,6 +1214,7 @@ namespace TradeLord
         internal static void ScoreTheMark(Settlement site, int units, int gold, int profit)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
+            Shadow.NoteASale(site, profit);
             bool wayIn = Marks.TheFigureOnTheWayInScores(site?.StringId, _markedId, _wayIn.Id, _wayIn.Value);
             HeldFigure held = TheFigureItHolds();
             if (wayIn) HoldTheFigure(_wayIn);
@@ -2022,6 +2079,7 @@ namespace TradeLord
             _walkedInto = at?.StringId;
             _markedOnTheWayIn = _picked?.StringId;
             _wayIn = _markedId != null && _markedId == at?.StringId ? TheFigureItHolds() : default(HeldFigure);
+            Shadow.NoteAWalkIn(at);
         }
 
         internal static void NoteALoadInside(Settlement at)

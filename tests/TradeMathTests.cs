@@ -4781,6 +4781,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_workshop_that_changed_owner_never_moves_the_hour_a_town_ticks()
+        {
+            Assert.Equal(10.375d, TradeMath.TheRunThatTellsTheTick(new[] { 10.375d, 10.8d }, 10.9d, double.NaN), 6);
+            Assert.Equal(10.375d, TradeMath.TheRunThatTellsTheTick(new[] { 10.8d, 10.375d }, 10.9d, 9.375d), 6);
+            Assert.True(double.IsNaN(TradeMath.TheRunThatTellsTheTick(new[] { 10.8d }, 10.9d, 9.375d)));
+            Assert.Equal(10.8d, TradeMath.TheRunThatTellsTheTick(new[] { 10.8d, 10.8d }, 10.9d, 9.375d), 6);
+            Assert.Equal(10.99d, TradeMath.TheRunThatTellsTheTick(new[] { 10.99d }, 11.2d, 9.01d), 6);
+            Assert.True(double.IsNaN(TradeMath.TheRunThatTellsTheTick(new[] { 7d }, 10.9d, double.NaN)));
+            Assert.True(double.IsNaN(TradeMath.TheRunThatTellsTheTick(new double[0], 10.9d, 9.375d)));
+            Assert.True(double.IsNaN(TradeMath.TheRunThatTellsTheTick(new[] { 11.5d }, 10.9d, double.NaN)));
+        }
+
+        [Fact]
         public void A_towns_daily_tick_once_seen_is_kept_after_its_workshops_stop_running()
         {
             Assert.Equal(0.3d, TradeMath.DaysSinceTheTick(0.3d, double.NaN), 6);

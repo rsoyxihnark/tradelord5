@@ -69,6 +69,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_shelf_runs_out_at_the_moment_a_buyer_comes_rather_than_at_the_next_quarter_day()
+        {
+            var coming = new List<Spending> { Bought("grain", 300, 0.6f) };
+            Assert.Equal(new[] { 0.6f, 0.75f }, Projection.Moments(null, coming, 0.5f).ToArray());
+            Assert.Equal(new[] { 0.1f, 0.25f },
+                         Projection.Moments(null, null, 0f, new List<Draw> { Taken("grain", 50, 0.1f) }).ToArray());
+            Assert.Equal(new[] { 1f }, Projection.Moments(null, new List<Spending> { Bought("grain", 300, 1f) }, 0.5f).ToArray());
+            Assert.Equal(new[] { 0f }, Projection.Moments(null, new List<Spending> { Bought("grain", 300, -0.2f) }, -0.5f).ToArray());
+            var curve = Projection.ShelfAhead(null, coming, "grain", "grain", 10, 40, 0.5f);
+            Assert.Equal(0.6f, curve[0].days);
+            Assert.True(curve[0].shelf > curve[1].shelf);
+            Assert.True(Projection.RunsOutOf(curve, curve[0].shelf + 1) <= 0.6f);
+        }
+
+        [Fact]
         public void A_shelf_a_landing_keeps_up_still_runs_out_on_the_day_the_town_has_used_it_up()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1f) };
@@ -459,7 +474,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day()
+        public void Every_moment_counted_is_after_you_arrive_at_its_own_time_and_the_quarter_day_after_it()
         {
             var listed = new List<Landing>
             {
@@ -469,7 +484,7 @@ namespace TradeLord.Tests
             };
             var coming = new List<Spending> { Bought("grain", 100, 0.8f), Bought("grain", 100, 3f) };
             var when = Projection.Moments(listed, coming, 0.5f);
-            Assert.Equal(new List<float> { 1f, 2.5f, 3f }, when);
+            Assert.Equal(new List<float> { 0.8f, 1f, 2.3f, 2.5f, 3f }, when);
         }
 
         [Fact]
@@ -483,7 +498,7 @@ namespace TradeLord.Tests
                 coming.Add(Bought("grain", 10, 1.2f));
             }
             listed.Add(Coming("grain", "grain", 1, 10, 4.1f));
-            Assert.Equal(new List<float> { 1.25f, 4.25f }, Projection.Moments(listed, coming, 0.5f));
+            Assert.Equal(new List<float> { 1.2f, 1.25f, 4.1f, 4.25f }, Projection.Moments(listed, coming, 0.5f));
         }
 
         [Fact]
