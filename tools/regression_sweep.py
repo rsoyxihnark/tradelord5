@@ -10182,7 +10182,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 42
+            and ALL.count("Tongue.Named(") == 45
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -24028,6 +24028,26 @@ def a_ride_broken_off_and_taken_up_again_is_not_a_turn_away():
 
 chk("2.9.2", "a ride broken off by a fight, a trade on the road or a stop counts as one you turned away from only when your party sets off for another market, not when it takes up the road to the same one again",
     a_ride_broken_off_and_taken_up_again_is_not_a_turn_away())
+
+
+def the_log_says_how_the_ledger_timed_its_routes_when_opened_on_the_road():
+    panel = S['Panel.cs']
+    refresh = method_body(panel, "private void Refresh()")
+    said = method_body(panel, "private static string OpenedOnTheRoad(")
+    return (refresh and said
+            and ordered(refresh, "var shown = FromWhereYouStand(LedgerBehavior.Instance?.BestRoutes(int.MaxValue));",
+                        "List<int> order = TradeMath.ByShownScore(keys, RoutesShown);",
+                        "if (Options.Current.ExtendedDebugLogging) Log.Write(OpenedOnTheRoad(shown, order));")
+            and refresh.count("OpenedOnTheRoad(") == 1
+            and ordered(said, "if (one.asScanned) asScanned++;",
+                        "else if (one.route.From != null && one.route.To != null) retimed++;",
+                        "var first = shown[order[0]];",
+                        '" where the route scan said "', '" where it said "',
+                        '"TradeLord ledger opened on the road: "'))
+
+
+chk("2.9.3", "with Enable extended debug logging on, TradeLord.log says, each time you open or refresh the TradeLord ledger on the road, how many routes it timed from where your party stands and how its top row changed",
+    the_log_says_how_the_ledger_timed_its_routes_when_opened_on_the_road())
 
 
 def the_weather_step_is_not_read_across_nightfall():

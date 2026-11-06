@@ -517,6 +517,7 @@ namespace TradeLord
                     rows.Add(new RouteRowVM(one.route, i % 2 == 1, Ranks.Of(i, order.Count), _centerMap,
                                             one.days, one.key, one.asScanned));
                 }
+                if (Options.Current.ExtendedDebugLogging) Log.Write(OpenedOnTheRoad(shown, order));
             }
             Routes = rows;
             bool empty = rows.Count == 0;
@@ -652,6 +653,37 @@ namespace TradeLord
             }
             return shown;
         }
+
+        private static string OpenedOnTheRoad(List<(TradeRoute route, float days, float key, bool asScanned)> shown,
+                                              List<int> order)
+        {
+            int retimed = 0, asScanned = 0;
+            foreach (var one in shown)
+            {
+                if (one.asScanned) asScanned++;
+                else if (one.route.From != null && one.route.To != null) retimed++;
+            }
+            string top = "";
+            if (order.Count > 0)
+            {
+                var first = shown[order[0]];
+                TradeRoute r = first.route;
+                top = "; the top row is " + (r.Item == null ? "a good" : Tongue.Named(r.Item.Name, r.Item.StringId)) +
+                      " from " + (r.From == null ? "?" : Tongue.Named(r.From.Name, r.From.StringId)) +
+                      " to " + (r.To == null ? "?" : Tongue.Named(r.To.Name, r.To.StringId)) +
+                      ", Days " + Shown(first.days) + " where the route scan said " + Shown(r.TravelDays) +
+                      " and Score " + ScoreShown(first.key) + " where it said " + ScoreShown(r.Key) +
+                      (first.asScanned ? ", as scanned" : "");
+            }
+            return "TradeLord ledger opened on the road: " + order.Count + " of " + shown.Count +
+                   " route(s) shown, " + retimed + " timed from where your party stands and " + asScanned +
+                   " left as scanned while the road from there is still being measured" + top;
+        }
+
+        private static string Shown(float value) =>
+            value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
+        private static string ScoreShown(float key) => key < 10f ? Shown(key) : ((int)key).ToString();
 
         private static string WhatHeldQtyBack(LedgerBehavior ledger)
         {

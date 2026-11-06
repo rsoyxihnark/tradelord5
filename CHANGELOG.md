@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.3
+
+- With Enable extended debug logging on, TradeLord.log now says how the TradeLord ledger timed its routes when you open it on the road (#117)
+
 ## 2.9.2
 
 - Fixed TradeLord.log leaving the marker check out for a Staged Trading deal taken at the market the map marker had marked (#150)
