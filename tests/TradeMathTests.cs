@@ -3224,7 +3224,66 @@ namespace TradeLord.Tests
             Assert.Equal(20f, other, 4);
             Assert.Equal((10f, 30f), TradeMath.DemandShiftedToASubstitute(10f, 10f, 100f, 30f, 0.5f));
             Assert.Equal((30f, 10f), TradeMath.DemandShiftedToASubstitute(100f, 30f, 10f, 10f, 0.5f));
-            Assert.Equal((0f, 30f), TradeMath.DemandShiftedToASubstitute(100f, 0f, 10f, 30f, 0.5f));
+            Assert.Equal((15f, 15f), TradeMath.DemandShiftedToASubstitute(100f, 0f, 10f, 30f, 0.5f));
+            Assert.Equal((30f, 0f), TradeMath.DemandShiftedToASubstitute(100f, 30f, 10f, 0f, 0.5f));
+        }
+
+        [Fact]
+        public void A_towns_supply_and_demand_step_each_day_and_a_substitute_takes_its_share_after_them()
+        {
+            var supply = new[] { 1000f, 100f };
+            var demand = new[] { 10f, 30f };
+            TradeMath.StepSupplyAndDemand(supply, demand, new[] { 1000, 100 }, new[] { 10f, 30f },
+                                          new[] { (0, 1, 0.5f) },
+                                          (g, shelf, want, was, wasWanted) =>
+                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+            Assert.Equal(1000f, supply[0], 3);
+            Assert.Equal(100f, supply[1], 3);
+            Assert.Equal(20f, demand[0], 3);
+            Assert.Equal(20f, demand[1], 3);
+            var (s, d) = TradeMath.TheGamesDailySupplyAndDemand(5000f, 40f, 2000f, 20f);
+            Assert.Equal(2450f, s, 2);
+            Assert.Equal(23f, d, 3);
+            Assert.Equal(0.1f, TradeMath.TheGamesDailySupplyAndDemand(0f, 0f, 0f, 0f).supply, 4);
+        }
+
+        [Fact]
+        public void A_caravan_is_paid_for_each_unit_at_the_price_the_shelf_has_reached_as_the_game_walks_it()
+        {
+            Assert.Equal(100 + 90 + 80, TradeMath.WhatAWalkFetches(3, i => 100 - 10 * i));
+            Assert.Equal(0, TradeMath.WhatAWalkFetches(0, i => 100));
+            Assert.Equal(1300, TradeMath.ShelfForAUnitOfAWalk(1000, 3, 100, true));
+            Assert.Equal(700, TradeMath.ShelfForAUnitOfAWalk(1000, 3, 100, false));
+            Assert.Equal(0, TradeMath.ShelfForAUnitOfAWalk(100, 3, 100, false));
+        }
+
+        [Fact]
+        public void A_towns_budget_for_a_kind_follows_its_price_index_as_the_game_counts_it()
+        {
+            Assert.Equal(100f * (float)System.Math.Pow(1.15 / 1.3, 0.3), TradeMath.BudgetAtAnotherIndex(100f, 1.15f, 1.3f), 3);
+            Assert.Equal(100f, TradeMath.BudgetAtAnotherIndex(100f, 1.3f, 1.3f), 4);
+            Assert.Equal(100f, TradeMath.BudgetAtAnotherIndex(100f, 0f, 1.3f), 4);
+        }
+
+        [Fact]
+        public void A_villages_next_trips_are_checked_one_arrival_at_a_time()
+        {
+            Assert.True(TradeMath.OnTheSameArrival(1.25f, 1.25f));
+            Assert.False(TradeMath.OnTheSameArrival(2.25f, 1.25f));
+            Assert.False(TradeMath.OnTheSameArrival(float.NaN, 1.25f));
+        }
+
+        [Fact]
+        public void An_hourly_roll_first_comes_half_an_hour_after_the_chance_opens_and_a_new_village_party_carries_what_its_men_and_pack_animals_can()
+        {
+            Assert.Equal(2.5f / 24f, TradeMath.DaysUntilARollTakes(1f / 3f), 4);
+            Assert.Equal((1f / 0.15f - 0.5f) / 24f, TradeMath.DaysUntilARollTakes(0.15f), 4);
+            Assert.Equal(4.5f / 24f, TradeMath.DaysUntilARollTakes(0.2f), 4);
+            Assert.True(float.IsPositiveInfinity(TradeMath.DaysUntilARollTakes(0f)));
+            Assert.Equal(10f + 19 * 20f + 4 * 100f, TradeMath.RoomOfANewParty(8f, 19, 300f), 3);
+            Assert.Equal(10f + 9 * 20f + 4 * 100f, TradeMath.RoomOfANewParty(8f, 19, 5.5f), 3);
+            Assert.Equal(10f + 30 * 20f + 15 * 100f, TradeMath.RoomOfANewParty(30f, 19, 300f), 3);
+            Assert.Equal(10f, TradeMath.RoomOfANewParty(float.NaN, 0, float.NaN), 3);
         }
 
         [Fact]
@@ -3272,7 +3331,7 @@ namespace TradeLord.Tests
         public void A_full_village_sends_its_goods_to_its_town_and_sends_again_once_its_warehouse_fills_again()
         {
             float share = TradeMath.ShareVillagersLoad();
-            float wait = 1f / 0.15f / 24f;
+            float wait = (1f / 0.15f - 0.5f) / 24f;
             List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
                 new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
                 0f, 0f, true, 0.25f, 7f, 0.5f, new[] { 1f });
@@ -3288,7 +3347,7 @@ namespace TradeLord.Tests
         [Fact]
         public void A_village_sends_again_on_the_day_its_own_hour_fills_the_warehouse()
         {
-            float wait = 1f / 0.15f / 24f;
+            float wait = (1f / 0.15f - 0.5f) / 24f;
             List<TradeMath.VillageLoad> late = TradeMath.WhatAVillageSends(
                 new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
                 0f, 0f, true, 0.25f, 7f, 0.9f, new[] { 1f });
@@ -3306,7 +3365,7 @@ namespace TradeLord.Tests
         [Fact]
         public void Villagers_away_from_home_or_short_of_room_send_later_or_less_and_a_village_that_cannot_fill_sends_nothing()
         {
-            float wait = 1f / 0.15f / 24f;
+            float wait = (1f / 0.15f - 0.5f) / 24f;
             List<TradeMath.VillageLoad> away = TradeMath.WhatAVillageSends(
                 new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
                 0f, 1f, true, 0.25f, 7f, 0.5f, new[] { 1f });
@@ -3317,12 +3376,12 @@ namespace TradeLord.Tests
                 new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
                 0f, 0f, true, 2f, 10f, 0.5f, new[] { 1f });
             Assert.Equal(2, far.Count);
-            Assert.Equal(wait + 2f + 5f / 24f + 2f + wait + 2f, far[1].Days, 3);
+            Assert.Equal(wait + 2f + 4.5f / 24f + 2f + wait + 2f, far[1].Days, 3);
 
             List<TradeMath.VillageLoad> unraised = TradeMath.WhatAVillageSends(
                 new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
                 0f, 0f, false, 0.25f, 7f, 0.5f, new[] { 1f });
-            Assert.Equal(wait + wait + 0.25f, unraised[0].Days, 3);
+            Assert.Equal(wait + 1f / 0.15f / 24f + 0.25f, unraised[0].Days, 3);
 
             List<TradeMath.VillageLoad> cut = TradeMath.WhatAVillageSends(
                 new[] { 40f, 20f, 5f }, new[] { 10f, 2f, 0f }, new[] { 1f, 1f, 50f }, new[] { false, false, true },
@@ -3341,7 +3400,7 @@ namespace TradeLord.Tests
         [Fact]
         public void A_looted_village_sends_nothing_until_the_day_it_recovers_and_makes_its_goods_again()
         {
-            float wait = 1f / 0.15f / 24f;
+            float wait = (1f / 0.15f - 0.5f) / 24f;
             List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
                 new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
                 0f, 0f, true, 0.25f, 7f, 0.5f, new[] { 0f, 0f, 0f, 1f });
@@ -3355,7 +3414,7 @@ namespace TradeLord.Tests
         [Fact]
         public void A_village_whose_hearth_reaches_a_new_level_makes_more_and_its_warehouse_holds_more()
         {
-            float wait = 1f / 0.15f / 24f;
+            float wait = (1f / 0.15f - 0.5f) / 24f;
             List<TradeMath.VillageLoad> grown = TradeMath.WhatAVillageSends(
                 new[] { 20f }, new[] { 6f }, new[] { 1f }, new[] { false }, 0f, 0f, true, 0.25f, 7f, 0.5f,
                 new[] { 1f, 2f });

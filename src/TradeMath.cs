@@ -1261,13 +1261,59 @@ namespace TradeLord
         public static (float demand, float substituteDemand) DemandShiftedToASubstitute(
             float supply, float demand, float substituteSupply, float substituteDemand, float factor)
         {
-            if (!(demand > 0f) || !(substituteDemand > 0f)) return (demand, substituteDemand);
             if (supply / demand > substituteSupply / substituteDemand && substituteDemand > demand)
             {
                 float moved = (substituteDemand - demand) * Finite(factor, 0f);
                 return (demand + moved, substituteDemand - moved);
             }
             return (demand, substituteDemand);
+        }
+
+        public static void StepSupplyAndDemand(float[] supply, float[] demand, IList<int> inStore, IList<float> wanted,
+                                               IList<(int kind, int substitute, float factor)> pairs,
+                                               Func<int, float, float, float, float, (float supply, float demand)> step)
+        {
+            if (supply == null || demand == null || inStore == null || wanted == null || step == null) return;
+            int n = Math.Min(Math.Min(supply.Length, demand.Length), Math.Min(inStore.Count, wanted.Count));
+            for (int g = 0; g < n; g++) (supply[g], demand[g]) = step(g, inStore[g], wanted[g], supply[g], demand[g]);
+            if (pairs == null) return;
+            foreach (var (one, other, factor) in pairs)
+            {
+                if (one < 0 || one >= n || other < 0 || other >= n) continue;
+                (demand[one], demand[other]) = DemandShiftedToASubstitute(supply[one], demand[one], supply[other],
+                                                                          demand[other], factor);
+            }
+        }
+
+        public static (float supply, float demand) TheGamesDailySupplyAndDemand(float inStore, float wanted,
+                                                                              float supply, float demand) =>
+            (Math.Max(0.1f, supply * 0.85f + inStore * 0.15f), demand * 0.85f + wanted * 0.15f);
+
+        public static int WhatAWalkFetches(int units, Func<int, int> priceOfUnit)
+        {
+            if (units <= 0 || priceOfUnit == null) return 0;
+            long gold = 0L;
+            for (int i = 0; i < units; i++) gold += Math.Max(0, priceOfUnit(i));
+            return gold > int.MaxValue ? int.MaxValue : (int)gold;
+        }
+
+        public static int ShelfForAUnitOfAWalk(int shelfBefore, int unit, int unitValue, bool soldToTheTown)
+        {
+            long at = (long)shelfBefore + (soldToTheTown ? 1L : -1L) * unit * Math.Max(0, unitValue);
+            return at <= 0L ? 0 : at > int.MaxValue ? int.MaxValue : (int)at;
+        }
+
+        public const float OneArrivalSpansAtMost = 1E-4f;
+
+        public static bool OnTheSameArrival(float days, float soonest) =>
+            !float.IsNaN(days) && !float.IsNaN(soonest) && Math.Abs(days - soonest) <= OneArrivalSpansAtMost;
+
+        public const float ABudgetFollowsThePriceIndexBy = 0.3f;
+
+        public static float BudgetAtAnotherIndex(float budget, float indexThen, float indexNow)
+        {
+            if (!(indexThen > 0f) || !(indexNow > 0f) || indexThen == indexNow) return budget;
+            return Finite(budget * (float)Math.Pow(indexThen / indexNow, ABudgetFollowsThePriceIndexBy), budget);
         }
 
         public static int StockAfterAShelfShift(int stock, int inStoreValueNow, int inStoreValueThen, int unitValue)
@@ -1720,6 +1766,27 @@ namespace TradeLord
         public static float DaysVillagersWaitFor(float chanceAnHour) =>
             chanceAnHour > 0f ? 1f / chanceAnHour / 24f : float.PositiveInfinity;
 
+        public const float AnHourlyRollComesIn = 0.5f;
+
+        public static float DaysUntilARollTakes(float chanceAnHour) =>
+            chanceAnHour > 0f
+                ? Math.Max(0f, 1f / chanceAnHour - AnHourlyRollComesIn) / 24f
+                : float.PositiveInfinity;
+
+        public const float RoomOfAPartyItself = 10f;
+        public const float RoomEachPackAnimalAdds = 100f;
+        public const float ANewVillagerPartyLeadsPackAnimalsAMan = 0.5f;
+
+        public static float RoomOfANewParty(float menItSetsOutWith, int ideal, float hearth)
+        {
+            int men = (int)Math.Round(Math.Max(0f, Finite(menItSetsOutWith, 0f)), MidpointRounding.AwayFromZero);
+            int packAnimals = (int)(ANewVillagerPartyLeadsPackAnimalsAMan * men);
+            float left = Math.Max(0f, Finite(hearth, 0f) - (men + 1) / 2);
+            int added = Math.Min(ideal - men, (int)left);
+            if (added > 0) men += added;
+            return RoomOfAPartyItself + men * RoomEachVillagerAdds + packAnimals * RoomEachPackAnimalAdds;
+        }
+
         public static int HearthLevelOf(float hearth) => hearth >= 600f ? 2 : hearth >= 200f ? 1 : 0;
 
         public static float AVillageGrowsItsHearthBy(float hearth) => hearth < 300f ? 4f : hearth < 600f ? 1.2f : 0.2f;
@@ -1817,8 +1884,9 @@ namespace TradeLord
                 }
             }
             float share = ShareVillagersLoad();
-            float wait = DaysVillagersWaitFor(VillagersSetOutAnHourWith);
-            float stay = DaysVillagersWaitFor(VillagersLeaveATownAnHourWith);
+            float wait = DaysUntilARollTakes(VillagersSetOutAnHourWith);
+            float again = DaysVillagersWaitFor(VillagersSetOutAnHourWith);
+            float stay = DaysUntilARollTakes(VillagersLeaveATownAnHourWith);
             float since = 0f;
             float back = Math.Max(0f, Finite(home, 0f));
             for (int k = 0; k < MostLoadsAVillageIsFollowedFor; k++)
@@ -1832,7 +1900,7 @@ namespace TradeLord
                     ready = TickAt(ticked + 1);
                     Make();
                 }
-                float setOut = ready + (k == 0 && !raised ? wait + wait : wait);
+                float setOut = ready + (k == 0 && !raised ? wait + again : wait);
                 if (setOut + ride > watch) break;
                 while (TickAt(ticked + 1) <= setOut) Make();
                 var units = new float[n];

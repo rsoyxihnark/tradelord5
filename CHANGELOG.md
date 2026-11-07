@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.9.11
+
+- Fixed Count what is on its way counting a caravan's own sale twice in the prices it buys at in the same town (#174)
+- Fixed Count what is on its way pricing all the units a caravan sells or buys at the price of the first one (#175)
+- Fixed Count what is on its way taking what caravans not bound yet draw from a town's purse at the price left after their sale (#175)
+- Fixed TradeLord.log's caravan check counting what a caravan sold at the price left after its sale instead of what it was paid (#175)
+- Fixed Count what is on its way leaving out what caravans already in a town will buy there before they leave (#176)
+- With Enable extended debug logging on, TradeLord.log now says each hour how many caravans in a town are still to buy (#176)
+- Fixed Count what is on its way expecting caravans and villagers to set off half an hour later on average than they do (#177)
+- Fixed Count what is on its way letting a village's new villagers carry more than their men and pack animals can (#178)
+- Fixed Count what is on its way moving no demand onto a stand-in good when the town had no demand for it (#179)
+- Fixed Count what is on its way judging how much a caravan sells partly on today's prices instead of the prices it meets on arrival (#181)
+- Fixed TradeLord.log's caravan line each hour counting caravans as selling at other prices when only goods they do not sell had moved (#182)
+- Fixed TradeLord.log's caravan check counting villagers among the caravans still awaited (#183)
+- Fixed TradeLord.log's villager check counting a village's later trips against what its first trip sold (#184)
+- Fixed TradeLord.log counting only the looted villages sending a load in time as the looted villages it follows (#185)
+
 ## 2.9.10
 
 - Fixed Count what is on its way pricing what a caravan buys before its own sale reaches the shelf instead of as it leaves the town (#168)

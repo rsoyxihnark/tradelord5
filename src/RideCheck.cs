@@ -425,12 +425,15 @@ namespace TradeLord
             if (!Writing || caravan?.StringId == null || town?.Settlement == null || traded == null) return;
             if (!_counted.TryGetValue(caravan.StringId, out Counted one) || one.Town != town.Settlement.StringId) return;
             if (double.IsNaN(one.ArrivedAt)) one.ArrivedAt = CampaignTime.Now.ToHours;
-            foreach ((EquipmentElement element, int amount) in traded)
+            int[] fetched = Forecast.WhatTheTradesFetched(town, caravan, traded);
+            for (int i = 0; i < traded.Count; i++)
             {
+                (EquipmentElement element, int amount) = traded[i];
                 if (element.Item == null) continue;
                 var (units, sold) = TradeMath.WhatACaravanMoved(amount);
                 if (!sold || units <= 0) continue;
-                one.Sold = TradeMath.AddedUp(one.Sold, TradeMath.WorthOf(units, Priced.At(town, element, caravan, selling: true)));
+                one.Sold = TradeMath.AddedUp(one.Sold, fetched != null
+                    ? fetched[i] : TradeMath.WorthOf(units, Priced.At(town, element, caravan, selling: true)));
             }
         }
 
@@ -568,7 +571,7 @@ namespace TradeLord
                       "set off for; " + _soldDay + " arrived before you and sold " + _goldSold + " of the " + _wantSold +
                       " counted for them, " + _lateDay + " arrived after you and sold " + _goldLate + " of the " +
                       _wantLate + " counted for them, and " + _neverDay + " never arrived, counted for " + _wantNever +
-                      "; " + _counted.Count + " still awaited" +
+                      "; " + CaravansAwaited() + " still awaited" +
                       (_indexJudged > 0
                           ? "; for " + _indexJudged + " of them the price index of their biggest sale counted for their " +
                             "arrival was " + Index((float)(_indexSaidOff / _indexJudged)) + " off what they met on " +
@@ -576,6 +579,13 @@ namespace TradeLord
                             " off"
                           : ""));
             ClearTheCounted();
+        }
+
+        private static int CaravansAwaited()
+        {
+            int awaited = 0;
+            foreach (Counted one in _counted.Values) if (!one.Villagers) awaited++;
+            return awaited;
         }
 
         private static void SayTheVillagers()
