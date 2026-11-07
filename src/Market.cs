@@ -350,6 +350,9 @@ namespace TradeLord
             }
             return market.GetItemPrice(el, who, selling);
         }
+
+        internal static int AsTheGameChargesACaravan(Town town, EquipmentElement el, MobileParty caravan, bool selling) =>
+            town == null ? 0 : town.GetItemPrice(el, caravan, selling);
     }
 
     internal sealed class TheirOffer : IMarketData
