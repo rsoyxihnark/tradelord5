@@ -37,8 +37,7 @@ namespace TradeLord
 
         internal bool Walkable => _walkable;
 
-        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,
-                       float days = 0f)
+        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)
         {
             ItemObject item = stocked.Item;
             _item = item;
@@ -49,7 +48,7 @@ namespace TradeLord
             if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;
             if (site != null && site.IsVillage)
             {
-                _quoted = VillageAfterLanding(site, quoted, landed, days);
+                _quoted = VillageAfterLanding(site, quoted, landed);
                 return;
             }
             Town town = site != null && site.IsTown ? site.Town : null;
@@ -57,17 +56,17 @@ namespace TradeLord
             try
             {
                 ItemData data = town.MarketData.GetCategoryData(item.ItemCategory);
-                (_supply, _demand) = Forecast.SupplyAndDemandOnArrival(site, item.ItemCategory, days) ??
-                                     (data.Supply, data.Demand);
+                _supply = data.Supply;
+                _demand = data.Demand;
                 _inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);
                 _walkable = true;
             }
             catch (Exception e) { Log.Error(e, "bulk price walk setup"); }
         }
 
-        private int VillageAfterLanding(Settlement village, int quoted, int landed, float days)
+        private int VillageAfterLanding(Settlement village, int quoted, int landed)
         {
-            if ((landed == 0 && !(days > 0f)) || quoted <= 0 || _item == null || _item.ItemCategory == null) return quoted;
+            if (landed == 0 || quoted <= 0 || _item == null || _item.ItemCategory == null) return quoted;
             Town town = Hindsight.PricedFrom(village)?.Town;
             IMarketData held = Priced.Kept(village);
             if (town == null || held == null) return quoted;
@@ -80,10 +79,9 @@ namespace TradeLord
                                        data.InStoreValue, data.Supply, data.Demand) ==
                         held.GetPrice(_element, MobileParty.MainParty, _selling, _party)))
                     return quoted;
-                var (supply, demand) = Forecast.SupplyAndDemandOnArrival(town.Settlement, _item.ItemCategory, days) ??
-                                       (data.Supply, data.Demand);
                 int after = model.GetPrice(_element, MobileParty.MainParty, _party, _selling,
-                                           TradeMath.ShelfAfterLanding(data.InStoreValue, landed), supply, demand);
+                                           TradeMath.ShelfAfterLanding(data.InStoreValue, landed),
+                                           data.Supply, data.Demand);
                 return after > 0 ? TradeMath.ForecastWithin(quoted, after) : quoted;
             }
             catch (Exception e)
@@ -121,16 +119,15 @@ namespace TradeLord
         private readonly List<long> _running = new List<long>();
         private int _stopsAt = -1;
 
-        internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed, float days = 0f)
-            : this(site, new EquipmentElement(item), selling, quoted, landed, days)
+        internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)
+            : this(site, new EquipmentElement(item), selling, quoted, landed)
         {
         }
 
-        internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,
-                        float days = 0f)
+        internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)
         {
             _selling = selling;
-            _shelf = new Shelf(site, stocked, selling, quoted, landed, days);
+            _shelf = new Shelf(site, stocked, selling, quoted, landed);
         }
 
         internal bool Walkable => _shelf.Walkable;
@@ -171,11 +168,11 @@ namespace TradeLord
 
     internal static class Bulk
     {
-        private static readonly Dictionary<(string site, string item, bool selling, int landed, int ticks), Ladder> _rungs =
-            new Dictionary<(string, string, bool, int, int), Ladder>();
+        private static readonly Dictionary<(string site, string item, bool selling, int landed), Ladder> _rungs =
+            new Dictionary<(string, string, bool, int), Ladder>();
 
-        private static readonly Dictionary<(string site, string item, bool selling, bool arriving, int ticks), int> _reach =
-            new Dictionary<(string, string, bool, bool, int), int>();
+        private static readonly Dictionary<(string site, string item, bool selling, bool arriving), int> _reach =
+            new Dictionary<(string, string, bool, bool), int>();
 
         private static readonly Dictionary<(string site, string kind, bool selling), bool> _pricedAsTheGame =
             new Dictionary<(string, string, bool), bool>();
@@ -195,68 +192,64 @@ namespace TradeLord
         }
 
         private static Ladder Rung(Settlement site, ItemObject item, bool selling, int quoted,
-                                   int landed, float days)
+                                   int landed)
         {
-            int ticks = Forecast.TownTicksAhead(site, days);
-            var key = (site.StringId, item.StringId, selling, landed, ticks);
+            var key = (site.StringId, item.StringId, selling, landed);
             if (!_rungs.TryGetValue(key, out Ladder rung))
             {
-                rung = Held(site, item, selling, quoted, landed, days, ticks, scanning: true);
+                rung = Held(site, item, selling, quoted, landed, scanning: true);
                 _rungs[key] = rung;
             }
             return rung;
         }
 
-        private static Ladder Held(Settlement site, ItemObject item, bool selling, int quoted, int landed, float days,
-                                   int ticks, bool scanning) =>
-            Held(site, new EquipmentElement(item), selling, quoted, landed, days, ticks, scanning);
+        private static Ladder Held(Settlement site, ItemObject item, bool selling, int quoted, int landed,
+                                   bool scanning) =>
+            Held(site, new EquipmentElement(item), selling, quoted, landed, scanning);
 
         private static Ladder Held(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,
-                                   float days, int ticks, bool scanning)
+                                   bool scanning)
         {
-            var rung = new Ladder(site, stocked, selling, quoted, landed, days);
-            if ((landed == 0 && ticks == 0) || !rung.Walkable) return rung;
+            var rung = new Ladder(site, stocked, selling, quoted, landed);
+            if (landed == 0 || !rung.Walkable) return rung;
             int first = rung.At(0);
             if (TradeMath.ForecastWithin(quoted, first) == first) return rung;
-            var way = (site.StringId, stocked.Item.StringId, selling, landed > 0, ticks);
+            var way = (site.StringId, stocked.Item.StringId, selling, landed > 0);
             if (!scanning || !_reach.TryGetValue(way, out int held))
             {
                 held = TradeMath.LandingWithinReach(quoted, landed, first,
-                    shift => new Ladder(site, stocked, selling, quoted, shift, days).At(0));
+                    shift => new Ladder(site, stocked, selling, quoted, shift).At(0));
                 if (scanning) _reach[way] = held;
             }
-            return new Ladder(site, stocked, selling, quoted, TradeMath.NoFurtherThan(landed, held), days);
+            return new Ladder(site, stocked, selling, quoted, TradeMath.NoFurtherThan(landed, held));
         }
 
         internal static Ladder AsItLands(Settlement site, EquipmentElement stocked, bool selling, int quoted,
-                                         int landed, float days = 0f) =>
+                                         int landed) =>
             site == null || stocked.Item == null
                 ? null
-                : Held(site, stocked, selling, quoted, landed, days, Forecast.TownTicksAhead(site, days), scanning: false);
+                : Held(site, stocked, selling, quoted, landed, scanning: false);
 
         internal static int Opening(Settlement site, ItemObject item, bool selling, int quoted,
-                                   int landed, float days = 0f)
+                                   int landed)
         {
             if (site == null || item == null) return quoted;
-            int walked = Rung(site, item, selling, quoted, landed, days).At(0);
-            return landed == 0 && Forecast.TownTicksAhead(site, days) == 0
-                ? walked
-                : TradeMath.ForecastWithin(quoted, walked);
+            int walked = Rung(site, item, selling, quoted, landed).At(0);
+            return landed == 0 ? walked : TradeMath.ForecastWithin(quoted, walked);
         }
 
         internal static RouteQuote Walk(Settlement from, Settlement to, ItemObject item,
                                         int maxUnits, int merchantTill, int spendCap,
                                         int quotedBuyPrice, int quotedSellPrice,
-                                        int landedAtBuyTown, int landedAtSellTown, int sellFrom = 0,
-                                        float buyDays = 0f, float sellDays = 0f)
+                                        int landedAtBuyTown, int landedAtSellTown, int sellFrom = 0)
         {
             RouteQuote q = default(RouteQuote);
             if (item == null || from == null || to == null || maxUnits <= 0) return q;
 
             Ladder buy = Rung(from, item, selling: false, quoted: quotedBuyPrice,
-                              landed: landedAtBuyTown, days: buyDays);
+                              landed: landedAtBuyTown);
             Ladder sell = Rung(to, item, selling: true, quoted: quotedSellPrice,
-                               landed: landedAtSellTown, days: sellDays);
+                               landed: landedAtSellTown);
             q.Simulated = buy.Walkable && sell.Walkable;
             int drawnBefore = sellFrom > 0 ? sell.Through(sellFrom) : 0;
 
@@ -278,11 +271,10 @@ namespace TradeLord
         }
 
         internal static int FirstUnit(Settlement site, ItemObject item, bool selling, int quoted,
-                                     int landed, float days = 0f)
+                                     int landed)
         {
-            int ticks = Forecast.TownTicksAhead(site, days);
-            if ((landed == 0 && ticks == 0) || site == null || item == null) return quoted;
-            Ladder rung = Held(site, item, selling, quoted, landed, days, ticks, scanning: false);
+            if (landed == 0 || site == null || item == null) return quoted;
+            Ladder rung = Held(site, item, selling, quoted, landed, scanning: false);
             return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;
         }
     }

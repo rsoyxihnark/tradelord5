@@ -228,7 +228,7 @@ namespace TradeLord
             if (at.Purse <= 0) { why = Block.BudgetSpent; return null; }
             int fits = TradeMath.UnitsThatFit(at.Room, each);
             int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);
-            int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy);
+            int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
             BuySideTicks += Now() - buying;
             buying = Now();
             Options s = Options.Current;
@@ -308,7 +308,7 @@ namespace TradeLord
                 }
                 if (_passOver && landedAtSellTown > 0 &&
                     TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,
-                                                                 Bulk.Opening(to, item, true, sellPrice, 0, days),
+                                                                 Bulk.Opening(to, item, true, sellPrice, 0),
                                                                  landedAtSellTown, _safety))
                 {
                     PassedOver++;
@@ -325,7 +325,7 @@ namespace TradeLord
                 }
 
                 long pricing = Now();
-                int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);
+                int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
                 PriceTicks += Now() - pricing;
                 Opened++;
                 float realizable = TradePolicy.Realizable(openingSell);
@@ -393,8 +393,7 @@ namespace TradeLord
             if (units <= 0 || money <= 0) return null;
             int spendCap = leg.ValueCap > 0 ? Math.Min(leg.ValueCap, money) : money;
             RouteQuote q = Bulk.Walk(leg.From, leg.To, leg.Item, units, leg.Till, spendCap,
-                                     leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held,
-                                     leg.ToBuy, leg.Days);
+                                     leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held);
             if (q.Units <= 0) return null;
 
             bool conservative = Options.Current.ConservativeRouteProjection;
@@ -437,8 +436,7 @@ namespace TradeLord
             if (leg == null || money <= 0) return 0;
             int spendCap = leg.ValueCap > 0 ? Math.Min(leg.ValueCap, money) : money;
             return Bulk.Walk(leg.From, leg.To, leg.Item, leg.Units, leg.Till, spendCap,
-                             leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held,
-                             leg.ToBuy, leg.Days).Units;
+                             leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held).Units;
         }
 
         internal TradeRoute Resized(TradeRoute row, float roomLeft, int moneyLeft, Bound moneyBound)
@@ -503,14 +501,14 @@ namespace TradeLord
 
     internal static class Plan
     {
-        internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed, float days = 0f) =>
+        internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed) =>
             to == null || item == null
                 ? null
-                : Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed, days) ??
+                : Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed) ??
                   new Ladder(to, item, true, quoted, 0);
 
         internal static Ladder SellLadder(Leg leg) =>
-            leg == null ? null : SellLadder(leg.To, leg.Item, leg.SellQuoted, leg.LandedAtSell, leg.Days);
+            leg == null ? null : SellLadder(leg.To, leg.Item, leg.SellQuoted, leg.LandedAtSell);
 
         internal static int TillAt(Settlement to, float days) =>
             to != null && Options.Current.Omniscient
@@ -573,7 +571,7 @@ namespace TradeLord
                 float days = Travel.EstimateDaysFromParty(to);
                 if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(to, days)) continue;
                 int landed = Forecast.WorthShiftAsItHasHeld(to, item, days);
-                Ladder ladder = SellLadder(to, item, quoted, landed, days);
+                Ladder ladder = SellLadder(to, item, quoted, landed);
                 int purse = TillAt(to, days);
                 if (s.Omniscient && purse <= 0) continue;
                 int drawn = held > 0 ? ladder.Through(held) : 0;

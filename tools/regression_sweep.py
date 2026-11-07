@@ -2059,7 +2059,7 @@ chk("1.3.17", "the haircut filters every route pair, on the prices that pair wou
     "Realizable(sellPrice)" not in S['Ledger.cs'] + S['Plan.cs'] and
     "BuyAcceptable(buyPrice" not in S['Ledger.cs'] + S['Plan.cs'] and
     ordered(route_scan(),
-            "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);",
+            "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
             "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }",
             "Bulk.Walk(leg.From, leg.To, leg.Item"))
 chk("1.3.18", "denar cap reaches route quantities",
@@ -2401,7 +2401,7 @@ chk("1.5.0", "one definition of the resale haircut, walk and planner alike",
 chk("1.5.0", "observed mode does not read live market supply/demand for projections",
     "if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;" in
     method_body(S['Market.cs'],
-                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,"))
+                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)"))
 chk("1.5.0", "only a town shelf can be advanced, because only a town publishes the inputs",
     "Town town = site != null && site.IsTown ? site.Town : null;" in S['Market.cs'] and
     "if (town == null" in S['Market.cs'] and
@@ -2416,11 +2416,11 @@ chk("1.5.0", "buying strips the shelf and selling stocks it",
 chk("1.5.0", "route pruning is bounded by the very prices the quote opens at, so it cannot discard a viable route",
     "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);" in S['Plan.cs'] and
     "(sellPrice - buyPrice) * qtyCap" not in S['Plan.cs'] and
-    "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy);"
+    "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);"
         in S['Plan.cs'] and
-    "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);"
+    "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"
         in S['Plan.cs'] and
-    "int walked = Rung(site, item, selling, quoted, landed, days).At(0);" in
+    "int walked = Rung(site, item, selling, quoted, landed).At(0);" in
         method_body(S['Market.cs'], "internal static int Opening") and
     ordered(S['Plan.cs'], "float ceiling =", "Bulk.Walk(leg.From, leg.To, leg.Item"))
 chk("1.5.0", "a broke selling town is no destination, in the mode that can see its till",
@@ -2840,20 +2840,20 @@ chk("1.36.2", "a purchase is written down at what the very thing that was bought
         and "EquipmentElement el = purchased[i].Item1.EquipmentElement;" in hand
         and "_element = stocked;" in shelf
         and "new EquipmentElement" not in shelf
-        and ": this(site, new EquipmentElement(item), selling, quoted, landed, days)" in ladder
-        and "new Shelf(site, stocked, selling, quoted, landed, days);" in method_body(
-            S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,")
+        and ": this(site, new EquipmentElement(item), selling, quoted, landed)" in ladder
+        and "new Shelf(site, stocked, selling, quoted, landed);" in method_body(
+            S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
         and S['Market.cs'].count("new EquipmentElement(") == 3
-        and "Held(site, new EquipmentElement(item), selling, quoted, landed, days, ticks, scanning);" in S['Market.cs']
+        and "Held(site, new EquipmentElement(item), selling, quoted, landed, scanning);" in S['Market.cs']
         and "item == null ? 0 : At(market, new EquipmentElement(item), who, selling);" in S['Market.cs'])
     (method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange"),
      method_body(S['Market.cs'],
-                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,"),
-     method_body(S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed, float days = 0f)")))
+                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)"),
+     method_body(S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)")))
 chk("1.5.6", "no shelf is read outside a projection",
     S['Market.cs'].count("new Shelf(") == 1 and
     "new Shelf(" in method_body(
-        S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,") and
+        S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)") and
     "projecting" not in S['Market.cs'])
 chk("1.5.6", "panel setup is retried before being disabled",
     "private const int SetupAttempts = 3;" in S['Panel.cs'] and
@@ -7763,12 +7763,11 @@ def a_workshop_run_moves_the_price_of_its_kind_and_the_stock_of_the_good_the_tow
 
 def the_walk_starts_from_what_the_market_will_hold_when_you_get_there():
     shelf = method_body(S['Market.cs'],
-        "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,")
+        "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
     rung = method_body(S['Market.cs'], "private static Ladder Rung")
     return ("_inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);" in shelf
-            and "int ticks = Forecast.TownTicksAhead(site, days);" in rung
-            and "var key = (site.StringId, item.StringId, selling, landed, ticks);" in rung
-            and "Dictionary<(string site, string item, bool selling, int landed, int ticks), Ladder>" in S['Market.cs']
+            and "var key = (site.StringId, item.StringId, selling, landed);" in rung
+            and "Dictionary<(string site, string item, bool selling, int landed), Ladder>" in S['Market.cs']
             and "int landedAtBuyTown, int landedAtSellTown" in
                 method_body(S['Market.cs'], "internal static RouteQuote Walk"))
 
@@ -7876,11 +7875,11 @@ def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
                     "if (!Forecast.On || markets == null || markets.Count == 0) return;",
                     "float days = Travel.EstimateDaysFromParty(town);",
                     "Bulk.FirstUnit(town, item, selling, price,",
-                    "Forecast.WorthShiftAsItHasHeld(town, item, days), days));",
+                    "Forecast.WorthShiftAsItHasHeld(town, item, days)));",
                     "markets.Sort(")
             and "AsTheyWillBe(item, sells, selling: true);" in picked
             and "AsTheyWillBe(item, buys, selling: false);" in picked
-            and "if ((landed == 0 && ticks == 0) || site == null || item == null) return quoted;" in first
+            and "if (landed == 0 || site == null || item == null) return quoted;" in first
             and "return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
             and "route and tooltip prices" in spoken(ENGLISH)['TL396'])
 
@@ -10366,20 +10365,19 @@ def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
     return (scan.count("Forecast.WorthShiftAsItHasHeld(to, item,") == 1
             and scan.count("Forecast.WorthShiftAsItHasHeld(from, item,") == 1
             and scan.count("Bulk.Opening(") == 3
-            and scan.count("Bulk.Opening(to, item, true, sellPrice, 0, days),") == 1
+            and scan.count("Bulk.Opening(to, item, true, sellPrice, 0),") == 1
             and ordered(scan,
                         "int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);",
-                        "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy)",
+                        "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown)",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
                         "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,",
-                        "Bulk.Opening(to, item, true, sellPrice, 0, days),",
+                        "Bulk.Opening(to, item, true, sellPrice, 0),",
                         "landedAtSellTown, _safety))",
-                        "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days)",
+                        "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown)",
                         "float ceiling =",
                         "LandedAtBuy = landedAtBuyTown, LandedAtSell = landedAtSellTown,")
-            and ordered(scan, "leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held,",
-                        "leg.ToBuy, leg.Days);"))
+            and "leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held);" in scan)
 
 
 chk("1.79.2", "what a route could at best be worth is worked out from the same arrival, and the same count of what reaches that market before you, as the quote the panel then shows",
@@ -10392,8 +10390,8 @@ def a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it():
             and between(scan, "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,",
                         "landedAtSellTown, _safety))").count("sellPrice") == 1
             and scan.count("buyPrice") == 7
-            and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);" in scan
-            and "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy);" in scan
+            and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in scan
+            and "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);" in scan
             and "int stocked = TradeRules.UnitsAPlanMayTake(good, openingBuy, taken, held, _shareCap, herdRoom," in scan
             and "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;" in scan
             and "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);" in scan
@@ -10577,7 +10575,7 @@ chk("1.80.5", "the panel says a market's Score is lowered for paying less than i
 def a_setting_that_leans_on_another_names_it_in_every_language():
     refresh = method_body(S['Panel.cs'], "private void Refresh")
     shelf = method_body(S['Market.cs'], "internal Shelf(Settlement site, EquipmentElement stocked, "
-                                        "bool selling, int quoted, int landed,")
+                                        "bool selling, int quoted, int landed)")
     everywhere = [ENGLISH] + list(TRANSLATIONS.values())
     return ("if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;"
                 in shelf
@@ -11069,7 +11067,7 @@ def the_marker_walks_the_price_down_the_way_a_sale_really_would():
     asked = method_body(S['Marker.cs'], "internal int At(int taken)")
     unbought, bought = marker_passes()
     step = method_body(S['Marker.cs'], "private int Next()")
-    return ("? null : Bulk.AsItLands(_site, _el, true, _flat, landed, _ride);" in step
+    return ("? null : Bulk.AsItLands(_site, _el, true, _flat, landed);" in step
             and "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);" in step
             and "_walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;" in step
             and "return _walk != null ? _walk.At(_rungs.Count) : _flat;" in step
@@ -11478,16 +11476,16 @@ chk("1.83.3", "the kept copies in the archive folder are a closed record, so a c
 
 def the_far_market_ladder_is_walked_once_and_handed_on():
     sale = best_sale()
-    ladder = between(S['Plan.cs'], "internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed, float days = 0f) =>",
+    ladder = between(S['Plan.cs'], "internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed) =>",
                      "internal static Ladder SellLadder(Leg leg) =>")
     buy = buy_pass()
     return (sale and ladder
             and "SellWalk" not in ALL
             and "struct Fetched" not in ALL
-            and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed, days) ??" in ladder
+            and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed) ??" in ladder
             and "new Ladder(to, item, true, quoted, 0);" in ladder
             and S['Market.cs'].count("new Ladder(site, item, true, quoted, 0);") == 0
-            and ordered(sale, "Ladder ladder = SellLadder(to, item, quoted, landed, days);",
+            and ordered(sale, "Ladder ladder = SellLadder(to, item, quoted, landed);",
                         "int price = ladder.At(held + bought);",
                         "rungs = ladder;",
                         "return best;")
@@ -11532,7 +11530,7 @@ def the_route_scan_says_what_it_cost():
             and scan.count("Opened++;") == 1
             and scan.count("ThrownAway++;") == 4
             and ordered(scan,
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
                         "Opened++;")
             and "SayWhatTheScanCost(scan, kept.Count, took);" in scan
             and "if (!Options.Current.ExtendedDebugLogging) return;" in say
@@ -11786,13 +11784,12 @@ def the_ledger_bounds_a_forecast_price_the_way_the_tooltip_already_did():
     opening = method_body(S['Market.cs'], "internal static int Opening")
     first = method_body(S['Market.cs'], "internal static int FirstUnit")
     return (opening and first
-            and "int walked = Rung(site, item, selling, quoted, landed, days).At(0);" in opening
-            and ordered(opening, "return landed == 0 && Forecast.TownTicksAhead(site, days) == 0", "? walked",
-                        ": TradeMath.ForecastWithin(quoted, walked);")
+            and "int walked = Rung(site, item, selling, quoted, landed).At(0);" in opening
+            and "return landed == 0 ? walked : TradeMath.ForecastWithin(quoted, walked);" in opening
             and "return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
-            and "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy);"
+            and "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);"
                 in route_scan()
-            and "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);"
+            and "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"
                 in route_scan())
 
 
@@ -11866,21 +11863,21 @@ def what_is_on_its_way_moves_a_route_no_further_than_its_first_unit_may_move():
     walk = method_body(S['Market.cs'], "internal static RouteQuote Walk")
     reach = method_body(S['TradeMath.cs'], "public static int LandingWithinReach")
     return (rung and held and first and opening and walk and reach
-            and "rung = Held(site, item, selling, quoted, landed, days, ticks, scanning: true);" in rung
+            and "rung = Held(site, item, selling, quoted, landed, scanning: true);" in rung
             and "new Ladder(" not in rung
-            and "Ladder rung = Held(site, item, selling, quoted, landed, days, ticks, scanning: false);" in first
+            and "Ladder rung = Held(site, item, selling, quoted, landed, scanning: false);" in first
             and "new Ladder(" not in first
             and "return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
-            and "int walked = Rung(site, item, selling, quoted, landed, days).At(0);" in opening
-            and ordered(held, "var rung = new Ladder(site, stocked, selling, quoted, landed, days);",
-                        "if ((landed == 0 && ticks == 0) || !rung.Walkable) return rung;",
+            and "int walked = Rung(site, item, selling, quoted, landed).At(0);" in opening
+            and ordered(held, "var rung = new Ladder(site, stocked, selling, quoted, landed);",
+                        "if (landed == 0 || !rung.Walkable) return rung;",
                         "int first = rung.At(0);",
                         "if (TradeMath.ForecastWithin(quoted, first) == first) return rung;",
                         "held = TradeMath.LandingWithinReach(quoted, landed, first,",
-                        "shift => new Ladder(site, stocked, selling, quoted, shift, days).At(0));",
-                        "return new Ladder(site, stocked, selling, quoted, TradeMath.NoFurtherThan(landed, held), days);")
+                        "shift => new Ladder(site, stocked, selling, quoted, shift).At(0));",
+                        "return new Ladder(site, stocked, selling, quoted, TradeMath.NoFurtherThan(landed, held));")
             and held.count("new Ladder(") == 3
-            and "landed: landedAtBuyTown, days: buyDays);" in walk and "landed: landedAtSellTown, days: sellDays);" in walk
+            and "landed: landedAtBuyTown);" in walk and "landed: landedAtSellTown);" in walk
             and "int buyPrice = buy.At(u);" in walk and "int sellPrice = sell.At(u + Math.Max(0, sellFrom));" in walk
             and "if (landed == 0 || ForecastWithin(live, firstUnit) == firstUnit) return landed;" in reach
             and "int held = MostThatHolds(most, shift =>" in reach
@@ -11914,8 +11911,8 @@ def how_far_a_landing_may_move_a_market_is_found_once_a_scan():
                          "internal static void Forget()")
     further = method_body(S['TradeMath.cs'], "public static int NoFurtherThan")
     return (held and forget
-            and "private static readonly Dictionary<(string site, string item, bool selling, bool arriving, int ticks), int> _reach =" in m
-            and ordered(held, "var way = (site.StringId, stocked.Item.StringId, selling, landed > 0, ticks);",
+            and "private static readonly Dictionary<(string site, string item, bool selling, bool arriving), int> _reach =" in m
+            and ordered(held, "var way = (site.StringId, stocked.Item.StringId, selling, landed > 0);",
                         "if (!scanning || !_reach.TryGetValue(way, out int held))",
                         "held = TradeMath.LandingWithinReach(",
                         "if (scanning) _reach[way] = held;",
@@ -12559,7 +12556,7 @@ def every_best_market_comparison_prices_the_quality_you_carry():
     return ("long priced = (long)plainPrice * qualityValue / plainValue;" in scale
             and "rungs = Marker.WhatTheMarkTakes(where, _plan[at].EquipmentElement, units, worth, ride, purse);" in resale
             and "Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);" in takes
-            and "Bulk.AsItLands(_site, _el, true, _flat, landed, _ride);" in step
+            and "Bulk.AsItLands(_site, _el, true, _flat, landed);" in step
             and colour.count("TradeMath.AtThisQuality(best.price, item.Value, held.ItemValue)") == 2
             and all(one in FLOORTESTS for one in
                     ("The_best_price_is_scaled_to_the_quality_you_carry",
@@ -13395,7 +13392,7 @@ def a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_
     m = S['Market.cs']
     held = between(f, "internal static int WorthShiftAsItHasHeld", "private static int PriceShift")
     shift = method_body(f, "private static int PriceShift")
-    shelf = method_body(m, "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,")
+    shelf = method_body(m, "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
     village = method_body(m, "private int VillageAfterLanding")
     game = method_body(m, "internal static bool PricedAsTheGame")
     first = method_body(m, "internal static int FirstUnit")
@@ -13418,9 +13415,9 @@ def a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_
             and "_shifts.Clear();" in method_body(f, "private static void Build")
             and ordered(shelf, "if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;",
                         "if (site != null && site.IsVillage)",
-                        "_quoted = VillageAfterLanding(site, quoted, landed, days);\n                return;",
+                        "_quoted = VillageAfterLanding(site, quoted, landed);\n                return;",
                         "Town town = site != null && site.IsTown ? site.Town : null;")
-            and ordered(village, "if ((landed == 0 && !(days > 0f)) || quoted <= 0 || _item == null || _item.ItemCategory == null) return quoted;",
+            and ordered(village, "if (landed == 0 || quoted <= 0 || _item == null || _item.ItemCategory == null) return quoted;",
                         "Town town = Hindsight.PricedFrom(village)?.Town;",
                         "IMarketData held = Priced.Kept(village);",
                         "if (town == null || held == null) return quoted;",
@@ -14140,7 +14137,7 @@ chk("1.93.10", "Esc on the ledger or on Recent trades closes that window through
 
 def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
     sale = best_sale()
-    ladder = between(S['Plan.cs'], "internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed, float days = 0f) =>",
+    ladder = between(S['Plan.cs'], "internal static Ladder SellLadder(Settlement to, ItemObject item, int quoted, int landed) =>",
                      "internal static Ladder SellLadder(Leg leg) =>")
     score = method_body(S['Plan.cs'], "internal static float SaleScore(")
     lands = between(S['Market.cs'], "internal static Ladder AsItLands", "internal static int Opening(")
@@ -14151,15 +14148,15 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
             and ordered(sale, "float days = Travel.EstimateDaysFromParty(to);",
                         "if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(to, days)) continue;",
                         "int landed = Forecast.WorthShiftAsItHasHeld(to, item, days);",
-                        "Ladder ladder = SellLadder(to, item, quoted, landed, days);",
+                        "Ladder ladder = SellLadder(to, item, quoted, landed);",
                         "int price = ladder.At(held + bought);",
                         "if (price <= 0) break;",
                         "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, stock, caravans,",
                         "rungs = ladder;")
-            and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed, days) ??" in ladder
+            and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed) ??" in ladder
             and "trust = Confidence.AsPromisesHaveHeld(1f, arrivals, heldThere);" in score
             and "if (s.TrustWhatAMarketPaid && ledger != null && to != null &&" in score
-            and ": Held(site, stocked, selling, quoted, landed, days, Forecast.TownTicksAhead(site, days), scanning: false);" in lands
+            and ": Held(site, stocked, selling, quoted, landed, scanning: false);" in lands
             and "OpeningOn" not in S['Market.cs']
             and "_walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;" in step
             and "return _walk != null ? _walk.At(_rungs.Count) : _flat;" in step
@@ -14167,14 +14164,14 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
             and "!On ? 0" in between(S['Forecast.cs'], "internal static int WorthShiftAsItHasHeld", "private static int PriceShift")
             and ordered(step, "? Priced.At(_market, _el, _party, true)",
                         "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);",
-                        "? null : Bulk.AsItLands(_site, _el, true, _flat, landed, _ride);")
+                        "? null : Bulk.AsItLands(_site, _el, true, _flat, landed);")
             and "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);" in fetch
             and "Takings took = WhatItWouldSell(s, market, party, ride, cargo, gold, null);" in marker
             and "WhatItWouldSell(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);"
                 in marker
             and "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);" in route_scan()
-            and "if ((landed == 0 && ticks == 0) || !rung.Walkable) return rung;" in S['Market.cs']
-            and "if ((landed == 0 && ticks == 0) || site == null || item == null) return quoted;" in
+            and "if (landed == 0 || !rung.Walkable) return rung;" in S['Market.cs']
+            and "if (landed == 0 || site == null || item == null) return quoted;" in
                 method_body(S['Market.cs'], "internal static int FirstUnit"))
 
 
@@ -14352,7 +14349,7 @@ def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
             and ordered(plan, "TradeRoute row = market.PlanFor(item);",
                         'one.Good.Id + " for " + row.To.Name + " at " + row.SellPrice +',
                         '" day(s), Conf " + Scoring.Share(row.Confidence) +')
-            and "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);" in route_scan()
+            and "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in route_scan()
             and "BuyerTicks" not in ALL)
 
 
@@ -18258,7 +18255,7 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
                         "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
                         "mayCarry, days, beaten, key, _safety,\n"
                         "                                                                      MostItCounts(days)))",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
                         "Opened++;", "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }",
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
                         "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);")
@@ -18274,13 +18271,13 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
             and scan.count("TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin)") == 1
             and between(scan, "mayCarry, days, beaten, key, _safety,\n"
                         "                                                                      MostItCounts(days)))",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);").count("PassedOver++;") == 2
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);").count("PassedOver++;") == 2
             and ordered(between(scan, "mayCarry, days, beaten, key, _safety,\n"
                         "                                                                      MostItCounts(days)))",
-                                "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);"),
+                                "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"),
                         "if (_passOver && landedAtSellTown > 0 &&",
                         "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,")
-            and between(scan, "Bulk.Opening(to, item, true, sellPrice, 0, days),",
+            and between(scan, "Bulk.Opening(to, item, true, sellPrice, 0),",
                         "int till = 0;").count("PassedOver++;") == 1
             and between(scan, "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, mayCarry, soonest, beaten, key,\n"
                         "                                                             MostItCounts(soonest)))",
@@ -21000,10 +20997,10 @@ def one_engine_prices_every_unit_as_the_market_would():
     return (best and sized and scan
             and "int price = Priced.At(here.SettlementComponent, item, party, false);" in scan
             and the_scan_reads_each_goods_sell_list_once()
-            and ordered(best, "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy);",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);")
+            and ordered(best, "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);")
             and "RouteQuote q = Bulk.Walk(leg.From, leg.To, leg.Item, units, leg.Till, spendCap," in sized
-            and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed, days) ??" in S['Plan.cs'])
+            and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed) ??" in S['Plan.cs'])
 
 
 chk("2.1.0", "the one engine prices each unit through the game's own model at both ends, as each market will be when you arrive",
@@ -21039,8 +21036,7 @@ def one_engine_sizes_every_good_to_what_you_may_take():
                         "int valueCap = s.BuyValueCapPerItem > 0 ? Math.Max(0, s.BuyValueCapPerItem - taken.Item2) : 0;",
                         "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);",
                         "TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);")
-            and ordered(sized, "leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held,",
-                        "leg.ToBuy, leg.Days);")
+            and "leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held);" in sized
             and "_shareCap = Options.Current.MaxHeldShare > 0f ? capacity * Options.Current.MaxHeldShare : 0f;" in ctor
             and "_herdRoom = party == null ? 0 : Drove.RoomForLivestock(party);" in ctor
             and "if (s.MaxHeldPerItem > 0) most = Math.Min(most, (long)s.MaxHeldPerItem - held);" in
@@ -22583,7 +22579,7 @@ def a_markets_purse_is_counted_as_it_will_be_when_you_arrive():
             and "int purse = TillAt(to, days);" in best_sale()
             and ordered(route_scan(), "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);")
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);")
             and all(one in MATHTESTS for one in
                     ("A_towns_purse_closes_a_quarter_of_its_gap_to_what_it_would_hold_each_day",
                      "Sellers_on_the_road_draw_the_purse_in_the_order_they_arrive_and_it_refills_between_them")))
@@ -22605,9 +22601,9 @@ def a_landing_that_cannot_lift_the_price_past_the_margin_is_passed_over_unpriced
             and ordered(scan, "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(",
                         "if (_passOver && landedAtSellTown > 0 &&",
                         "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,",
-                        "Bulk.Opening(to, item, true, sellPrice, 0, days),", "landedAtSellTown, _safety))", "int till = 0;",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);")
-            and between(scan, "Bulk.Opening(to, item, true, sellPrice, 0, days),", "int till = 0;").count("PassedOver++;") == 1
+                        "Bulk.Opening(to, item, true, sellPrice, 0),", "landedAtSellTown, _safety))", "int till = 0;",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);")
+            and between(scan, "Bulk.Opening(to, item, true, sellPrice, 0),", "int till = 0;").count("PassedOver++;") == 1
             and "A_landing_rules_out_a_route_only_when_even_the_price_before_it_lands_cannot_clear_the_margin" in MATHTESTS)
 
 
@@ -22908,7 +22904,7 @@ def a_scan_and_a_weighing_price_each_offer_once_and_skip_what_cannot_win():
             and ordered(scanning, "Marker.HoldThePayings();", "try { return ScanEveryRoute(); }",
                         "finally", "Marker.LetThePayingsGo();", "Travel.CloseTheScansRoadBudget();")
             and m.count("new Paying(") == 2
-            and paying.count("_ride") == 2
+            and paying.count("_ride") == 1
             and "Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride)" in paying
             and "var key = (site.StringId, item.ItemCategory.StringId, quarterDay);" in
                 method_body(S['Forecast.cs'], "private static int ShiftCachedAt(")
@@ -23266,7 +23262,7 @@ def the_route_scan_times_each_of_its_steps_only_with_extended_debug_logging_on()
             and ordered(ctor, "_timed = Options.Current.ExtendedDebugLogging;", "long setUp = Now();",
                         "_ledger = ledger;", "SetUpTicks = Now() - setUp;")
             and ordered(best, "BuyFrom at = At(from);", "long buying = Now();",
-                        "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown, toBuy);",
+                        "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);",
                         "BuySideTicks += Now() - buying;\n            buying = Now();",
                         "BuySideTicks += Now() - buying;\n            if (stocked <= 0) { why = Block.NoStock; return null; }",
                         "long road = Now();",
@@ -23279,7 +23275,7 @@ def the_route_scan_times_each_of_its_steps_only_with_extended_debug_logging_on()
                         "long tilling = Now();",
                         "LandingTicks += Now() - tilling;",
                         "long pricing = Now();",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
                         "PriceTicks += Now() - pricing;",
                         "long sizing = Now();",
                         "TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);",
@@ -24440,7 +24436,7 @@ def a_caravans_prices_follow_its_own_sale_your_sale_the_daily_supply_and_demand_
                         "TradeMath.StepSupplyAndDemand(supply, demand, shelves, wanted, pairs,",
                         "economy.GetSupplyDemandForCategory(town, group[g], shelf, want, was,",
                         "if (!TradeMath.ATickMayBeKept(own != null, ticks[j], ownAt)) continue;",
-                        "return (shelfToo ? InStoreAt(0, days) : 0, supply[0], demand[0]);")
+                        "return (InStoreAt(0, days), supply[0], demand[0]);")
             and ordered(step, "for (int g = 0; g < n; g++) (supply[g], demand[g]) = step(g, inStore[g], wanted[g], supply[g], demand[g]);",
                         "foreach (var (one, other, factor) in pairs)",
                         "(demand[one], demand[other]) = DemandShiftedToASubstitute(supply[one], demand[one], supply[other],")
@@ -24620,14 +24616,13 @@ def the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_
     budget = method_body(f, "private static float ConsumptionBudget(Town town, ItemCategory kind)")
     yours = method_body(f, "internal static void TakeYourSale(")
     takein = method_body(f, "internal static void TakeInYourNewSale()")
-    onarrival = method_body(f, "internal static (float supply, float demand)? SupplyAndDemandOnArrival(")
-    shelf = method_body(market, "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,")
+    shelf = method_body(market, "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
     left = method_body(c, "private static void VillagersLeft(")
     judge = method_body(c, "private static void JudgeTheCounted(double now)")
     fetched = method_body(f, "internal static int[] WhatTheTradesFetched(")
     walk = method_body(m, "public static int WhatALongWalkFetches(")
     return (build and chain and road and trip and sale and ahead and forget and ticks and copy and taken and budget
-            and yours and takein and onarrival and shelf and left and judge and fetched and walk
+            and yours and takein and shelf and left and judge and fetched and walk
             and ordered(build, 'Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);',
                         'Guard.Run("Forecast.WorkshopsAhead", WhatTheShopsWillMakeBeforeTheRoadArrives);',
                         'Guard.Run("Forecast.CaravansOnArrival", FollowTheCaravans);',
@@ -24702,12 +24697,6 @@ def the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_
                         "try { if (on) target = TheMarkFairlyWeighed(out how); }")
             and "if (float.IsNaN(due) || float.IsNaN(days) || days < due) return 0f;" in
                 method_body(m, "public static float YourSaleCountsFor(")
-            and ordered(onarrival, "int ticks = TownTicksAhead(site, days);", "if (ticks == 0) return null;", "Build();",
-                        "var key = (site.StringId, kind.StringId, ticks);",
-                        "if (_arrivalSupply.TryGetValue(key, out var kept)) return kept;",
-                        "var at = CategoryAt(site.Town, site, kind, days, TrustEarned(), null, 0f, shelfToo: false);",
-                        "_arrivalSupply[key] = (at.supply, at.demand);")
-            and f.count("_arrivalSupply.Clear();") == 3
             and ordered(method_body(f, "private static MobileParty VillagersToPriceBy(Settlement home, MobileParty villagers)"),
                         "if (villagers != null || faction == null) return villagers;",
                         "if (all[i] != null && all[i].IsActive && all[i].MapFaction?.StringId == faction) like = all[i];",
@@ -24717,11 +24706,9 @@ def the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_
                         "bool ticked = usedADay > 0 && firstTick > 0f && firstTick <= 1f;",
                         "int spread = ticked ? 0 : usedADay;",
                         "if (ticked) used += (long)usedADay * TradeMath.TownTicksCountBefore(firstTick, withinDays);")
-            and "(_supply, _demand) = Forecast.SupplyAndDemandOnArrival(site, item.ItemCategory, days) ??" in shelf
-            and "Forecast.SupplyAndDemandOnArrival(town.Settlement, _item.ItemCategory, days) ??" in
-                method_body(market, "private int VillageAfterLanding(")
-            and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown, days);" in S['Plan.cs']
-            and "leg.ToBuy, leg.Days);" in S['Plan.cs']
+            and ordered(shelf, "_supply = data.Supply;", "_demand = data.Demand;")
+            and "SupplyAndDemandOnArrival" not in market + f
+            and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in S['Plan.cs']
             and ordered(left, "one.Sold = TradeMath.WhatVillagersSoldFor(one.GoldBefore, party.PartyTradeGold);",
                         "if (!one.NextTrip || one.CameWithGoods) return;",
                         "one.ArrivedAt = double.NaN;")

@@ -1,12 +1,15 @@
 # Changelog
 
+## 2.9.13
+
+- Fixed the TradeLord ledger expecting some markets to pay far more for a good than they will
+
 ## 2.9.12
 
 - Fixed Count what is on its way counting villagers apart from caravans instead of in the order they reach a market (#188)
 - Fixed Count what is on its way pricing villagers' sales at today's prices instead of the prices they meet on arrival (#188)
 - Fixed Count what is on its way leaving horses and mules out of what a village's next trip sells (#196)
 - Fixed TradeLord.log's villager check taking a village's empty visit to its town for the next trip it was counted for (#196)
-- Fixed Count what is on its way pricing what you sell or buy at a market on arrival with its supply and demand as they stand today (#187)
 - Fixed Count what is on its way leaving workshops' goods out of the prices caravans and villagers meet on arrival (#191)
 - Fixed Count what is on its way counting a town's use of its goods through the day instead of once a day at its own hour (#189)
 - Fixed Count what is on its way leaving out how much of a good a town uses up when demand moves to or from a good standing in for it (#190)

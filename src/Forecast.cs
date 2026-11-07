@@ -236,7 +236,6 @@ namespace TradeLord
             _villagersAhead.Clear();
             _villageLoadsAhead.Clear();
             _villagersLike.Clear();
-            _arrivalSupply.Clear();
             _caravanMeets.Clear();
             _ticksAhead.Clear();
             _substitutes = null;
@@ -312,30 +311,6 @@ namespace TradeLord
             if (kept == null || !kept.ForecastScore(out _, out long weighed, out float cameTrue))
                 return TradeMath.TrustInTheForecast(0L, 0f);
             return TradeMath.TrustInTheForecast(weighed, cameTrue);
-        }
-
-        internal static int TownTicksAhead(Settlement site, float days)
-        {
-            if (!On || site == null || !(days > 0f)) return 0;
-            Settlement town = site.IsVillage ? Hindsight.PricedFrom(site) : site;
-            return town?.Town == null ? 0 : TradeMath.TownTicksCountBefore(TheTownTicksIn(town), days);
-        }
-
-        private static readonly Dictionary<(string site, string kind, int ticks), (float supply, float demand)> _arrivalSupply =
-            new Dictionary<(string, string, int), (float, float)>();
-
-        internal static (float supply, float demand)? SupplyAndDemandOnArrival(Settlement site, ItemCategory kind,
-                                                                               float days)
-        {
-            if (!On || site?.Town == null || kind == null) return null;
-            int ticks = TownTicksAhead(site, days);
-            if (ticks == 0) return null;
-            Build();
-            var key = (site.StringId, kind.StringId, ticks);
-            if (_arrivalSupply.TryGetValue(key, out var kept)) return kept;
-            var at = CategoryAt(site.Town, site, kind, days, TrustEarned(), null, 0f, shelfToo: false);
-            _arrivalSupply[key] = (at.supply, at.demand);
-            return (at.supply, at.demand);
         }
 
         internal static int WorthShiftAsItHasHeld(Settlement site, ItemObject item, float withinDays) =>
@@ -502,7 +477,6 @@ namespace TradeLord
             _villagersAhead.Clear();
             _villageLoadsAhead.Clear();
             _villagersLike.Clear();
-            _arrivalSupply.Clear();
             _caravanMeets.Clear();
             _ticksAhead.Clear();
             if (_indexes.Count == 0) Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
@@ -515,7 +489,6 @@ namespace TradeLord
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
             Guard.Run("Forecast.Purses", SettleThePurses);
             _ticksAhead.Clear();
-            _arrivalSupply.Clear();
             _shifts.Clear();
             _shelfAhead.Clear();
             foreach (List<(float days, int gold)> paid in _tillPays.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
@@ -1359,8 +1332,7 @@ namespace TradeLord
 
         private static (int inStore, float supply, float demand) CategoryAt(Town town, Settlement site, ItemCategory kind,
                                                                             float days, float trust,
-                                                                            Dictionary<string, int> own, float ownAt,
-                                                                            bool shelfToo = true)
+                                                                            Dictionary<string, int> own, float ownAt)
         {
             var economy = Campaign.Current.Models.SettlementEconomyModel;
             var group = new List<ItemCategory> { kind };
@@ -1414,7 +1386,7 @@ namespace TradeLord
                 if (kept == null) _ticksAhead[key] = kept = new List<(float[], float[])>();
                 if (kept.Count == j) kept.Add(((float[])supply.Clone(), (float[])demand.Clone()));
             }
-            return (shelfToo ? InStoreAt(0, days) : 0, supply[0], demand[0]);
+            return (InStoreAt(0, days), supply[0], demand[0]);
         }
 
         private static float IndexAt(Town town, ItemCategory kind, (int inStore, float supply, float demand) at)

@@ -53,7 +53,7 @@ namespace TradeLord
                     ? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);
                 _landed = landed;
                 Ladder walk = _el.Item == null || _flat <= 0
-                    ? null : Bulk.AsItLands(_site, _el, true, _flat, landed, _ride);
+                    ? null : Bulk.AsItLands(_site, _el, true, _flat, landed);
                 _walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;
             }
             return _walk != null ? _walk.At(_rungs.Count) : _flat;
