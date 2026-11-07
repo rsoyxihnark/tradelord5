@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.9.12
+
+- Fixed Count what is on its way counting villagers apart from caravans instead of in the order they reach a market (#188)
+- Fixed Count what is on its way pricing villagers' sales at today's prices instead of the prices they meet on arrival (#188)
+- Fixed Count what is on its way leaving horses and mules out of what a village's next trip sells (#196)
+- Fixed TradeLord.log's villager check taking a village's empty visit to its town for the next trip it was counted for (#196)
+- Fixed Count what is on its way pricing what you sell or buy at a market on arrival with its supply and demand as they stand today (#187)
+- Fixed Count what is on its way leaving workshops' goods out of the prices caravans and villagers meet on arrival (#191)
+- Fixed Count what is on its way counting a town's use of its goods through the day instead of once a day at its own hour (#189)
+- Fixed Count what is on its way leaving out how much of a good a town uses up when demand moves to or from a good standing in for it (#190)
+- Fixed Count what is on its way counting what a town earns from using up its goods at their worth instead of their price (#190)
+- Fixed Count what is on its way reading a town's daily hour off its workshops instead of the town's own hour (#192)
+- Fixed Count what is on its way reading the caravans' price averages too early in a new game (#193)
+- Count what is on its way now takes in a big change in your sale at the map marker's market straight away, once an hour at most (#180)
+- Fixed Count what is on its way counting your planned sale all or nothing for caravans due around the time you arrive (#180)
+
 ## 2.9.11
 
 - Fixed Count what is on its way counting a caravan's own sale twice in the prices it buys at in the same town (#174)

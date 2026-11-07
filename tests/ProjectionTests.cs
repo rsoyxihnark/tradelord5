@@ -57,6 +57,30 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_town_uses_its_goods_up_once_a_day_at_its_own_tick_when_the_tick_is_known()
+        {
+            Assert.Equal(0, Projection.WorthUsedUp(null, "wool", 0.2f, 300, 10000, false, 0.25f));
+            Assert.Equal(300, Projection.WorthUsedUp(null, "wool", 1f, 300, 10000, false, 0.25f));
+            Assert.Equal(600, Projection.WorthUsedUp(null, "wool", 1.3f, 300, 10000, false, 0.25f));
+            Assert.Equal(300, Projection.WorthUsedUp(null, "wool", 1.25f, 300, 10000, false, 0.25f));
+            Assert.Equal(500, Projection.WorthUsedUp(null, "wool", 1.3f, 300, 500, false, 0.25f));
+            var takes = new List<Draw> { Taken("wool", 200, 0.5f) };
+            Assert.Equal(500, Projection.WorthUsedUp(takes, "wool", 1f, 300, 10000, true, 0.25f));
+            Assert.Equal(330, Projection.WorthUsedUp(null, "wool", 1.1f, 300, 10000, false, float.NaN));
+            Assert.Equal(1f, Projection.DaysOfUse(0.25f, 1f));
+            Assert.Equal(1.1f, Projection.DaysOfUse(float.NaN, 1.1f), 4);
+            List<float> when = Projection.Moments(null, null, 0.5f, null, 100, 0.25f);
+            Assert.Equal(1.25f + Projection.JustAfterTheTick, when[0], 4);
+            Assert.Contains(when, at => Math.Abs(at - (2.25f + Projection.JustAfterTheTick)) < 1E-5f);
+            Assert.Equal(1.5f, when[1], 4);
+            Assert.Equal(2 * Projection.DaysUseIsReadFor, when.Count);
+            Assert.Equal(0.25f + Projection.JustAfterTheTick, Projection.Moments(null, null, 0f, null, 100, 0.25f)[0], 4);
+            var curve = Projection.ShelfAhead(null, null, "grain", "grain", 10, 40, 0f, null, 100, 0.25f);
+            Assert.Equal(30, curve[0].shelf);
+            Assert.Equal(0.25f + Projection.JustAfterTheTick, Projection.RunsOutOf(curve, 35), 4);
+        }
+
+        [Fact]
         public void A_town_that_uses_a_good_up_is_read_a_day_at_a_time_from_the_day_you_arrive()
         {
             Assert.Equal(new[] { 1f, 2f, 3f }, Projection.Moments(null, null, 0.5f, null, 100).GetRange(0, 3).ToArray());
@@ -218,7 +242,7 @@ namespace TradeLord.Tests
             };
             var coming = new List<Spending> { Bought("grain", 50, 0.5f) };
             var drawn = new List<Draw> { Taken("grain", 30, 0.5f) };
-            int[] parts = Projection.WorthParts(listed, coming, drawn, "grain", 1f, 40, 5000, true, 70, 20, out int figure);
+            int[] parts = Projection.WorthParts(listed, coming, drawn, "grain", 1f, 40, 5000, true, 70, 20, float.NaN, out int figure);
             Assert.Equal(new[] { 200, 100, 80, 60, 70, -50, -20, -30, -40, 0 }, parts);
             int landing = TradeMath.ShelfAfterLanding(Projection.WorthLanding(listed, "grain", 1f, true), 70);
             int leaving = TradeMath.AddedUp(TradeMath.AddedUp(Projection.WorthBought(coming, "grain", 1f, true), 20),
@@ -227,11 +251,11 @@ namespace TradeLord.Tests
             int sum = 0;
             foreach (int one in parts) sum += one;
             Assert.Equal(figure, sum);
-            int[] held = Projection.WorthParts(null, coming, drawn, "grain", 1f, 400, 100, true, 0, 20, out int capped);
+            int[] held = Projection.WorthParts(null, coming, drawn, "grain", 1f, 400, 100, true, 0, 20, float.NaN, out int capped);
             Assert.Equal(-100, capped);
             Assert.Equal(-50 - 20 - 30 - 400 + held[9], capped);
             Assert.True(held[9] > 0);
-            int[] village = Projection.WorthParts(listed, coming, drawn, "grain", 1f, 40, 0, false, 0, 0, out int there);
+            int[] village = Projection.WorthParts(listed, coming, drawn, "grain", 1f, 40, 0, false, 0, 0, float.NaN, out int there);
             Assert.Equal(0, village[7]);
             Assert.Equal(0, village[8]);
             Assert.Equal(440 - 50, there);

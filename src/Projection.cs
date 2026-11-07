@@ -115,20 +115,32 @@ namespace TradeLord
             share >= 1f ? whole : (int)Math.Round(whole * (double)share, MidpointRounding.AwayFromZero);
 
         internal static int WorthUsedUp(IList<Draw> drawn, string category, float withinDays, int usedADay,
-                                        int most, bool graded = false)
+                                        int most, bool graded = false, float firstTick = float.NaN)
         {
             if (category == null || most <= 0) return 0;
+            bool ticked = usedADay > 0 && firstTick > 0f && firstTick <= 1f;
+            int spread = ticked ? 0 : usedADay;
             TradeMath.ForecastHorizon(withinDays, out float low, out float high, out float share);
-            int below = WorthUsedUpBy(drawn, category, low, usedADay, most, graded);
-            return share > 0f
-                ? TradeMath.BlendedShift(below, WorthUsedUpBy(drawn, category, high, usedADay, most, graded), share)
+            int below = WorthUsedUpBy(drawn, category, low, spread, int.MaxValue, graded, firstTick);
+            long used = share > 0f
+                ? TradeMath.BlendedShift(below, WorthUsedUpBy(drawn, category, high, spread, int.MaxValue, graded, firstTick),
+                                         share)
                 : below;
+            if (ticked) used += (long)usedADay * TradeMath.TownTicksCountBefore(firstTick, withinDays);
+            return used >= most ? most : (int)used;
+        }
+
+        internal static float DaysOfUse(float firstTick, float withinDays)
+        {
+            float within = TradeMath.Finite(withinDays, 0f);
+            if (!(within > 0f)) return 0f;
+            return firstTick > 0f && firstTick <= 1f ? TradeMath.TownTicksCountBefore(firstTick, within) : within;
         }
 
         private static int WorthUsedUpBy(IList<Draw> drawn, string category, float withinDays, int usedADay, int most,
-                                         bool graded)
+                                         bool graded, float firstTick)
         {
-            double used = usedADay > 0 ? (double)usedADay * withinDays : 0d;
+            double used = usedADay > 0 ? (double)usedADay * DaysOfUse(firstTick, withinDays) : 0d;
             for (int i = 0; drawn != null && i < drawn.Count; i++)
             {
                 Draw draw = drawn[i];
@@ -142,7 +154,7 @@ namespace TradeLord
 
         internal static int[] WorthParts(IList<Landing> listed, IList<Spending> coming, IList<Draw> drawn,
                                          string category, float withinDays, int usedADay, int shelf, bool town,
-                                         int unseenLanding, int unseenBought, out int figure)
+                                         int unseenLanding, int unseenBought, float firstTick, out int figure)
         {
             var parts = new int[PartsOfAShift];
             figure = 0;
@@ -155,14 +167,15 @@ namespace TradeLord
             if (town)
             {
                 parts[7] = -WorthUsedUp(drawn, category, withinDays, 0, int.MaxValue, true);
-                parts[8] = -WorthUsedUp(null, category, withinDays, usedADay, int.MaxValue, true);
+                parts[8] = -WorthUsedUp(null, category, withinDays, usedADay, int.MaxValue, true, firstTick);
             }
             int landing = TradeMath.ShelfAfterLanding(WorthLanding(listed, category, withinDays, true), unseenLanding);
             int leaving = TradeMath.AddedUp(road, unseenBought);
             if (town)
             {
                 int most = TradeMath.AddedUp(shelf, landing);
-                leaving = TradeMath.AddedUp(leaving, WorthUsedUp(drawn, category, withinDays, usedADay, most, true));
+                leaving = TradeMath.AddedUp(leaving, WorthUsedUp(drawn, category, withinDays, usedADay, most, true,
+                                                                 firstTick));
                 if (leaving > most) leaving = most;
             }
             figure = TradeMath.WorthShift(landing, leaving);
@@ -198,8 +211,11 @@ namespace TradeLord
 
         internal const int DaysUseIsReadFor = 30;
 
+        internal const float JustAfterTheTick = 1E-4f;
+
         internal static List<float> Moments(IList<Landing> listed, IList<Spending> coming,
-                                            float afterDays, IList<Draw> drawn = null, int usedADay = 0)
+                                            float afterDays, IList<Draw> drawn = null, int usedADay = 0,
+                                            float firstTick = float.NaN)
         {
             var when = new List<float>();
             var already = new HashSet<float>();
@@ -208,8 +224,17 @@ namespace TradeLord
             for (int i = 0; drawn != null && i < drawn.Count; i++) Note(when, already, drawn[i].Days, afterDays);
             if (usedADay > 0 && !float.IsNaN(afterDays) && afterDays < TradeMath.LongerThanAnyRide)
             {
-                int first = afterDays < 0f ? 1 : (int)Math.Floor(afterDays) + 1;
-                for (int day = first; day < first + DaysUseIsReadFor; day++) Note(when, already, day, afterDays);
+                if (firstTick > 0f && firstTick <= 1f)
+                {
+                    float tick = firstTick + JustAfterTheTick;
+                    if (tick <= afterDays) tick += (float)Math.Floor(afterDays - tick) + 1f;
+                    for (int day = 0; day < DaysUseIsReadFor; day++) Note(when, already, tick + day, afterDays);
+                }
+                else
+                {
+                    int first = afterDays < 0f ? 1 : (int)Math.Floor(afterDays) + 1;
+                    for (int day = first; day < first + DaysUseIsReadFor; day++) Note(when, already, day, afterDays);
+                }
             }
             when.Sort();
             return when;
@@ -226,17 +251,17 @@ namespace TradeLord
         internal static List<(float days, int shelf)> ShelfAhead(
             IList<Landing> listed, IList<Spending> coming,
             string item, string category, int unitValue, int stockNow, float afterDays,
-            IList<Draw> drawn = null, int usedADay = 0)
+            IList<Draw> drawn = null, int usedADay = 0, float firstTick = float.NaN)
         {
             var curve = new List<(float, int)>();
             if (item == null || unitValue <= 0) return curve;
-            List<float> when = Moments(listed, coming, afterDays, drawn, usedADay);
+            List<float> when = Moments(listed, coming, afterDays, drawn, usedADay, firstTick);
             int most = TradeMath.WorthOf(stockNow, unitValue);
             for (int i = 0; i < when.Count; i++)
             {
                 float days = when[i];
                 int used = WorthUsedUp(drawn, category, days, usedADay,
-                                       TradeMath.AddedUp(most, WorthLanding(listed, category, days)));
+                                       TradeMath.AddedUp(most, WorthLanding(listed, category, days)), false, firstTick);
                 int taken = UnitsLeaving(TradeMath.AddedUp(WorthBought(coming, category, days), used), unitValue);
                 curve.Add((days, TradeMath.StockAfterShift(stockNow,
                                UnitsLanding(listed, item, days), taken)));

@@ -53,7 +53,7 @@ namespace TradeLord
                     ? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);
                 _landed = landed;
                 Ladder walk = _el.Item == null || _flat <= 0
-                    ? null : Bulk.AsItLands(_site, _el, true, _flat, landed);
+                    ? null : Bulk.AsItLands(_site, _el, true, _flat, landed, _ride);
                 _walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;
             }
             return _walk != null ? _walk.At(_rungs.Count) : _flat;
@@ -487,6 +487,7 @@ namespace TradeLord
         {
             VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
             if (tracker == null) return;
+            Guard.Run("Marker.YourNewSale", Forecast.TakeInYourNewSale);
             Settlement target = null;
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;

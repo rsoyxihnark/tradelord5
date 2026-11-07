@@ -119,6 +119,7 @@ namespace TradeLord
             internal int Sold;
             internal bool Villagers;
             internal bool NextTrip;
+            internal bool CameWithGoods;
             internal int GoldBefore;
             internal ItemCategory Kind;
             internal float IndexNow = float.NaN;
@@ -406,6 +407,7 @@ namespace TradeLord
             {
                 one.ArrivedAt = CampaignTime.Now.ToHours;
                 if (one.Villagers && party.PartyTradeGold < one.GoldBefore) one.GoldBefore = party.PartyTradeGold;
+                if (one.Villagers) one.CameWithGoods = BringsGoods(party);
                 if (!one.Villagers && one.Kind != null && at.Town != null)
                     one.IndexMet = at.Town.GetItemCategoryPriceIndex(one.Kind);
             }
@@ -418,6 +420,27 @@ namespace TradeLord
                 !one.Villagers || one.Town != at.StringId || double.IsNaN(one.ArrivedAt))
                 return;
             one.Sold = TradeMath.WhatVillagersSoldFor(one.GoldBefore, party.PartyTradeGold);
+            if (!one.NextTrip || one.CameWithGoods) return;
+            one.ArrivedAt = double.NaN;
+            one.Sold = 0;
+            one.GoldBefore = party.PartyTradeGold;
+        }
+
+        private static bool BringsGoods(MobileParty party)
+        {
+            ItemRoster carried = party?.ItemRoster;
+            if (carried == null) return false;
+            ItemObject kept = null;
+            for (int k = 0; k < carried.Count; k++)
+            {
+                ItemObject item = carried.GetItemAtIndex(k);
+                if (item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000)) kept = item;
+            }
+            int keeps = (int)(0.5f * party.MemberRoster.TotalManCount);
+            for (int k = 0; k < carried.Count; k++)
+                if (TradeMath.UnitsVillagersBringToSell(carried.GetElementNumber(k), carried.GetItemAtIndex(k) == kept, keeps) > 0)
+                    return true;
+            return false;
         }
 
         internal static void ACaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
@@ -459,6 +482,12 @@ namespace TradeLord
             {
                 alive.TryGetValue(one.Id, out MobileParty party);
                 bool gone = party == null || !party.IsActive;
+                if (one.NextTrip && !double.IsNaN(one.ArrivedAt) && !gone && party.CurrentSettlement?.StringId == one.Town &&
+                    !one.CameWithGoods)
+                {
+                    one.ArrivedAt = double.NaN;
+                    one.GoldBefore = party.PartyTradeGold;
+                }
                 bool left = !double.IsNaN(one.ArrivedAt) && (gone || party.CurrentSettlement?.StringId != one.Town);
                 TradeMath.CaravanCame came = TradeMath.WhatACaravanDid(now, one.DueAt, one.YouDueAt, one.ArrivedAt, left,
                                                                        one.Elsewhere != null, gone);

@@ -203,6 +203,7 @@ namespace TradeLord
             CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);
             CampaignEvents.OnCaravanTransactionCompletedEvent.AddNonSerializedListener(this, OnCaravanTraded);
             CampaignEvents.DailyTickSettlementEvent.AddNonSerializedListener(this, OnSettlementDailyTick);
+            CampaignEvents.DailyTickTownEvent.AddNonSerializedListener(this, OnTownDailyTick);
             CampaignEvents.OnGameLoadFinishedEvent.AddNonSerializedListener(this, OnGameLoadFinished);
             CampaignEvents.OnNewGameCreatedPartialFollowUpEndEvent.AddNonSerializedListener(this, OnNewGameMade);
         }
@@ -214,7 +215,12 @@ namespace TradeLord
 
         private void OnNewGameMade(CampaignGameStarter starter)
         {
-            Guard.Run("Forecast.PriceIndexesOnANewGame", Forecast.ReadThePriceIndexesAsTheCaravansDo);
+            Guard.Run("Forecast.PriceIndexesOnANewGame", Forecast.ReadThePriceIndexesOnceTheNewGameIsMade);
+        }
+
+        private void OnTownDailyTick(Town town)
+        {
+            Guard.Run("Forecast.TownTick", () => Forecast.ATownTicked(town));
         }
 
         private void OnHourlyTick()
@@ -706,6 +712,7 @@ namespace TradeLord
 
         private void OnSessionLaunched(CampaignGameStarter starter)
         {
+            Guard.Run("Forecast.PriceIndexesOnceTheNewGameIsMade", Forecast.TakeTheCaravansOwnPriceIndexes);
             Guard.Run("Ledger.WatchTheParty", WatchTheParty);
             Guard.Run("Ledger.MatchPurchases", MatchPurchasesToWhatIsHeld);
             Guard.Run("Ledger.DateTheUnits", DateTheUnits);
