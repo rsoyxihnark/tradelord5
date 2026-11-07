@@ -1258,6 +1258,21 @@ namespace TradeLord
             return ticks;
         }
 
+        public static int UnitsVillagersBringToSell(int amount, bool theirOwnPackAnimal, int theyKeep) =>
+            Math.Max(0, theirOwnPackAnimal ? amount - Math.Max(0, theyKeep) : amount);
+
+        public static bool ATickMayBeKept(bool following, float tick, float arrivedAt) => !following || tick < arrivedAt;
+
+        public static int TownTicksCountBefore(float firstTick, float days)
+        {
+            float until = Finite(days, 0f);
+            if (!(until > 0f)) return 0;
+            float first = firstTick > 0f && firstTick <= 1f ? firstTick : TickTimeUnknown;
+            int count = 0;
+            for (float at = first; at < until && count < MostTownTicksFollowed; at += 1f) count++;
+            return count;
+        }
+
         public static (float demand, float substituteDemand) DemandShiftedToASubstitute(
             float supply, float demand, float substituteSupply, float substituteDemand, float factor)
         {
@@ -1267,6 +1282,41 @@ namespace TradeLord
                 return (demand + moved, substituteDemand - moved);
             }
             return (demand, substituteDemand);
+        }
+
+        public const float YourSaleMovesItsForecastBy = 0.1f;
+
+        public static int WorthOfAll(IDictionary<string, int> worths)
+        {
+            long all = 0L;
+            if (worths != null) foreach (int worth in worths.Values) if (worth > 0) all += worth;
+            return all > int.MaxValue ? int.MaxValue : (int)all;
+        }
+
+        public static bool YourSaleMovedEnough(string wasAt, int was, string nowAt, int now)
+        {
+            if (!string.Equals(wasAt, nowAt, StringComparison.Ordinal)) return true;
+            if (nowAt == null) return false;
+            long gap = Math.Abs((long)now - was);
+            return gap > Math.Max(was, now) * (double)YourSaleMovesItsForecastBy;
+        }
+
+        public static float YourSaleCountsFor(float due, float days)
+        {
+            if (float.IsNaN(due) || float.IsNaN(days) || days < due) return 0f;
+            return ShareThatLands(due, days);
+        }
+
+        public static float DemandMovedToASubstitute(float supply, float demand, float substituteSupply,
+                                                     float substituteDemand, float factor) =>
+            Finite(DemandShiftedToASubstitute(supply, demand, substituteSupply, substituteDemand, factor).demand - demand,
+                   0f);
+
+        public static float ShelfAtItsPrice(float inStoreValue, int price, int unitValue)
+        {
+            float shelf = Finite(inStoreValue, 0f);
+            if (!(shelf > 0f) || price <= 0 || unitValue <= 0) return shelf;
+            return Finite(shelf * price / unitValue, shelf);
         }
 
         public static void StepSupplyAndDemand(float[] supply, float[] demand, IList<int> inStore, IList<float> wanted,
@@ -1295,6 +1345,22 @@ namespace TradeLord
             long gold = 0L;
             for (int i = 0; i < units; i++) gold += Math.Max(0, priceOfUnit(i));
             return gold > int.MaxValue ? int.MaxValue : (int)gold;
+        }
+
+        public const int AWalkIsCountedUnitByUnitUpTo = 16;
+
+        public const int AWalkIsSampledAt = 8;
+
+        public static int WhatALongWalkFetches(int units, Func<int, int> priceOfUnit)
+        {
+            if (units <= AWalkIsCountedUnitByUnitUpTo || priceOfUnit == null) return WhatAWalkFetches(units, priceOfUnit);
+            int last = units - 1;
+            double step = last / (double)AWalkIsSampledAt;
+            double first = Math.Max(0, priceOfUnit(0)), end = Math.Max(0, priceOfUnit(last)), area = first + end;
+            for (int k = 1; k < AWalkIsSampledAt; k++)
+                area += (k % 2 == 1 ? 4d : 2d) * Math.Max(0, priceOfUnit((int)Math.Round(k * step)));
+            double gold = area * step / 3d + (first + end) / 2d;
+            return gold >= int.MaxValue ? int.MaxValue : (int)Math.Round(gold);
         }
 
         public static int ShelfForAUnitOfAWalk(int shelfBefore, int unit, int unitValue, bool soldToTheTown)
@@ -1693,6 +1759,13 @@ namespace TradeLord
         {
             double scale = Math.Max(1d, Math.Max((double)said, held));
             return (float)((held - (double)said) / scale);
+        }
+
+        public static double DaysSinceATickSeen(double now, double tickedAt)
+        {
+            double since = now - tickedAt;
+            if (double.IsNaN(since) || double.IsInfinity(since) || since < 0d) return double.NaN;
+            return since - Math.Floor(since);
         }
 
         public static double DaysSinceTheTick(double sinceItsLastRun, double sinceARunSeen)

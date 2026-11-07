@@ -3287,6 +3287,80 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_towns_ticks_ahead_are_counted_as_the_list_of_them_is_and_its_hour_is_read_off_the_last_tick_seen()
+        {
+            foreach (float first in new[] { 0.1f, 0.5f, 1f, float.NaN, 0f })
+                foreach (float days in new[] { 0f, 0.05f, 0.5f, 1f, 1.1f, 2.5f, 3f, 70f })
+                    Assert.Equal(TradeMath.TownTicksBefore(first, days).Count, TradeMath.TownTicksCountBefore(first, days));
+            Assert.Equal(0.25d, TradeMath.DaysSinceATickSeen(10.25d, 10d), 6);
+            Assert.Equal(0.25d, TradeMath.DaysSinceATickSeen(12.25d, 10d), 6);
+            Assert.True(double.IsNaN(TradeMath.DaysSinceATickSeen(9d, 10d)));
+        }
+
+        [Fact]
+        public void A_tick_is_kept_for_later_caravans_only_when_it_comes_before_the_caravan_being_followed()
+        {
+            Assert.True(TradeMath.ATickMayBeKept(false, 3f, 1f));
+            Assert.True(TradeMath.ATickMayBeKept(true, 0.5f, 1f));
+            Assert.False(TradeMath.ATickMayBeKept(true, 1f, 1f));
+            Assert.False(TradeMath.ATickMayBeKept(true, 1.5f, 1f));
+            Assert.False(TradeMath.ATickMayBeKept(true, 0.2f, 0f));
+        }
+
+        [Fact]
+        public void A_long_walk_is_priced_from_a_few_of_its_units_and_comes_close_to_pricing_every_one()
+        {
+            int Exact(int units, Func<int, int> price) => TradeMath.WhatAWalkFetches(units, price);
+            Func<int, int> falling = i => 1000 - 2 * i;
+            Func<int, int> curved = i => (int)Math.Round(800d * Math.Pow(1d + i / 40d, -0.6d));
+            Func<int, int> floored = i => Math.Max(120, 900 - 7 * i);
+            foreach (Func<int, int> price in new[] { falling, curved, floored })
+                foreach (int units in new[] { 1, 5, 16, 17, 40, 120, 333 })
+                {
+                    int exact = Exact(units, price);
+                    int quick = TradeMath.WhatALongWalkFetches(units, price);
+                    Assert.True(Math.Abs(quick - exact) <= Math.Max(2, exact * 0.005), units + " units: " + quick + " " + exact);
+                }
+            Assert.Equal(TradeMath.WhatAWalkFetches(16, falling), TradeMath.WhatALongWalkFetches(16, falling));
+            Assert.Equal(0, TradeMath.WhatALongWalkFetches(0, falling));
+        }
+
+        [Fact]
+        public void Your_planned_sale_counts_only_for_those_who_come_after_you_and_only_a_real_change_reads_it_again()
+        {
+            Assert.Equal(0f, TradeMath.YourSaleCountsFor(1f, 0.9f));
+            Assert.Equal(0.5f, TradeMath.YourSaleCountsFor(1f, 1f), 3);
+            Assert.Equal(1f, TradeMath.YourSaleCountsFor(1f, 1.3f), 3);
+            Assert.Equal(0f, TradeMath.YourSaleCountsFor(float.NaN, 1f));
+            Assert.True(TradeMath.YourSaleMovedEnough("town_a", 1000, "town_b", 1000));
+            Assert.True(TradeMath.YourSaleMovedEnough(null, 0, "town_a", 1000));
+            Assert.True(TradeMath.YourSaleMovedEnough("town_a", 1000, null, 0));
+            Assert.False(TradeMath.YourSaleMovedEnough("town_a", 1000, "town_a", 1050));
+            Assert.True(TradeMath.YourSaleMovedEnough("town_a", 1000, "town_a", 1200));
+            Assert.False(TradeMath.YourSaleMovedEnough(null, 0, null, 0));
+            Assert.Equal(300, TradeMath.WorthOfAll(new Dictionary<string, int> { { "a", 100 }, { "b", 200 }, { "c", -5 } }));
+        }
+
+        [Fact]
+        public void A_substitute_moves_the_towns_budget_as_it_moves_demand_and_its_takings_count_the_shelf_at_its_price()
+        {
+            Assert.Equal(9f, TradeMath.DemandMovedToASubstitute(20f, 10f, 5f, 20f, 0.9f), 3);
+            Assert.Equal(0f, TradeMath.DemandMovedToASubstitute(5f, 10f, 20f, 20f, 0.9f), 3);
+            Assert.Equal(2000f, TradeMath.ShelfAtItsPrice(1000f, 40, 20), 3);
+            Assert.Equal(1000f, TradeMath.ShelfAtItsPrice(1000f, 0, 20), 3);
+            Assert.Equal(400, TradeMath.WhatATownTakesInForWhatItUses(400f, TradeMath.ShelfAtItsPrice(300f, 40, 20)));
+        }
+
+        [Fact]
+        public void Villagers_bring_to_sell_all_they_carry_but_the_pack_animals_they_keep_for_themselves()
+        {
+            Assert.Equal(12, TradeMath.UnitsVillagersBringToSell(12, false, 5));
+            Assert.Equal(7, TradeMath.UnitsVillagersBringToSell(12, true, 5));
+            Assert.Equal(0, TradeMath.UnitsVillagersBringToSell(4, true, 5));
+            Assert.Equal(4, TradeMath.UnitsVillagersBringToSell(4, true, -3));
+        }
+
+        [Fact]
         public void A_shelf_that_gains_or_loses_worth_gains_or_loses_the_units_that_worth_stands_for()
         {
             Assert.Equal(15, TradeMath.StockAfterAShelfShift(10, 1000, 1500, 100));

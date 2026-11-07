@@ -165,6 +165,12 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior",
              "_weatherNodeDataShuffledIndices"),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior", "_weatherTickEvent"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.CaravansCampaignBehavior", "_priceDictionary"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.CaravansCampaignBehavior", "_coastalPriceDictionary"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.CaravansCampaignBehavior+PriceIndexData",
+             "AverageBuySellPriceIndex"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.CaravansCampaignBehavior+PriceIndexData",
+             "MinBuySellPriceIndex"),
         };
 
         private static readonly string[] Enums =
