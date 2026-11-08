@@ -749,6 +749,57 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_second_run_the_same_day_is_priced_at_the_shelf_the_first_run_left_and_can_be_refused()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 10, 20);
+            Shelve(town, "cloth", 0, 150);
+            var stopped = new int[WorkshopRuns.StopsKnown];
+            var made = new List<Landing>();
+            WorkshopRuns.Days days = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 2f, "wool", "cloth") }, town, null,
+                                                        null, (kind, store, selling) =>
+                                                            kind == "wool" ? 20 : store == 0 ? 100 : 50);
+            WorkshopRuns.Day(days, 1f, null, made, null, stopped);
+            Assert.Equal(1, Made(made, "cloth"));
+            Assert.Equal(1, stopped[WorkshopRuns.NotWorthIt]);
+            Assert.Equal(100d - (20d + 200d / 5d), days.Cleared["cloth"], 6);
+        }
+
+        [Fact]
+        public void A_line_that_makes_gear_takes_its_inputs_off_the_shelf_and_lands_its_gear_nowhere()
+        {
+            TownBook town = Town(1, gold: 5000);
+            Shelve(town, "hardwood", 10, 20);
+            var line = new ShopLine { Shop = 0, Progress = 0f, Speed = 1f, Pace = 5f, TradeGoodsOnly = false };
+            line.Inputs.Add(("hardwood", 2));
+            line.Outputs.Add(("arrows", 1));
+            line.Aside.Add("arrows");
+            var made = new List<Landing>();
+            var taken = new List<Draw>();
+            WorkshopRuns.Days days = WorkshopRuns.Begin(new List<ShopLine> { line }, town, null, null,
+                                                        (kind, store, selling) => kind == "arrows" ? 300 : 20);
+            WorkshopRuns.Day(days, 1f, null, made, taken);
+            Assert.Equal(8, town.Units["hardwood"]);
+            Assert.False(town.Units.ContainsKey("arrows"));
+            Assert.Empty(made);
+            Assert.Equal(1, days.MadeAside["arrows"]);
+            Assert.Equal(5000, town.Gold);
+            Assert.Equal(40, Drawn(taken));
+            TownBook poor = Town(1, gold: 5000);
+            Shelve(poor, "hardwood", 10, 20);
+            var cheap = new ShopLine { Shop = 0, Progress = 0f, Speed = 1f, Pace = 5f, TradeGoodsOnly = false };
+            cheap.Inputs.Add(("hardwood", 2));
+            cheap.Outputs.Add(("arrows", 1));
+            cheap.Aside.Add("arrows");
+            var stopped = new int[WorkshopRuns.StopsKnown];
+            days = WorkshopRuns.Begin(new List<ShopLine> { cheap }, poor, null, null,
+                                      (kind, store, selling) => kind == "arrows" ? 70 : 20);
+            WorkshopRuns.Day(days, 1f, null, null, null, stopped);
+            Assert.Equal(1, stopped[WorkshopRuns.NotWorthIt]);
+            Assert.Equal(10, poor.Units["hardwood"]);
+        }
+
+        [Fact]
         public void A_faster_line_runs_more_than_once_a_day_and_a_slower_one_skips_days()
         {
             TownBook town = Town(2);

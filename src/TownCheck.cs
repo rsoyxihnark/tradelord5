@@ -171,7 +171,10 @@ namespace TradeLord
                 if (madeSaid == madeGame && takenSaid == takenGame) continue;
                 _shopGoodsOff++;
                 shopsOff.Add(NameOf(id) + " made " + madeSaid + " said and " + madeGame + " by the game, taken " +
-                             takenSaid + " said and " + takenGame + " by the game");
+                             takenSaid + " said and " + takenGame + " by the game" +
+                             (madeSaid > madeGame && one.Said.Cleared.TryGetValue(id, out double cleared)
+                                 ? ", its last run counted clearing the game's bar by " + Figure(cleared)
+                                 : ""));
             }
             for (int r = 0; !one.Said.Yours && r < _runs.Length && r < one.Said.Runs.Length; r++) _runs[r] += one.Said.Runs[r];
 

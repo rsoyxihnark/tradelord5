@@ -195,6 +195,7 @@ namespace TradeLord
         {
             CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);
             CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);
+            CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);
             CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerInventoryExchange);
@@ -226,6 +227,7 @@ namespace TradeLord
         private void OnHourlyTick()
         {
             Guard.Run("Forecast.Watch", Forecast.WatchTheCaravansTurn);
+            Guard.Run("Forecast.VillagersRiding", Forecast.WatchTheVillagersRide);
         }
 
         private void OnSettlementDailyTick(Settlement settlement)
@@ -678,8 +680,15 @@ namespace TradeLord
                       ", counting no profit and no Trade XP");
         }
 
+        private void OnSettlementLeft(MobileParty party, Settlement settlement)
+        {
+            if (party == null || !party.IsVillager) return;
+            Guard.Run("Forecast.VillagersLeft", () => Forecast.VillagersLeft(party, settlement));
+        }
+
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
         {
+            Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));
             if (party != MobileParty.MainParty) return;
             Guard.Run("Ledger.OnSettlementEntered", () => CaptureSettlement(settlement));
         }

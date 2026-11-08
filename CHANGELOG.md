@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.9.15
+
+- Fixed Count what is on its way getting wrong how much of a good a town uses up when demand moves to a good standing in for it (#190)
+- Fixed Count what is on its way counting a town's workshops running again the same day at prices their first run had already moved (#191)
+- Fixed Count what is on its way leaving out the iron, hardwood, wool and leather workshops use up to make weapons, armour and gear (#191)
+- Fixed Count what is on its way timing villagers' rides at a fixed speed instead of how long each village's villagers really take (#197)
+- Fixed TradeLord.log's villager check taking a visit villagers made before leaving their village for the next trip it was counted for (#197)
+- Fixed TradeLord.log's villager check timing a next trip's ride from an earlier time the villagers left their village (#197)
+- Fixed TradeLord.log's villager check rolling the game's own dice for a village's horses when it read how full the village store is (#197)
+- With Enable extended debug logging on, TradeLord.log's villager check says what made each next trip ready and how full its store was (#197)
+- With Enable extended debug logging on, TradeLord.log's town tick check counts the weapons, armour and other gear workshops make (#191)
+- With Enable extended debug logging on, TradeLord.log's town tick check says how far a workshop's last run cleared the game's bar (#191)
+- With Enable extended debug logging on, TradeLord.log says each hour how long the towns' use, workshops and purses took to work out
+
 ## 2.9.14
 
 - With Enable extended debug logging on, TradeLord.log now compares what each town uses up each day with what TradeLord said (#189)

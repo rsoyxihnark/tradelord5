@@ -6055,7 +6055,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 19 and settled in S['Trading.cs']
+    return held == 20 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -7751,7 +7751,7 @@ def a_workshop_run_moves_the_price_of_its_kind_and_the_stock_of_the_good_the_tow
     return ("Note(site, shops.Standing[one.Category].stands.StringId, shops.Kinds[one.Category], one.Units, one.Worth, one.Days,"
             in settle
             and "Standing = standing," in shops
-            and "ShopBook read = ReadTheShops(town, warehouse, kind => StandsForAt(site, kind), kind => UsedUpADay(site, kind));" in shops
+            and "ShopBook read = ReadTheShops(town, warehouse, kind => StandsForAt(site, kind), kind => UsedUpADay(site, kind),\n                                         false);" in shops
             and "ItemObject stands = standsFor(one.Value);" in method_body(S['Forecast.cs'], "private static ShopBook ReadTheShops(")
             and "if (landing.Item != item) continue;" in
                 method_body(S['Projection.cs'], "private static int UnitsLandingBy")
@@ -8283,7 +8283,7 @@ def a_workshop_run_lands_by_how_far_along_it_already_is():
                         "line.Progress = (progress > 1f ? 1f : progress) + line.Speed;",
                         "while (line.Progress >= 1f)",
                         "bool ran = RunOnce(line, town, days.Buy, days.Sell, days.ToTown, days.MadeNow, days.TakenNow,",
-                        "out int stoppedBy);",
+                        "days.MadeAside, out int stoppedBy, out double cleared);",
                         "line.Progress -= 1f;", "if (!ran) break;")
             and ordered(tick, "daysSinceTheLastRun > DaysARunTellsTheTickFor) return TickTimeUnknown;",
                         "double gone = daysSinceTheLastRun - Math.Floor(daysSinceTheLastRun);")
@@ -8299,7 +8299,7 @@ def what_a_workshop_makes_is_valued_at_the_good_that_town_stocks():
     shops = method_body(f, "private static void FollowTheShops")
     read = method_body(f, "private static ShopBook ReadTheShops(")
     return (stands and found and shops and read
-            and "ShopBook read = ReadTheShops(town, warehouse, kind => StandsForAt(site, kind), kind => UsedUpADay(site, kind));" in shops
+            and "ShopBook read = ReadTheShops(town, warehouse, kind => StandsForAt(site, kind), kind => UsedUpADay(site, kind),\n                                         false);" in shops
             and "ItemObject stands = standsFor(one.Value);" in read
             and "book.UnitValue[one.Key] = stands.Value;" in read
             and ordered(stands, "if (_standsForAt.TryGetValue(key, out ItemObject kept)) return kept;",
@@ -13476,17 +13476,19 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
                         "firstTick: TheTownTicksIn(site));")
             and ordered(aday, "if (_usedUp.TryGetValue(key, out int worth)) return worth;",
                         "ItemObject stands = StandsForAt(site, category);",
-                        "TradeMath.WorthUsedUpADay(ConsumptionBudget(where, category), where.MarketData.GetPrice(stands),",
-                        "stands.Value), 0);",
+                        "var (budget, price) = SteppedUse(where, category, stands, null);",
+                        "return TradeMath.WorthUsedUpADay(budget, price, stands.Value);",
                         "_usedUp[key] = worth;")
-            and ordered(method_body(f, "private static float ShiftCountedNow(Town town, ItemCategory kind)"),
-                        "foreach (var (one, other, factor) in Substitutes())",
-                        "float moved = TradeMath.DemandMovedToASubstitute(mine.Supply, mine.Demand, theirs.Supply, theirs.Demand,",
-                        "shift += one == kind ? moved : -moved;", "return shift;")
-            and ordered(method_body(f, "private static float ConsumptionBudget(Town town, ItemCategory kind)"),
-                        "float shift = ShiftCountedNow(town, kind);",
-                        "return economy.CalculateDailySettlementBudgetForItemCategory(",
-                        "town, TradeMath.Finite(economy.GetDailyDemandForCategory(town, kind) + shift, 0f), kind);")
+            and ordered(method_body(f, "private static (int inStore, float supply, float demand) SteppedAtTheTick("),
+                        "List<(ItemCategory kind, ItemCategory substitute, float factor)> all = Substitutes();",
+                        "TradeMath.StepSupplyAndDemand(supply, demand, shelves, wanted, null,",
+                        "TradeMath.ShiftsInPairOrder(supply, demand, pairs);",
+                        "shift = TradeMath.Finite(demand[0] - steppedBefore, 0f);")
+            and ordered(method_body(f, "private static (float budget, int price) SteppedUse("),
+                        "var at = SteppedAtTheTick(town, kind, book, out _, out float shift);",
+                        "float budget = economy.CalculateDailySettlementBudgetForItemCategory(",
+                        "town, TradeMath.Finite(economy.GetDailyDemandForCategory(town, kind) + shift, 0f), kind);",
+                        "budget = TradeMath.BudgetAtAnotherIndex(budget, IndexAt(town, kind, at), town.GetItemCategoryPriceIndex(kind));")
             and "double worth = (double)budget / price * unitValue;" in rate
             and all("_drawing.Clear();" in method_body(f, sig) and "_usedUp.Clear();" in method_body(f, sig)
                     for sig in ("internal static void Forget", "private static void Build"))
@@ -22505,8 +22507,10 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
                         "if (FactionManager.IsAtWarAgainstFaction(home.MapFaction, town.MapFaction)) return;",
                         "float rate = item.IsMountable || looted", "? each * (level + 1) * 0.5f",
                         ": model.CalculateDailyProductionAmount(village, item).ResultNumber;",
-                        "float ride = TradeMath.EtaDays(RoadBetween(home, town), speed);",
-                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch, next, scale);",
+                        "float flat = TradeMath.EtaDays(RoadBetween(home, town), speed);",
+                        "float ride = TradeMath.TheRideToCount(learned?.Out, flat, _outRatios);",
+                        "float rideBack = TradeMath.TheRideToCount(learned?.Back, flat, _backRatios);",
+                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch, next, scale,", "rideBack);",
                         "foreach (TradeMath.VillageLoad load in loads) _villageLoadsAhead.Add((home, town, villagers, items, load));")
             and ordered(method_body(f, "private static void ANextTripsSale("),
                         "if (items[i]?.ItemCategory != null && units > 0) sold.Add((items[i], units));",
@@ -22514,8 +22518,8 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
                         "TradeMath.TillDraw.VillagesNextTrips,")
             and "GetWarehouseCapacity" not in f
             and ordered(home, "if (villagers == null || villagers.CurrentSettlement == home) return 0f;",
-                        "if (villagers.CurrentSettlement == town) return stay + ride;",
-                        "return reach + stay + ride;")
+                        "if (villagers.CurrentSettlement == town) return stay + rideBack;",
+                        "return reach + stay + rideBack;")
             and "public const float VillagersSetOutAnHourWith = 0.15f;" in m
             and "public const float VillagersLeaveATownAnHourWith = 0.2f;" in m
             and "public const float VillagersTakeEachPass = 0.2f;" in m
@@ -22527,7 +22531,7 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
                         "if (setOut + ride > watch) break;",
                         "units[i] = at[i] * share;",
                         "float cut = room > 0f && carried > room ? room / carried : 1f;",
-                        "back = setOut + ride + stay + ride;")
+                        "back = setOut + ride + stay + rideHome;")
             and "string villages = Forecast.TheVillagesSend();" in method_body(S['Marker.cs'], "private static void Ultra(")
             and all(one in MATHTESTS for one in
                     ("A_villages_warehouse_holds_five_days_of_what_it_makes_and_it_stops_making_past_half_again",
@@ -23592,8 +23596,9 @@ def a_towns_purse_refills_at_its_daily_tick_as_the_game_does():
                         "double since = double.IsNaN(lastRun) ? double.NaN : now - lastRun;",
                         "return TradeMath.DaysSinceTheTick(since,")
             and ordered(income, "float inStore = town.MarketData.GetCategoryData(kind).InStoreValue;",
-                        "sum += TradeMath.WhatATownTakesInForWhatItUses(", "ConsumptionBudget(town, kind),",
-                        "TradeMath.ShelfAtItsPrice(inStore, price, stands?.Value ?? 0));", "_income[site.StringId] = income;")
+                        "var (budget, price) = SteppedUse(town, kind, stands, null);",
+                        "sum += TradeMath.WhatATownTakesInForWhatItUses(",
+                        "budget, TradeMath.ShelfAtItsPrice(inStore, price, stands?.Value ?? 0));", "_income[site.StringId] = income;")
             and "_ticksIn" not in f and f.count("_income.Clear();") == 2
             and all(one in MATHTESTS for one in (
                 "A_towns_purse_fills_only_at_its_daily_tick_and_a_ride_that_misses_it_finds_no_refill",
@@ -24345,7 +24350,8 @@ def a_villages_next_trip_follows_its_hour_its_hearth_and_its_healing():
                         "bool known = _villageMadeAt.TryGetValue(home.StringId, out double madeAt);",
                         "? TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)",
                         ": TradeMath.AVillagesTickUnseen;",
-                        "held.ToArray(), made.ToArray(), weight, onHoof, room, back, villagers != null, ride, watch, next, scale);",
+                        "held.ToArray(), made.ToArray(), weight, onHoof, room, back, villagers != null, ride, watch, next, scale,",
+                        "rideBack);",
                         "if (known) _villageHoursKnown++;", "if (looted) _villagesHealing++;")
             and ordered(heal, "new ExplainedNumber(TradeMath.AVillageHealsADayBy(home.MapFaction?.CurrentTotalStrength ?? 0f));",
                         "PerkHelper.AddPerkBonusForTown(DefaultPerks.Medicine.CleanInfrastructure, village.TradeBound.Town, false,",
@@ -24632,7 +24638,7 @@ def the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_
     ticks = method_body(f, "private static double DaysSinceTheTick(Settlement site)")
     copy = method_body(f, "private static bool CopyTheCaravansOwnPriceIndexes()")
     taken = method_body(f, "internal static void TakeTheCaravansOwnPriceIndexes()")
-    budget = method_body(f, "private static float ConsumptionBudget(Town town, ItemCategory kind)")
+    budget = method_body(f, "private static (float budget, int price) SteppedUse(")
     yours = method_body(f, "internal static void TakeYourSale(")
     takein = method_body(f, "internal static void TakeInYourNewSale()")
     shelf = method_body(market, "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
@@ -24690,12 +24696,12 @@ def the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_
             and ordered(copy, 'HarmonyLib.AccessTools.Inner(typeof(CaravansCampaignBehavior), "PriceIndexData");',
                         '"_priceDictionary"', '"_coastalPriceDictionary"', '"AverageBuySellPriceIndex"',
                         '"MinBuySellPriceIndex"', "_indexes.Clear();", "_coastIndexes.Clear();")
-            and ordered(method_body(f, "private static float ShiftCountedNow(Town town, ItemCategory kind)"),
-                        "float moved = TradeMath.DemandMovedToASubstitute(",
-                        "shift += one == kind ? moved : -moved;")
-            and ordered(budget, "float shift = ShiftCountedNow(town, kind);",
+            and ordered(method_body(f, "private static (int inStore, float supply, float demand) SteppedAtTheTick("),
+                        "TradeMath.StepSupplyAndDemand(supply, demand, shelves, wanted, null,",
+                        "TradeMath.ShiftsInPairOrder(supply, demand, pairs);")
+            and ordered(budget, "var at = SteppedAtTheTick(town, kind, book, out _, out float shift);",
                         "economy.GetDailyDemandForCategory(town, kind) + shift")
-            and "ConsumptionBudget(where, category)" in method_body(f, "private static int UsedUpADay(Settlement site, ItemCategory category)")
+            and "SteppedUse(where, category, stands, null)" in method_body(f, "private static int UsedUpADay(Settlement site, ItemCategory category)")
             and "TradeMath.ShelfAtItsPrice(inStore, price, stands?.Value ?? 0));" in
                 method_body(f, "private static int ConsumptionIncome(Settlement site)")
             and "return Finite(shelf * price / unitValue, shelf);" in method_body(m, "public static float ShelfAtItsPrice(")
@@ -24754,14 +24760,92 @@ chk("2.9.12", "Count what is on its way follows villagers with caravans in arriv
     the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_as_the_game_does())
 
 
+def the_forecast_steps_town_use_reprices_workshops_counts_gear_and_learns_village_rides_from_the_game():
+    f = S['Forecast.cs']
+    p = S['Projection.cs']
+    m = S['TradeMath.cs']
+    c = S['RideCheck.cs']
+    led = S['Ledger.cs']
+    day = method_body(p, "internal static void Day(")
+    run = method_body(p, "private static bool RunOnce")
+    read = method_body(f, "private static ShopBook ReadTheShops(")
+    weighed = method_body(f, "private static (double perValue, int value) TheMakeWeighed(")
+    paid = method_body(f, "private static int WhatTheTownPaysForWhatItsShopsMake(")
+    left = method_body(f, "internal static void VillagersLeft(MobileParty party, Settlement left)")
+    entered = method_body(f, "internal static void VillagersEntered(MobileParty party, Settlement entered)")
+    watch = method_body(f, "internal static void WatchTheVillagersRide()")
+    home = method_body(f, "private static float WhenTheVillagersAreHome(")
+    came = method_body(c, "private static void ACountedCaravanCame(")
+    gone = method_body(c, "private static void VillagersLeftHome(")
+    return (day and run and read and weighed and paid and left and entered and watch and home and came and gone
+            and ALL.count("SteppedUse(") == 4
+            and "SteppedUse(where, category, stands, null)" in method_body(f, "private static int UsedUpADay(Settlement site, ItemCategory category)")
+            and "SteppedUse(town, kind, stands, null)" in method_body(f, "private static int ConsumptionIncome(Settlement site)")
+            and "SteppedUse(town, kind, stands, book)" in method_body(f, "private static TownTickSaid WhatATownTickWillDo(Town town, Settlement site)")
+            and ordered(method_body(f, "internal static TownTickSaid WhatATownTickShouldDo(Town town)"),
+                        "long useTicksBefore = _useTicks;", "try { return WhatATownTickWillDo(town, site); }",
+                        "finally { _useTicks = useTicksBefore; }")
+            and ordered(read, "int paid = WhatTheTownPaysForWhatItsShopsMake(town, category, live);", "line.Aside.Add(kind);",
+                        "lines.RemoveAll(line => !EveryKindPriced(line.Inputs, standing) ||",
+                        "!EveryOutputPriced(line.Outputs, standing, expected));",
+                        "if (!standing.TryGetValue(kind, out var at)) return expected.TryGetValue(kind, out int paid) ? paid : 0;")
+            and ordered(weighed, "item.MultiplayerItem || item.NotMerchandise ||", "item.IsCraftedByPlayer",
+                        "model.GetTradePenalty(item, null, null, true, 0f, 0f, 0f)",
+                        'item.Culture == null || item.Culture.StringId == "neutral_culture" || item.Culture == culture',
+                        "TradeMath.TheGamesPickWeighed(preferred.Count > 0 ? preferred : every);")
+            and "GetBasePriceFactor(" in paid and "TradeMath.ATownPaysForAMake(perValue, factor);" in paid
+            and ordered(paid, "if (!live && _makePaid.TryGetValue(key, out int known)) return known;",
+                        "if (!live) _makePaid[key] = paid;")
+            and "GetWarehouseCapacity" not in ALL
+            and "trip.StoreHolds = Forecast.TheStoreTradeLordCounts(party.HomeSettlement);" in c
+            and "_villageStore[home.StringId] = TradeMath.AVillagesWarehouse(madeADay);" in f
+            and "double weight = 1d / (Math.Max(100, each) + 100d);" in method_body(m, "public static (double perValue, int value) TheGamesPickWeighed(")
+            and ordered(day, "if (!ran) break;", "foreach (var (kind, _) in line.Outputs) days.Cleared[kind] = cleared;",
+                        "PriceAgain(days, line.Inputs, line.Aside);", "PriceAgain(days, line.Outputs, line.Aside);")
+            and ordered(run, "cleared = income - bar;", "if (line.Aside.Contains(kind))", "Tally(madeAside, kind, 1);",
+                        "Stock(town, kind, 1);")
+            and "CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);" in
+                method_body(led, "public override void RegisterEvents")
+            and 'Guard.Run("Forecast.VillagersLeft", () => Forecast.VillagersLeft(party, settlement));' in
+                method_body(led, "private void OnSettlementLeft(MobileParty party, Settlement settlement)")
+            and 'Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));' in
+                method_body(led, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+            and 'Guard.Run("Forecast.VillagersRiding", Forecast.WatchTheVillagersRide);' in
+                method_body(led, "private void OnHourlyTick()")
+            and not any(one in left + entered + watch for one in ("ExtendedDebugLogging", "Writing", "Naming", " On "))
+            and "if (!TradeMath.ARideIsLearned(took, flat)) return;" in entered
+            and "riding.Spoiled = true;" in entered and "if (riding.Spoiled) return;" in entered
+            and "if (RideCheck.Dodging(party)) riding.Spoiled = true;" in watch
+            and "back = setOut + ride + stay + rideHome;" in m
+            and ordered(home, "if (villagers.CurrentSettlement == town) return stay + rideBack;",
+                        "_outRatios);", "return reach + stay + rideBack;",
+                        "TradeMath.WhatIsLeftOfARide(rideBack, left, town.GetPosition2D.Distance(home.GetPosition2D));")
+            and ordered(came, "if (one.NextTrip && at == party.HomeSettlement)", "one.LeftHomeAt = double.NaN;",
+                        "if (one.NextTrip && at.StringId == one.Town && double.IsNaN(one.LeftHomeAt))",
+                        '"over and their next trip is still awaited");')
+            and "!double.IsNaN(one.LeftHomeAt)" not in gone and "one.StoreAtLeaving = store < 0 ? -1 : store + UnitsBroughtToSell(party);" in gone
+            and all(one in MATHTESTS for one in (
+                "A_shop_line_that_makes_gear_is_weighed_at_the_games_own_pick_with_each_items_selling_penalty",
+                "A_villager_ride_is_learned_only_inside_half_to_twice_the_flat_ride_and_counted_by_its_last_three",
+                "A_party_heading_home_is_counted_its_learned_way_home_for_the_share_of_the_road_still_to_go",
+                "A_village_counts_its_party_coming_home_at_the_way_home_and_not_the_way_out"))
+            and all(one in PROJECTIONTESTS for one in (
+                "A_second_run_the_same_day_is_priced_at_the_shelf_the_first_run_left_and_can_be_refused",
+                "A_line_that_makes_gear_takes_its_inputs_off_the_shelf_and_lands_its_gear_nowhere")))
+
+
+chk("2.9.15", "Count what is on its way counts town use as the game steps it, prices each workshop run anew, lets gear lines take their inputs and times villagers by rides learned from the game",
+    the_forecast_steps_town_use_reprices_workshops_counts_gear_and_learns_village_rides_from_the_game())
+
+
 def the_log_judges_each_town_tick_trip_and_caravan_against_the_game_without_touching_a_price():
     f = S['Forecast.cs']
     c = S['RideCheck.cs']
     t = S['TownCheck.cs']
     h = S['Hindsight.cs']
-    said = method_body(f, "internal static TownTickSaid WhatATownTickShouldDo(Town town)")
+    said = method_body(f, "private static TownTickSaid WhatATownTickWillDo(Town town, Settlement site)")
     stepped = method_body(f, "private static (int inStore, float supply, float demand) SteppedAtTheTick(")
-    budget = method_body(f, "private static float ConsumptionBudget(Town town, ItemCategory kind)")
+    budget = method_body(f, "private static (float budget, int price) SteppedUse(")
     before = method_body(t, "internal static void ATownIsAboutToTick(Town town)")
     judge = method_body(t, "private static void Judge(Heard one, List<string> lines)")
     counted = method_body(c, "private static void JudgeTheCounted(double now)")
@@ -24777,19 +24861,20 @@ def the_log_judges_each_town_tick_trip_and_caravan_against_the_game_without_touc
             and ordered(before, "if (!Writing || !Forecast.On || town?.Settlement?.StringId == null) return;",
                         "Forecast.TownTickSaid said = Forecast.WhatATownTickShouldDo(town);", "SoldBefore = town.SoldItems,")
             and "if (town?.MarketData == null || ReferenceEquals(town.SoldItems, one.SoldBefore))" in judge
-            and ordered(said, "ShopBook read = ReadTheShops(town, warehouse, kind => WhatStandsForAt(site, kind), kind => 0);",
+            and ordered(said, "ShopBook read = ReadTheShops(town, warehouse, kind => WhatStandsForAt(site, kind), kind => 0, true);",
                         "WorkshopRuns.Begin(read.Lines, read.Book, null, null, read.Price);",
                         "WorkshopRuns.Day(days, 0f, null, null, null, said.Runs);",
                         "ItemObject stands = WhatStandsForAt(site, kind);",
-                        "TradeMath.BudgetAtAnotherIndex(budget, IndexAt(town, kind, at),",
-                        "said.Shifts.Add((kind, steppedBefore, ShiftCountedNow(town, kind), shift));")
+                        "var (budget, price) = SteppedUse(town, kind, stands, book);",
+                        "said.Shifts.Add((kind, steppedBefore, shift, shift));")
             and not any(one in said + stepped for one in ("Build()", "_usedUp[", "_standsForAt[", "_shopsAhead[",
                                                           "_ticksAhead", "Stale()"))
             and re.search(r'(?<!What)StandsForAt\(', said + stepped) is None
             and re.search(r'(?<!Worth)UsedUpADay\(', said + stepped) is None
             and ordered(stepped, "TradeMath.StepSupplyAndDemand(supply, demand, shelves, wanted, null,",
                         "steppedBefore = demand[0];", "TradeMath.ShiftsInPairOrder(supply, demand, pairs);")
-            and "float shift = ShiftCountedNow(town, kind);" in budget and "Stepped" not in budget
+            and "var at = SteppedAtTheTick(town, kind, book, out _, out float shift);" in budget
+            and "ConsumptionBudget" not in ALL and "ShiftCountedNow" not in ALL
             and ALL.count("SteppedAtTheTick(") == 3
             and ALL.count("WhatATownTickShouldDo(") == 2
             and ordered(counted, "if (one.Aside)", "_asideDay++;", "TallyTheVillagers(one, came);",

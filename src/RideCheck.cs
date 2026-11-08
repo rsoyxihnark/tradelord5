@@ -163,6 +163,9 @@ namespace TradeLord
             internal double BackAt = double.NaN;
             internal float[] Dice;
             internal float DiceSaid = float.NaN;
+            internal int StoreAtCount = -1;
+            internal int StoreAtLeaving = -1;
+            internal int StoreHolds = -1;
         }
 
         private struct PurseSaid
@@ -474,6 +477,8 @@ namespace TradeLord
                     trip.BackAt = now + back * 24d;
                     trip.Dice = dice;
                     trip.DiceSaid = diceSaid * 24f;
+                    trip.StoreAtCount = StoreHeld(party.HomeSettlement);
+                    trip.StoreHolds = Forecast.TheStoreTradeLordCounts(party.HomeSettlement);
                 }
                 if (kind == TradeMath.TillDraw.VillagesNextTrips) _nextTripsDay++;
                 else _villagersDay++;
@@ -485,6 +490,22 @@ namespace TradeLord
             if (party.StringId == null || !_counted.TryGetValue(party.StringId, out Counted one) ||
                 !double.IsNaN(one.ArrivedAt))
                 return;
+            if (one.NextTrip && at == party.HomeSettlement)
+            {
+                one.LeftHomeAt = double.NaN;
+                one.StoreAtLeaving = -1;
+                return;
+            }
+            if (one.NextTrip && at.StringId == one.Town && double.IsNaN(one.LeftHomeAt))
+            {
+                if (Writing)
+                    Log.Write("villager check: the next trip from " + one.Name + " at " + one.TownName + ": they came in " +
+                              (BringsGoods(party) ? "with goods" : "empty") + " " +
+                              Hours((float)(CampaignTime.Now.ToHours - one.SetOffAt)) + " h after you set off, before " +
+                              "they were seen leaving their village, so that visit is taken as an earlier trip carried " +
+                              "over and their next trip is still awaited");
+                return;
+            }
             if (at.StringId == one.Town)
             {
                 one.ArrivedAt = CampaignTime.Now.ToHours;
@@ -513,11 +534,49 @@ namespace TradeLord
         private static void VillagersLeftHome(MobileParty party, Settlement at)
         {
             if (!party.IsVillager || party.StringId == null || at != party.HomeSettlement ||
-                !_counted.TryGetValue(party.StringId, out Counted one) || !one.NextTrip ||
-                !double.IsNaN(one.LeftHomeAt) || !double.IsNaN(one.ArrivedAt))
+                !_counted.TryGetValue(party.StringId, out Counted one) || !one.NextTrip || !double.IsNaN(one.ArrivedAt))
                 return;
             one.LeftHomeAt = CampaignTime.Now.ToHours;
+            int store = StoreHeld(at);
+            one.StoreAtLeaving = store < 0 ? -1 : store + UnitsBroughtToSell(party);
         }
+
+        private static int UnitsBroughtToSell(MobileParty party)
+        {
+            ItemRoster carried = party?.ItemRoster;
+            if (carried == null) return 0;
+            ItemObject kept = null;
+            for (int k = 0; k < carried.Count; k++)
+            {
+                ItemObject item = carried.GetItemAtIndex(k);
+                if (item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000)) kept = item;
+            }
+            int keeps = (int)(0.5f * party.MemberRoster.TotalManCount);
+            int units = 0;
+            for (int k = 0; k < carried.Count; k++)
+                units += TradeMath.UnitsVillagersBringToSell(carried.GetElementNumber(k), carried.GetItemAtIndex(k) == kept, keeps);
+            return units;
+        }
+
+        private static int StoreHeld(Settlement village)
+        {
+            ItemRoster store = village?.ItemRoster;
+            int held = 0;
+            for (int k = 0; store != null && k < store.Count; k++) held += store.GetElementNumber(k);
+            return store == null ? -1 : held;
+        }
+
+        private static string WhatMadeItReady(Counted one) =>
+            double.IsNaN(one.ReadyAt) || double.IsNaN(one.BackAt)
+                ? ""
+                : "; TradeLord had it ready " +
+                  (one.ReadyAt <= one.SetOffAt + 0.01d ? "when it was counted"
+                   : one.ReadyAt > one.BackAt + 0.01d ? "once its store filled" : "once its party got home") +
+                  (one.StoreHolds >= 0
+                      ? ", its store holding " + one.StoreAtCount + " of the " + one.StoreHolds + " TradeLord counts it " +
+                        "can hold when counted" +
+                        (one.StoreAtLeaving >= 0 ? " and " + one.StoreAtLeaving + " when they left, their load counted in" : "")
+                      : "");
 
         internal static void YouSoldAt(Settlement site, int gold)
         {
@@ -697,7 +756,7 @@ namespace TradeLord
                                      (double.IsNaN(one.LeftHomeAt)
                                          ? ""
                                          : "; it left its village at " + Hours((float)(one.LeftHomeAt - one.SetOffAt)) +
-                                           " h"));
+                                           " h") + WhatMadeItReady(one));
             }
             if (came == TradeMath.CaravanCame.Sold)
             {
@@ -778,7 +837,7 @@ namespace TradeLord
         private static string SetOffAndRide(Counted one)
         {
             if (!one.NextTrip || double.IsNaN(one.SetOutSaidAt)) return "";
-            string dice = "; TradeLord said they would leave their village " +
+            string dice = WhatMadeItReady(one) + "; TradeLord said they would leave their village " +
                           Hours((float)(one.SetOutSaidAt - one.SetOffAt)) + " h after you set off, " +
                           Hours(one.DiceSaid) + " h of that waiting on the game's dice";
             if (double.IsNaN(one.LeftHomeAt)) return dice + ", and their leaving was not seen";
@@ -800,9 +859,11 @@ namespace TradeLord
                 : party.TargetSettlement != null
                     ? ", and are on the road to " + Tongue.Named(party.TargetSettlement.Name, party.TargetSettlement.StringId)
                     : ", and are on the map with nowhere set";
+            int holds = Forecast.TheStoreTradeLordCounts(home);
             return where + (village == null
                 ? ""
-                : ", with " + held + " of the " + village.GetWarehouseCapacity() + " their village store holds");
+                : ", with " + held + " in their village store" +
+                  (holds >= 0 ? " of the " + holds + " TradeLord counts it can hold" : ""));
         }
 
         internal static void SayTheCounted()

@@ -1926,8 +1926,9 @@ namespace TradeLord
 
         public static List<VillageLoad> WhatAVillageSends(float[] held, float[] made, float[] weight, bool[] onHoof,
                                                          float room, float home, bool raised, float ride, float watch,
-                                                         float nextTick, float[] scale)
+                                                         float nextTick, float[] scale, float rideBack = float.NaN)
         {
+            float rideHome = rideBack >= 0f && !float.IsInfinity(rideBack) ? rideBack : ride;
             var loads = new List<VillageLoad>();
             if (held == null || made == null || weight == null || onHoof == null) return loads;
             int n = held.Length;
@@ -2001,7 +2002,7 @@ namespace TradeLord
                     Unraised = k == 0 && !raised
                 });
                 since = setOut;
-                back = setOut + ride + stay + ride;
+                back = setOut + ride + stay + rideHome;
             }
             return loads;
         }
@@ -3387,6 +3388,73 @@ namespace TradeLord
             return theyArrivedHours - youArrivedHours <= HoursYourSaleTakesToLandInFull
                 ? YourSaleGroup.WithinItsLanding
                 : YourSaleGroup.Later;
+        }
+
+        public const float ShortestRideLearned = 0.5f;
+
+        public const float LongestRideLearned = 2f;
+
+        public const int RidesLearnedPerWay = 3;
+
+        public const int RideRatiosKept = 50;
+
+        public const int LeastRidesForARatio = 5;
+
+        public static bool ARideIsLearned(float tookDays, float flatDays) =>
+            tookDays > 0f && flatDays > 0f && !float.IsInfinity(tookDays) && !float.IsInfinity(flatDays) &&
+            tookDays >= flatDays * ShortestRideLearned && tookDays <= flatDays * LongestRideLearned;
+
+        public static void KeepTheLast(List<float> kept, float one, int most)
+        {
+            if (kept == null || float.IsNaN(one)) return;
+            kept.Add(one);
+            while (kept.Count > most) kept.RemoveAt(0);
+        }
+
+        public static float MedianOf(IList<float> values)
+        {
+            if (values == null || values.Count == 0) return float.NaN;
+            var sorted = new List<float>(values);
+            sorted.Sort();
+            return Quantile(sorted, 0.5f);
+        }
+
+        public static float TheRideToCount(IList<float> learned, float flatDays, IList<float> ratios)
+        {
+            if (learned != null && learned.Count > 0) return MedianOf(learned);
+            if (ratios != null && ratios.Count >= LeastRidesForARatio && flatDays >= 0f)
+                return Finite(flatDays * MedianOf(ratios), flatDays);
+            return flatDays;
+        }
+
+        public static float WhatIsLeftOfARide(float rideDays, float leftToGo, float whole)
+        {
+            if (!(rideDays >= 0f) || !(whole > 0f) || float.IsNaN(leftToGo)) return float.NaN;
+            float share = leftToGo / whole;
+            return rideDays * (share < 0f ? 0f : share > 1f ? 1f : share);
+        }
+
+        public static (double perValue, int value) TheGamesPickWeighed(IList<(int value, float penalty)> items)
+        {
+            double weights = 0d, perValue = 0d, value = 0d;
+            for (int i = 0; items != null && i < items.Count; i++)
+            {
+                var (each, penalty) = items[i];
+                if (each <= 0 || float.IsNaN(penalty) || penalty <= -1f) continue;
+                double weight = 1d / (Math.Max(100, each) + 100d);
+                weights += weight;
+                perValue += weight * each / (1d + penalty);
+                value += weight * each;
+            }
+            if (!(weights > 0d)) return (0d, 0);
+            return (perValue / weights, (int)Math.Round(value / weights, MidpointRounding.AwayFromZero));
+        }
+
+        public static int ATownPaysForAMake(double perValue, float factor)
+        {
+            if (!(perValue > 0d) || !(factor > 0f) || float.IsInfinity(factor)) return 0;
+            double paid = Math.Floor(perValue * factor);
+            return paid >= int.MaxValue ? int.MaxValue : Math.Max(1, (int)paid);
         }
 
         public static float HoursTheWorkshopReadingWasOff(float tickIn)

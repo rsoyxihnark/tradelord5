@@ -299,6 +299,7 @@ namespace TradeLord
         internal float ToTown = 1f;
         internal readonly List<(string category, int count)> Inputs = new List<(string, int)>();
         internal readonly List<(string category, int count)> Outputs = new List<(string, int)>();
+        internal readonly List<string> Aside = new List<string>();
     }
 
     internal sealed class TownBook
@@ -348,6 +349,8 @@ namespace TradeLord
             internal readonly Dictionary<string, int> Sell = new Dictionary<string, int>(StringComparer.Ordinal);
             internal readonly Dictionary<string, int> MadeNow = new Dictionary<string, int>(StringComparer.Ordinal);
             internal readonly Dictionary<string, int> TakenNow = new Dictionary<string, int>(StringComparer.Ordinal);
+            internal readonly Dictionary<string, int> MadeAside = new Dictionary<string, int>(StringComparer.Ordinal);
+            internal readonly Dictionary<string, double> Cleared = new Dictionary<string, double>(StringComparer.Ordinal);
             internal float[] ToTown;
         }
 
@@ -416,6 +419,7 @@ namespace TradeLord
             }
             days.MadeNow.Clear();
             days.TakenNow.Clear();
+            days.MadeAside.Clear();
             foreach (ShopLine line in days.Lines)
             {
                 if (!(line.Speed > 0f)) continue;
@@ -424,10 +428,13 @@ namespace TradeLord
                 while (line.Progress >= 1f)
                 {
                     bool ran = RunOnce(line, town, days.Buy, days.Sell, days.ToTown, days.MadeNow, days.TakenNow,
-                                       out int stoppedBy);
+                                       days.MadeAside, out int stoppedBy, out double cleared);
                     line.Progress -= 1f;
                     if (stopped != null && stoppedBy >= 0 && stoppedBy < stopped.Length) stopped[stoppedBy]++;
                     if (!ran) break;
+                    foreach (var (kind, _) in line.Outputs) days.Cleared[kind] = cleared;
+                    PriceAgain(days, line.Inputs, line.Aside);
+                    PriceAgain(days, line.Outputs, line.Aside);
                 }
             }
             for (int k = 0; k < town.Capital.Length && k < town.Expense.Length; k++)
@@ -451,6 +458,17 @@ namespace TradeLord
             }
         }
 
+        private static void PriceAgain(Days days, List<(string category, int count)> kinds, List<string> aside)
+        {
+            foreach (var (kind, _) in kinds)
+            {
+                if (kind == null || aside.Contains(kind)) continue;
+                days.Town.InStore.TryGetValue(kind, out int store);
+                days.Buy[kind] = days.Price(kind, store, false);
+                days.Sell[kind] = days.Price(kind, store, true);
+            }
+        }
+
         private static void Stock(TownBook town, string kind, int units)
         {
             town.Units.TryGetValue(kind, out int have);
@@ -470,9 +488,11 @@ namespace TradeLord
 
         private static bool RunOnce(ShopLine line, TownBook town, Dictionary<string, int> buy,
                                     Dictionary<string, int> sell, float[] toTown,
-                                    Dictionary<string, int> made, Dictionary<string, int> taken, out int stoppedBy)
+                                    Dictionary<string, int> made, Dictionary<string, int> taken,
+                                    Dictionary<string, int> madeAside, out int stoppedBy, out double cleared)
         {
             stoppedBy = Ran;
+            cleared = double.NaN;
             int k = line.Shop;
             bool owned = k >= 0 && k < town.Capital.Length;
             int need = 0;
@@ -494,6 +514,7 @@ namespace TradeLord
             long income = 0;
             foreach (var (kind, count) in line.Outputs) income += (long)sell[kind] * count;
             double bar = line.Hidden || !(line.Pace > 0f) ? cost : cost + PayOverInputsPerPace / line.Pace;
+            cleared = income - bar;
             if (income <= bar)
             {
                 stoppedBy = NotWorthIt;
@@ -529,6 +550,11 @@ namespace TradeLord
                         toTown[k] += line.ToTown;
                         if (toTown[k] < 1f) continue;
                         toTown[k] -= 1f;
+                    }
+                    if (line.Aside.Contains(kind))
+                    {
+                        Tally(madeAside, kind, 1);
+                        continue;
                     }
                     Stock(town, kind, 1);
                     Tally(made, kind, 1);

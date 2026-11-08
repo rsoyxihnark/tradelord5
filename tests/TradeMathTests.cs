@@ -5488,5 +5488,67 @@ namespace TradeLord.Tests
             Assert.Equal(wait + again, fresh[0].SetOut - fresh[0].Ready, 4);
             Assert.False(fresh[1].Unraised);
         }
+        [Fact]
+        public void A_shop_line_that_makes_gear_is_weighed_at_the_games_own_pick_with_each_items_selling_penalty()
+        {
+            var (perValue, value) = TradeMath.TheGamesPickWeighed(new List<(int value, float penalty)>
+            {
+                (100, 0.3f), (300, 0.35f)
+            });
+            double w1 = 1d / 200d, w2 = 1d / 400d;
+            Assert.Equal((w1 * 100d / 1.3d + w2 * 300d / 1.35d) / (w1 + w2), perValue, 6);
+            Assert.Equal((int)Math.Round((w1 * 100d + w2 * 300d) / (w1 + w2)), value);
+            Assert.Equal((0d, 0), TradeMath.TheGamesPickWeighed(new List<(int value, float penalty)>()));
+            Assert.Equal((0d, 0), TradeMath.TheGamesPickWeighed(null));
+            Assert.Equal(76, TradeMath.ATownPaysForAMake(76.9d, 1f));
+            Assert.Equal(1, TradeMath.ATownPaysForAMake(0.2d, 1f));
+            Assert.Equal(0, TradeMath.ATownPaysForAMake(0d, 1f));
+            Assert.Equal(0, TradeMath.ATownPaysForAMake(50d, float.NaN));
+        }
+
+        [Fact]
+        public void A_villager_ride_is_learned_only_inside_half_to_twice_the_flat_ride_and_counted_by_its_last_three()
+        {
+            Assert.True(TradeMath.ARideIsLearned(0.4f, 0.5f));
+            Assert.False(TradeMath.ARideIsLearned(0.2f, 0.5f));
+            Assert.False(TradeMath.ARideIsLearned(2.74f, 0.42f));
+            Assert.False(TradeMath.ARideIsLearned(float.PositiveInfinity, 0.5f));
+            var kept = new List<float>();
+            foreach (float one in new[] { 0.5f, 0.6f, 0.4f, 0.9f }) TradeMath.KeepTheLast(kept, one, TradeMath.RidesLearnedPerWay);
+            Assert.Equal(new[] { 0.6f, 0.4f, 0.9f }, kept.ToArray());
+            Assert.Equal(0.6f, TradeMath.TheRideToCount(kept, 1f, null), 4);
+            var ratios = new List<float> { 0.8f, 0.9f, 0.85f, 0.86f };
+            Assert.Equal(1f, TradeMath.TheRideToCount(null, 1f, ratios), 4);
+            ratios.Add(0.87f);
+            Assert.Equal(0.86f, TradeMath.TheRideToCount(new List<float>(), 1f, ratios), 4);
+            Assert.True(float.IsNaN(TradeMath.MedianOf(new List<float>())));
+        }
+
+        [Fact]
+        public void A_party_heading_home_is_counted_its_learned_way_home_for_the_share_of_the_road_still_to_go()
+        {
+            Assert.Equal(0.25f, TradeMath.WhatIsLeftOfARide(0.5f, 5f, 10f), 4);
+            Assert.Equal(0.5f, TradeMath.WhatIsLeftOfARide(0.5f, 15f, 10f), 4);
+            Assert.Equal(0f, TradeMath.WhatIsLeftOfARide(0.5f, -1f, 10f), 4);
+            Assert.True(float.IsNaN(TradeMath.WhatIsLeftOfARide(0.5f, 5f, 0f)));
+            Assert.True(float.IsNaN(TradeMath.WhatIsLeftOfARide(float.NaN, 5f, 10f)));
+        }
+
+        [Fact]
+        public void A_village_counts_its_party_coming_home_at_the_way_home_and_not_the_way_out()
+        {
+            float wait = (1f / 0.15f - 0.5f) / 24f;
+            float stay = (1f / 0.2f - 0.5f) / 24f;
+            List<TradeMath.VillageLoad> one = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                0f, 0f, true, 0.25f, 9f, 0.5f, new[] { 1f });
+            List<TradeMath.VillageLoad> two = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                0f, 0f, true, 0.25f, 9f, 0.5f, new[] { 1f }, 0.75f);
+            Assert.Equal(one[0].Days, two[0].Days, 4);
+            Assert.Equal(one[0].SetOut + 0.25f + stay + 0.25f, one[1].Back, 4);
+            Assert.Equal(two[0].SetOut + 0.25f + stay + 0.75f, two[1].Back, 4);
+            Assert.Equal(wait + 0.25f, two[0].Days, 3);
+        }
 }
 }
