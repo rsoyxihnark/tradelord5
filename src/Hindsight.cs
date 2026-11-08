@@ -384,8 +384,9 @@ namespace TradeLord
             if (here == null) return;
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
-            int scored = 0, stale = 0, early = 0, landingMiss = 0, shared = 0;
-            float weighed = 0f, cameTrue = 0f;
+            int scored = 0, stale = 0, early = 0, landingMiss = 0, shared = 0, pastTwice = 0;
+            float weighed = 0f, cameTrue = 0f, onTheCurve = 0f;
+            long saidPastTwice = 0L;
             var stillToCome = new List<KeyValuePair<string, Said>>();
             foreach (KeyValuePair<string, Said> one in here)
             {
@@ -426,6 +427,12 @@ namespace TradeLord
                     float size = Math.Abs((float)said.worth);
                     weighed += size;
                     cameTrue += size * share;
+                    onTheCurve += size * TradeMath.OnTheCurve((double)how.Moved / said.worth);
+                    if (TradeMath.MovedPastTwiceWhatWasSaid(said.worth, how.Moved))
+                    {
+                        pastTwice++;
+                        saidPastTwice += TradeMath.SizeOf(said.worth);
+                    }
                     LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);
                 }
                 lines.Add(line + "; " + WorthShifted(said.worth, how.Moved) + Shared(how.Share) +
@@ -447,7 +454,10 @@ namespace TradeLord
                               ? ", and no worth figure could be held to anything here"
                               : ", and of the worth it said would move, " +
                                 Share(TradeMath.ShareThatCameTrue(weighed, cameTrue)) + " came true, over " +
-                                shared + " good(s)"));
+                                shared + " good(s), and " + Share(TradeMath.ShareThatCameTrue(weighed, onTheCurve)) +
+                                " on TradeLord's own curve, which counts a move past twice what was said as no hit; " +
+                                pastTwice + " figure(s), saying " + saidPastTwice + " denars would move, moved more than " +
+                                "twice what was said"));
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.ForecastScore(out int figures, out long judged, out float held))
                     lines.Add("  over this campaign: of the worth it said would move, " + Share(held) +

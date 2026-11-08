@@ -5360,5 +5360,133 @@ namespace TradeLord.Tests
             Assert.Equal((0, false), TradeMath.WhatACaravanMoved(int.MinValue));
             Assert.Equal((int.MaxValue, false), TradeMath.WhatACaravanMoved(-int.MaxValue));
         }
+
+        [Fact]
+        public void The_town_tick_check_shifts_a_substitute_in_pair_order_exactly_as_the_daily_step_does()
+        {
+            var pairs = new[] { (0, 1, 0.5f), (1, 2, 0.9f) };
+            var supply = new[] { 1000f, 100f, 10f };
+            var demand = new[] { 10f, 30f, 60f };
+            var stepSupply = (float[])supply.Clone();
+            var stepDemand = (float[])demand.Clone();
+            TradeMath.StepSupplyAndDemand(stepSupply, stepDemand, new[] { 1000, 100, 10 }, new[] { 10f, 30f, 60f }, pairs,
+                                          (g, shelf, want, was, wasWanted) =>
+                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+            TradeMath.StepSupplyAndDemand(supply, demand, new[] { 1000, 100, 10 }, new[] { 10f, 30f, 60f }, null,
+                                          (g, shelf, want, was, wasWanted) =>
+                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+            var before = (float[])demand.Clone();
+            float[] shifts = TradeMath.ShiftsInPairOrder(supply, demand, pairs);
+            for (int g = 0; g < 3; g++) Assert.Equal(stepDemand[g], demand[g], 4);
+            Assert.Equal(demand[0] - before[0], shifts[0], 4);
+            Assert.Equal(10f, shifts[0], 3);
+            Assert.Empty(TradeMath.ShiftsInPairOrder(supply, demand, null));
+        }
+
+        [Fact]
+        public void A_shift_counted_on_the_day_before_the_step_misses_what_the_game_moves_after_it()
+        {
+            var supply = new[] { 1000f, 100f };
+            var demand = new[] { 21f, 19f };
+            var unstepped = TradeMath.DemandShiftedToASubstitute(supply[0], demand[0], supply[1], demand[1], 0.9f);
+            Assert.Equal(21f, unstepped.demand, 3);
+            TradeMath.StepSupplyAndDemand(supply, demand, new[] { 1000, 100 }, new[] { 10f, 30f }, null,
+                                          (g, shelf, want, was, wasWanted) =>
+                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+            float[] shifts = TradeMath.ShiftsInPairOrder(supply, demand, new[] { (0, 1, 0.9f) });
+            Assert.True(shifts[0] > 0f);
+        }
+
+        [Fact]
+        public void The_dice_alone_bring_a_village_trip_a_median_one_and_two_thirds_hours_sooner_than_their_average()
+        {
+            double[] one = TradeMath.HoursAllTheDiceTake(new[] { 0.15f });
+            double all = 0d;
+            foreach (double odds in one) all += odds;
+            Assert.Equal(1d, all, 6);
+            Assert.Equal(0d, one[0], 9);
+            Assert.Equal(0.15d, one[1], 6);
+            Assert.Equal(1f / 0.15f + 1f / 0.2f, TradeMath.HoursTheDiceAreSaidToTake(new[] { 0.15f, 0.2f }), 4);
+            TradeMath.DiceAlone single = TradeMath.WhatTheDiceAloneGive(new List<float[]> { new[] { 0.15f } }, 24f);
+            Assert.Equal(-5f / 3f, single.Median, 3);
+            Assert.Equal(0.6276f, single.Early, 3);
+            Assert.Equal(-17f / 3f, single.Low, 3);
+            Assert.Equal(22f / 3f, single.High, 3);
+            TradeMath.DiceAlone stay = TradeMath.WhatTheDiceAloneGive(new List<float[]> { new[] { 0.2f, 0.15f } }, 24f);
+            Assert.Equal(-23f / 3f, stay.Low, 3);
+            Assert.Equal(28f / 3f, stay.High, 3);
+            Assert.True(float.IsNaN(TradeMath.WhatTheDiceAloneGive(new List<float[]>(), 24f).Median));
+            Assert.True(float.IsNaN(TradeMath.WhatTheDiceAloneGive(null, 24f).Early));
+        }
+
+        [Fact]
+        public void A_trip_sooner_than_all_its_dice_could_bring_it_is_named_and_one_inside_them_is_not()
+        {
+            Assert.True(TradeMath.CameSoonerThanTheDiceAllow(-7f, 6.17f));
+            Assert.False(TradeMath.CameSoonerThanTheDiceAllow(-6f, 6.17f));
+            Assert.False(TradeMath.CameSoonerThanTheDiceAllow(-9f, 10.67f));
+            Assert.False(TradeMath.CameSoonerThanTheDiceAllow(float.NaN, 6.17f));
+            Assert.False(TradeMath.CameSoonerThanTheDiceAllow(-30f, float.NaN));
+        }
+
+        [Fact]
+        public void A_caravan_after_you_is_grouped_by_whether_your_sale_was_counted_and_how_soon_after_you_it_came()
+        {
+            Assert.Equal(6d, TradeMath.HoursYourSaleTakesToLandInFull, 6);
+            Assert.Equal(TradeMath.YourSaleGroup.NotAfterYou, TradeMath.GroupedByYourSale(true, 10d, 9d));
+            Assert.Equal(TradeMath.YourSaleGroup.NotAfterYou, TradeMath.GroupedByYourSale(true, 10d, 10d));
+            Assert.Equal(TradeMath.YourSaleGroup.NotAfterYou, TradeMath.GroupedByYourSale(true, 10d, double.NaN));
+            Assert.Equal(TradeMath.YourSaleGroup.NotCounted, TradeMath.GroupedByYourSale(false, 10d, 30d));
+            Assert.Equal(TradeMath.YourSaleGroup.WithinItsLanding, TradeMath.GroupedByYourSale(true, 10d, 16d));
+            Assert.Equal(TradeMath.YourSaleGroup.Later, TradeMath.GroupedByYourSale(true, 10d, 16.5d));
+        }
+
+        [Fact]
+        public void The_workshop_reading_of_a_towns_hour_is_put_off_by_the_hours_between_it_and_the_real_tick()
+        {
+            Assert.Equal(0f, TradeMath.HoursTheWorkshopReadingWasOff(0f), 4);
+            Assert.Equal(0f, TradeMath.HoursTheWorkshopReadingWasOff(1f), 4);
+            Assert.Equal(6f, TradeMath.HoursTheWorkshopReadingWasOff(0.25f), 4);
+            Assert.Equal(-6f, TradeMath.HoursTheWorkshopReadingWasOff(0.75f), 4);
+            Assert.True(float.IsNaN(TradeMath.HoursTheWorkshopReadingWasOff(float.NaN)));
+            Assert.True(float.IsNaN(TradeMath.HoursTheWorkshopReadingWasOff(1.5f)));
+        }
+
+        [Fact]
+        public void A_figure_that_moved_past_twice_what_was_said_is_counted_apart_and_scores_nothing_on_the_curve()
+        {
+            Assert.True(TradeMath.MovedPastTwiceWhatWasSaid(100, 300));
+            Assert.False(TradeMath.MovedPastTwiceWhatWasSaid(100, 200));
+            Assert.True(TradeMath.MovedPastTwiceWhatWasSaid(-100, -201));
+            Assert.False(TradeMath.MovedPastTwiceWhatWasSaid(0, 500));
+            Assert.Equal(0f, TradeMath.OnTheCurve(3d), 4);
+            Assert.Equal(-1f, TradeMath.OnTheCurve(-1d), 4);
+            float weighed = 200f, curve = 100f * TradeMath.OnTheCurve(3d) + 100f * TradeMath.OnTheCurve(-1d);
+            Assert.Equal(0f, TradeMath.ShareThatCameTrue(weighed, curve), 4);
+            Assert.Equal(2f, TradeMath.UsedAgainstSaid(5, 10), 4);
+            Assert.True(float.IsPositiveInfinity(TradeMath.UsedAgainstSaid(0, 3)));
+            Assert.True(float.IsNaN(TradeMath.UsedAgainstSaid(0, 0)));
+        }
+
+        [Fact]
+        public void A_village_load_carries_when_TradeLord_has_it_ready_set_off_and_its_party_home()
+        {
+            float wait = (1f / 0.15f - 0.5f) / 24f;
+            float again = 1f / 0.15f / 24f;
+            List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                0f, 0.1f, true, 0.25f, 7f, 0.5f, new[] { 1f });
+            Assert.Equal(0.1f, loads[0].Ready, 4);
+            Assert.Equal(0.1f, loads[0].Back, 4);
+            Assert.Equal(0.1f + wait, loads[0].SetOut, 4);
+            Assert.Equal(loads[0].SetOut + 0.25f, loads[0].Days, 4);
+            Assert.False(loads[0].Unraised);
+            List<TradeMath.VillageLoad> fresh = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                0f, 0f, false, 0.25f, 7f, 0.5f, new[] { 1f });
+            Assert.True(fresh[0].Unraised);
+            Assert.Equal(wait + again, fresh[0].SetOut - fresh[0].Ready, 4);
+            Assert.False(fresh[1].Unraised);
+        }
 }
 }

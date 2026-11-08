@@ -1828,6 +1828,10 @@ namespace TradeLord
         {
             public float Days;
             public float[] Units;
+            public float SetOut;
+            public float Ready;
+            public float Back;
+            public bool Unraised;
         }
 
         public static int AVillagesWarehouse(float madeADay) =>
@@ -1991,7 +1995,11 @@ namespace TradeLord
                     at[i] -= units[i];
                     heldAll += at[i];
                 }
-                loads.Add(new VillageLoad { Days = setOut + ride, Units = units });
+                loads.Add(new VillageLoad
+                {
+                    Days = setOut + ride, Units = units, SetOut = setOut, Ready = ready, Back = back,
+                    Unraised = k == 0 && !raised
+                });
                 since = setOut;
                 back = setOut + ride + stay + ride;
             }
@@ -3261,6 +3269,141 @@ namespace TradeLord
             return maxSpendPerVisit > 0
                 ? Math.Min(left, maxSpendPerVisit - spentThisVisit)
                 : left;
+        }
+
+        public static float[] ShiftsInPairOrder(float[] supply, float[] demand,
+                                                IList<(int kind, int substitute, float factor)> pairs)
+        {
+            var shifts = new float[pairs?.Count ?? 0];
+            if (supply == null || demand == null || pairs == null) return shifts;
+            int n = Math.Min(supply.Length, demand.Length);
+            for (int p = 0; p < pairs.Count; p++)
+            {
+                var (one, other, factor) = pairs[p];
+                if (one < 0 || one >= n || other < 0 || other >= n) continue;
+                float was = demand[one];
+                (demand[one], demand[other]) = DemandShiftedToASubstitute(supply[one], demand[one], supply[other],
+                                                                          demand[other], factor);
+                shifts[p] = Finite(demand[one] - was, 0f);
+            }
+            return shifts;
+        }
+
+        public const int DiceHoursFollowed = 240;
+
+        public static double[] HoursTheDiceTake(float chanceAnHour)
+        {
+            var odds = new double[DiceHoursFollowed + 1];
+            if (!(chanceAnHour > 0f) || chanceAnHour > 1f) return odds;
+            double left = 1d;
+            for (int k = 1; k <= DiceHoursFollowed; k++)
+            {
+                odds[k] = left * chanceAnHour;
+                left *= 1d - chanceAnHour;
+            }
+            return odds;
+        }
+
+        public static double[] HoursAllTheDiceTake(IList<float> chances)
+        {
+            var odds = new double[DiceHoursFollowed + 1];
+            odds[0] = 1d;
+            for (int r = 0; chances != null && r < chances.Count; r++)
+            {
+                double[] one = HoursTheDiceTake(chances[r]);
+                var both = new double[DiceHoursFollowed + 1];
+                for (int a = 0; a <= DiceHoursFollowed; a++)
+                {
+                    if (odds[a] <= 0d) continue;
+                    for (int b = 1; a + b <= DiceHoursFollowed; b++) both[a + b] += odds[a] * one[b];
+                }
+                odds = both;
+            }
+            return odds;
+        }
+
+        public static float HoursTheDiceAreSaidToTake(IList<float> chances)
+        {
+            double said = 0d;
+            for (int r = 0; chances != null && r < chances.Count; r++)
+                if (chances[r] > 0f) said += 1d / chances[r];
+            return (float)said;
+        }
+
+        public struct DiceAlone
+        {
+            public float Median;
+            public float Early;
+            public float Low;
+            public float High;
+        }
+
+        public static DiceAlone WhatTheDiceAloneGive(IList<float[]> trips, float lateAtMostHours)
+        {
+            var spread = new List<(float off, double odds)>();
+            int counted = 0;
+            for (int t = 0; trips != null && t < trips.Count; t++)
+            {
+                if (trips[t] == null || trips[t].Length == 0) continue;
+                double[] odds = HoursAllTheDiceTake(trips[t]);
+                float said = HoursTheDiceAreSaidToTake(trips[t]);
+                double kept = 0d;
+                for (int h = 0; h < odds.Length; h++) if (odds[h] > 0d && h - said <= lateAtMostHours) kept += odds[h];
+                if (!(kept > 0d)) continue;
+                counted++;
+                for (int h = 0; h < odds.Length; h++)
+                    if (odds[h] > 0d && h - said <= lateAtMostHours) spread.Add((h - said, odds[h] / kept));
+            }
+            var none = new DiceAlone { Median = float.NaN, Early = float.NaN, Low = float.NaN, High = float.NaN };
+            if (counted == 0) return none;
+            spread.Sort((x, y) => x.off.CompareTo(y.off));
+            float At(double share)
+            {
+                double run = 0d, all = counted;
+                foreach (var one in spread)
+                {
+                    run += one.odds / all;
+                    if (run >= share) return one.off;
+                }
+                return spread[spread.Count - 1].off;
+            }
+            double early = 0d;
+            foreach (var one in spread) if (one.off < 0f) early += one.odds / counted;
+            return new DiceAlone { Median = At(0.5d), Early = (float)early, Low = At(0.1d), High = At(0.9d) };
+        }
+
+        public static bool CameSoonerThanTheDiceAllow(float offHours, float diceSaidHours) =>
+            !float.IsNaN(offHours) && diceSaidHours > 0f && offHours < -diceSaidHours;
+
+        public enum YourSaleGroup { NotAfterYou, NotCounted, WithinItsLanding, Later }
+
+        public const double HoursYourSaleTakesToLandInFull = HorizonStep * 24d;
+
+        public static YourSaleGroup GroupedByYourSale(bool counted, double youArrivedHours, double theyArrivedHours)
+        {
+            if (double.IsNaN(theyArrivedHours) || double.IsNaN(youArrivedHours) || theyArrivedHours <= youArrivedHours)
+                return YourSaleGroup.NotAfterYou;
+            if (!counted) return YourSaleGroup.NotCounted;
+            return theyArrivedHours - youArrivedHours <= HoursYourSaleTakesToLandInFull
+                ? YourSaleGroup.WithinItsLanding
+                : YourSaleGroup.Later;
+        }
+
+        public static float HoursTheWorkshopReadingWasOff(float tickIn)
+        {
+            if (float.IsNaN(tickIn) || tickIn < 0f || tickIn > 1f) return float.NaN;
+            float hours = tickIn * 24f;
+            return hours <= 12f ? hours : hours - 24f;
+        }
+
+        public static bool MovedPastTwiceWhatWasSaid(int said, int moved) =>
+            said != 0 && (double)moved / said > 2d;
+
+        public static float UsedAgainstSaid(int said, int used)
+        {
+            if (said <= 0 && used <= 0) return float.NaN;
+            if (said <= 0) return float.PositiveInfinity;
+            return Finite((float)used / said, float.NaN);
         }
     }
 }

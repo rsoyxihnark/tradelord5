@@ -98,6 +98,7 @@ namespace TradeLord
             Guard.Run("GameEnd.Travel", Travel.Forget);
             Guard.Run("GameEnd.SpeedCheck", SpeedCheck.Forget);
             Guard.Run("GameEnd.RideCheck", RideCheck.Forget);
+            Guard.Run("GameEnd.TownCheck", TownCheck.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);
             Guard.Run("GameEnd.Forecast", Forecast.Forget);

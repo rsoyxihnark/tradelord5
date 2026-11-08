@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.9.14
+
+- With Enable extended debug logging on, TradeLord.log now compares what each town uses up each day with what TradeLord said (#189)
+- With Enable extended debug logging on, TradeLord.log now compares the demand moved to a stand-in good each day with the game's (#190)
+- With Enable extended debug logging on, TradeLord.log now also counts each town's use after demand moves as in the game (#190)
+- With Enable extended debug logging on, TradeLord.log now compares what workshops make and take each day with what TradeLord said (#191)
+- With Enable extended debug logging on, TradeLord.log now says why TradeLord expected a workshop run to stop (#191)
+- With Enable extended debug logging on, TradeLord.log says each day for how many towns the hour they use their goods is known (#192)
+- With Enable extended debug logging on, TradeLord.log says how far off a town's hour read from its workshops was (#192)
+- Fixed TradeLord.log's caravan check judging which caravans came after you by when you were due instead of when you got there (#180)
+- Fixed TradeLord.log's caravan check counting caravans from a ride you did not make (#180)
+- With Enable extended debug logging on, TradeLord.log's caravan check shows your sale counted for each caravan and what you sold there (#180)
+- With Enable extended debug logging on, TradeLord.log's caravan check splits caravans after you by whether your sale was counted (#180)
+- With Enable extended debug logging on, TradeLord.log's caravan check says how often a day a change in your sale was taken in (#180)
+- With Enable extended debug logging on, TradeLord.log's villager check says when a next trip left its village and how long it rode (#197)
+- With Enable extended debug logging on, TradeLord.log's villager check compares how early or late next trips came with the game's dice (#197)
+- With Enable extended debug logging on, TradeLord.log's villager check names next trips that came sooner than the game's dice allow (#197)
+- With Enable extended debug logging on, TradeLord.log's villager check says where missing villagers are and how full their store is (#197)
+- With Enable extended debug logging on, TradeLord.log's forecast check also scores each figure on TradeLord's own curve (#97)
+- With Enable extended debug logging on, TradeLord.log's forecast check counts the figures that moved more than twice what was said (#97)
+
 ## 2.9.13
 
 - Fixed the TradeLord ledger expecting some markets to pay far more for a good than they will

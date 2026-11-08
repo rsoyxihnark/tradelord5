@@ -97,6 +97,10 @@ namespace TradeLord
 
         private static int _caravansWaiting, _villagesLooted;
 
+        private static readonly Dictionary<string, List<(float days, float setOut, float ready, float back, float[] dice,
+            float diceSaid)>> _nextTrips = new Dictionary<string, List<(float, float, float, float, float[], float)>>(
+            StringComparer.Ordinal);
+
         private static readonly Dictionary<string, (string site, ItemCategory kind, float now, float said)> _caravanMeets =
             new Dictionary<string, (string, ItemCategory, float, float)>(StringComparer.Ordinal);
 
@@ -230,11 +234,14 @@ namespace TradeLord
             _fetchedLast = null;
             _yourSaleMoved = false;
             _yourSaleTakenInAt = int.MinValue;
+            _yourSaleTakenIn = 0;
+            _firstTicks.Clear();
             _villageMadeAt.Clear();
             _caravansAhead.Clear();
             _caravansInTown.Clear();
             _villagersAhead.Clear();
             _villageLoadsAhead.Clear();
+            _nextTrips.Clear();
             _villagersLike.Clear();
             _caravanMeets.Clear();
             _ticksAhead.Clear();
@@ -476,6 +483,7 @@ namespace TradeLord
             _caravansInTown.Clear();
             _villagersAhead.Clear();
             _villageLoadsAhead.Clear();
+            _nextTrips.Clear();
             _villagersLike.Clear();
             _caravanMeets.Clear();
             _ticksAhead.Clear();
@@ -931,6 +939,43 @@ namespace TradeLord
             if (known) _villageHoursKnown++;
             if (looted) _villagesHealing++;
             foreach (TradeMath.VillageLoad load in loads) _villageLoadsAhead.Add((home, town, villagers, items, load));
+            NoteTheNextTrips(home, villagers != null && (villagers.CurrentSettlement == town || villagers.TargetSettlement == town),
+                             loads);
+        }
+
+        private static void NoteTheNextTrips(Settlement home, bool inTown, List<TradeMath.VillageLoad> loads)
+        {
+            if (home?.StringId == null || loads == null) return;
+            float stay = TradeMath.DaysUntilARollTakes(TradeMath.VillagersLeaveATownAnHourWith);
+            var trips = new List<(float, float, float, float, float[], float)>();
+            for (int k = 0; k < loads.Count; k++)
+            {
+                TradeMath.VillageLoad load = loads[k];
+                bool stayed = k == 0 && inTown && Math.Abs(load.Ready - load.Back) < 0.0001f;
+                float[] dice = k > 0
+                    ? null
+                    : load.Unraised
+                        ? new[] { TradeMath.VillagersSetOutAnHourWith, TradeMath.VillagersSetOutAnHourWith }
+                        : stayed
+                            ? new[] { TradeMath.VillagersLeaveATownAnHourWith, TradeMath.VillagersSetOutAnHourWith }
+                            : new[] { TradeMath.VillagersSetOutAnHourWith };
+                float said = k > 0 ? float.NaN : load.SetOut - load.Ready + (stayed ? stay : 0f);
+                trips.Add((load.Days, load.SetOut, load.Ready, load.Back, dice, said));
+            }
+            _nextTrips[home.StringId] = trips;
+        }
+
+        internal static bool TheNextTripDueIn(string homeId, float days, out float setOut, out float ready, out float back,
+                                              out float[] dice, out float diceSaid)
+        {
+            setOut = ready = back = diceSaid = float.NaN;
+            dice = null;
+            if (homeId == null || !_nextTrips.TryGetValue(homeId, out var trips) || trips.Count == 0) return false;
+            int best = 0;
+            for (int k = 1; k < trips.Count; k++)
+                if (Math.Abs(trips[k].days - days) < Math.Abs(trips[best].days - days)) best = k;
+            (_, setOut, ready, back, dice, diceSaid) = trips[best];
+            return true;
         }
 
         private static void ARoadVillagersSale(MobileParty party, Settlement bound, float days, float trust)
@@ -1036,7 +1081,36 @@ namespace TradeLord
         internal static void ATownTicked(Town town)
         {
             if (town?.Settlement?.StringId == null) return;
+            if (Options.Current.ExtendedDebugLogging && !_townTickedAt.ContainsKey(town.Settlement.StringId))
+                _firstTicks.Add((Tongue.Named(town.Settlement.Name, town.Settlement.StringId),
+                                 TradeMath.HoursTheWorkshopReadingWasOff(TheTownTicksIn(town.Settlement))));
             _townTickedAt[town.Settlement.StringId] = CampaignTime.Now.ToDays;
+        }
+
+        private static readonly List<(string town, float off)> _firstTicks = new List<(string, float)>();
+
+        internal static List<(string town, float off)> TheFirstTicksSeen()
+        {
+            var seen = new List<(string town, float off)>(_firstTicks);
+            _firstTicks.Clear();
+            return seen;
+        }
+
+        internal static int TownsWhoseHourIsKnown(out int towns)
+        {
+            towns = 0;
+            int known = 0;
+            MBReadOnlyList<Town> all = Town.AllTowns;
+            double now = CampaignTime.Now.ToDays;
+            for (int i = 0; all != null && i < all.Count; i++)
+            {
+                string id = all[i]?.Settlement?.StringId;
+                if (id == null) continue;
+                towns++;
+                if (_townTickedAt.TryGetValue(id, out double at) && !double.IsNaN(TradeMath.DaysSinceATickSeen(now, at)))
+                    known++;
+            }
+            return known;
         }
 
         internal static void ASettlementTicked(Settlement settlement)
@@ -1298,7 +1372,28 @@ namespace TradeLord
             if (hour == _yourSaleTakenInAt) return;
             _yourSaleMoved = false;
             _yourSaleTakenInAt = hour;
+            _yourSaleTakenIn++;
             _readStamp.Stale();
+        }
+
+        private static int _yourSaleTakenIn;
+
+        internal static int TimesYourSaleWasTakenIn()
+        {
+            int taken = _yourSaleTakenIn;
+            _yourSaleTakenIn = 0;
+            return taken;
+        }
+
+        internal static int YourSaleCountedFor(Settlement site, float days, ICollection<string> kinds)
+        {
+            if (!On || _yourSaleAt == null || site?.StringId != _yourSaleAt || kinds == null) return 0;
+            if (MobileParty.MainParty?.CurrentSettlement == site) return 0;
+            float due = (float)Math.Max(0d, _yourSaleWhen - CampaignTime.Now.ToDays);
+            long worth = 0L;
+            foreach (var one in _yourSaleWorth) if (one.Value > 0 && kinds.Contains(one.Key)) worth += one.Value;
+            return (int)Math.Min(int.MaxValue, Math.Round(worth * (double)TradeMath.YourSaleCountsFor(due, days),
+                                                          MidpointRounding.AwayFromZero));
         }
 
         private static int YourSaleBy(Settlement site, string kind, float days)
@@ -1730,7 +1825,8 @@ namespace TradeLord
             }
         }
 
-        private static void FollowTheShops(Town town, float watch, IWorkshopWarehouseCampaignBehavior warehouse)
+        private static ShopBook ReadTheShops(Town town, IWorkshopWarehouseCampaignBehavior warehouse,
+                                             Func<ItemCategory, ItemObject> standsFor, Func<ItemCategory, int> usedADay)
         {
             Settlement site = town.Settlement;
             Workshop[] shops = town.Workshops;
@@ -1777,25 +1873,25 @@ namespace TradeLord
                         lines.Add(line);
                 }
             }
-            if (lines.Count == 0) return;
+            if (lines.Count == 0) return null;
 
             Dictionary<string, int> held = WhatTheMarketHolds(site);
             var standing = new Dictionary<string, (ItemObject stands, float supply, float demand)>(StringComparer.Ordinal);
             foreach (var one in kinds)
             {
-                ItemObject stands = StandsForAt(site, one.Value);
+                ItemObject stands = standsFor(one.Value);
                 if (stands == null) continue;
                 ItemData data = town.MarketData.GetCategoryData(one.Value);
                 held.TryGetValue(one.Key, out int units);
                 book.Units[one.Key] = units;
                 book.InStore[one.Key] = (int)Math.Min(int.MaxValue, Math.Max(0f, data.InStoreValue));
                 book.UnitValue[one.Key] = stands.Value;
-                book.UsedADay[one.Key] = UsedUpADay(site, one.Value);
+                book.UsedADay[one.Key] = usedADay(one.Value);
                 standing[one.Key] = (stands, data.Supply, data.Demand);
             }
             lines.RemoveAll(line => !EveryKindPriced(line.Inputs, standing) ||
                                     !EveryKindPriced(line.Outputs, standing));
-            if (lines.Count == 0) return;
+            if (lines.Count == 0) return null;
 
             TradeItemPriceFactorModel priced = Campaign.Current.Models.TradeItemPriceFactorModel;
             Func<string, int, bool, int> price = (kind, store, selling) =>
@@ -1804,6 +1900,28 @@ namespace TradeLord
                 return priced.GetPrice(new EquipmentElement(at.stands), null, null, selling, store,
                                        at.supply, at.demand);
             };
+            return new ShopBook { Lines = lines, Book = book, Standing = standing, Kinds = kinds, Price = price };
+        }
+
+        private sealed class ShopBook
+        {
+            internal List<ShopLine> Lines;
+            internal TownBook Book;
+            internal Dictionary<string, (ItemObject stands, float supply, float demand)> Standing;
+            internal Dictionary<string, ItemCategory> Kinds;
+            internal Func<string, int, bool, int> Price;
+        }
+
+        private static void FollowTheShops(Town town, float watch, IWorkshopWarehouseCampaignBehavior warehouse)
+        {
+            Settlement site = town.Settlement;
+            ShopBook read = ReadTheShops(town, warehouse, kind => StandsForAt(site, kind), kind => UsedUpADay(site, kind));
+            if (read == null) return;
+            List<ShopLine> lines = read.Lines;
+            TownBook book = read.Book;
+            Dictionary<string, (ItemObject stands, float supply, float demand)> standing = read.Standing;
+            Dictionary<string, ItemCategory> kinds = read.Kinds;
+            Func<string, int, bool, int> price = read.Price;
 
             _landing.TryGetValue(site.StringId, out List<Landing> arriving);
             var bought = new List<(float days, string category, int units)>();
@@ -1911,6 +2029,13 @@ namespace TradeLord
             if (site == null || category == null) return StandsFor(category);
             var key = (site.StringId, category.StringId);
             if (_standsForAt.TryGetValue(key, out ItemObject kept)) return kept;
+            ItemObject stands = WhatStandsForAt(site, category);
+            _standsForAt[key] = stands;
+            return stands;
+        }
+
+        private static ItemObject WhatStandsForAt(Settlement site, ItemCategory category)
+        {
             ItemObject stocked = null;
             int most = 0;
             ItemRoster stock = site.ItemRoster;
@@ -1924,9 +2049,7 @@ namespace TradeLord
                 stocked = item;
                 most = count;
             }
-            ItemObject stands = stocked ?? StandsFor(category);
-            _standsForAt[key] = stands;
-            return stands;
+            return stocked ?? StandsFor(category);
         }
 
         private static ItemObject StandsFor(ItemCategory category)
@@ -2136,6 +2259,13 @@ namespace TradeLord
         private static float ConsumptionBudget(Town town, ItemCategory kind)
         {
             var economy = Campaign.Current.Models.SettlementEconomyModel;
+            float shift = ShiftCountedNow(town, kind);
+            return economy.CalculateDailySettlementBudgetForItemCategory(
+                town, TradeMath.Finite(economy.GetDailyDemandForCategory(town, kind) + shift, 0f), kind);
+        }
+
+        private static float ShiftCountedNow(Town town, ItemCategory kind)
+        {
             float shift = 0f;
             foreach (var (one, other, factor) in Substitutes())
             {
@@ -2145,8 +2275,140 @@ namespace TradeLord
                                                                  factor);
                 shift += one == kind ? moved : -moved;
             }
-            return economy.CalculateDailySettlementBudgetForItemCategory(
-                town, TradeMath.Finite(economy.GetDailyDemandForCategory(town, kind) + shift, 0f), kind);
+            return shift;
+        }
+
+        internal sealed class TownTickSaid
+        {
+            internal readonly List<(ItemCategory kind, int shelf, int afterShops, int said, int stepped)> Uses =
+                new List<(ItemCategory, int, int, int, int)>();
+            internal readonly List<(ItemCategory kind, float steppedBefore, float now, float stepped)> Shifts =
+                new List<(ItemCategory, float, float, float)>();
+            internal readonly Dictionary<string, int> Made = new Dictionary<string, int>(StringComparer.Ordinal);
+            internal readonly Dictionary<string, int> Taken = new Dictionary<string, int>(StringComparer.Ordinal);
+            internal readonly int[] Runs = new int[WorkshopRuns.StopsKnown];
+            internal readonly Dictionary<string, string> Names = new Dictionary<string, string>(StringComparer.Ordinal);
+            internal bool Shops;
+            internal bool Yours;
+        }
+
+        internal static TownTickSaid WhatATownTickShouldDo(Town town)
+        {
+            Settlement site = town?.Settlement;
+            if (!On || site?.StringId == null || town.MarketData == null || Campaign.Current == null) return null;
+            var said = new TownTickSaid();
+            TownBook book = null;
+            Workshop[] shopsHere = town.Workshops;
+            for (int k = 0; shopsHere != null && k < shopsHere.Length; k++)
+                if (shopsHere[k]?.Owner == Hero.MainHero) said.Yours = true;
+            if (!town.InRebelliousState && town.Workshops != null)
+            {
+                IWorkshopWarehouseCampaignBehavior warehouse =
+                    Campaign.Current.GetCampaignBehavior<IWorkshopWarehouseCampaignBehavior>();
+                ShopBook read = ReadTheShops(town, warehouse, kind => WhatStandsForAt(site, kind), kind => 0);
+                WorkshopRuns.Days days = read == null ? null : WorkshopRuns.Begin(read.Lines, read.Book, null, null, read.Price);
+                if (days != null)
+                {
+                    WorkshopRuns.Day(days, 0f, null, null, null, said.Runs);
+                    foreach (var one in days.MadeNow) said.Made[one.Key] = one.Value;
+                    foreach (var one in days.TakenNow) said.Taken[one.Key] = one.Value;
+                    book = read.Book;
+                    said.Shops = true;
+                    foreach (var one in read.Kinds) said.Names[one.Key] = Tongue.Named(one.Value.GetName(), one.Key);
+                }
+            }
+            Dictionary<string, int> held = WhatTheMarketHolds(site);
+            MBReadOnlyList<ItemCategory> all = ItemCategories.All;
+            for (int i = 0; all != null && i < all.Count; i++)
+            {
+                ItemCategory kind = all[i];
+                if (kind == null) continue;
+                ItemObject stands = WhatStandsForAt(site, kind);
+                if (stands == null || stands.Value <= 0 || !TradePolicy.Priced(stands)) continue;
+                held.TryGetValue(kind.StringId, out int shelf);
+                int afterShops = book != null && book.Units.TryGetValue(kind.StringId, out int left) ? left : shelf;
+                if (shelf <= 0 && afterShops <= 0) continue;
+                int price = town.MarketData.GetPrice(stands);
+                int counted = UnitsUsedUp(TradeMath.WorthUsedUpADay(ConsumptionBudget(town, kind), price, stands.Value),
+                                          stands.Value, afterShops);
+                var at = SteppedAtTheTick(town, kind, book, out _, out float shift);
+                float budget = Campaign.Current.Models.SettlementEconomyModel.CalculateDailySettlementBudgetForItemCategory(
+                    town,
+                    TradeMath.Finite(
+                        Campaign.Current.Models.SettlementEconomyModel.GetDailyDemandForCategory(town, kind) + shift, 0f),
+                    kind);
+                budget = TradeMath.BudgetAtAnotherIndex(budget, IndexAt(town, kind, at),
+                                                        town.GetItemCategoryPriceIndex(kind));
+                int stepped = UnitsUsedUp(TradeMath.WorthUsedUpADay(budget, PriceAt(town, stands, null, false, at, price),
+                                                                    stands.Value),
+                                          stands.Value, afterShops);
+                said.Uses.Add((kind, shelf, afterShops, counted, stepped));
+            }
+            var paired = new List<ItemCategory>();
+            foreach (var (one, other, _) in Substitutes())
+            {
+                if (one != null && !paired.Contains(one)) paired.Add(one);
+                if (other != null && !paired.Contains(other)) paired.Add(other);
+            }
+            foreach (ItemCategory kind in paired)
+            {
+                SteppedAtTheTick(town, kind, book, out float steppedBefore, out float shift);
+                said.Shifts.Add((kind, steppedBefore, ShiftCountedNow(town, kind), shift));
+            }
+            return said;
+        }
+
+        private static int UnitsUsedUp(int worth, int unitValue, int have)
+        {
+            if (worth <= 0 || unitValue <= 0 || have <= 0) return 0;
+            int units = (int)Math.Round((double)worth / unitValue, MidpointRounding.AwayFromZero);
+            return units > have ? have : units;
+        }
+
+        private static (int inStore, float supply, float demand) SteppedAtTheTick(Town town, ItemCategory kind, TownBook book,
+                                                                                 out float steppedBefore, out float shift)
+        {
+            var economy = Campaign.Current.Models.SettlementEconomyModel;
+            var group = new List<ItemCategory> { kind };
+            List<(ItemCategory kind, ItemCategory substitute, float factor)> all = Substitutes();
+            for (bool grew = true; grew;)
+            {
+                grew = false;
+                foreach (var (one, other, _) in all)
+                {
+                    bool mine = group.Contains(one), theirs = group.Contains(other);
+                    if (mine == theirs) continue;
+                    group.Add(mine ? other : one);
+                    grew = true;
+                }
+            }
+            var pairs = new List<(int kind, int substitute, float factor)>();
+            foreach (var (one, other, factor) in all)
+                if (group.Contains(one) && group.Contains(other))
+                    pairs.Add((group.IndexOf(one), group.IndexOf(other), factor));
+            int n = group.Count;
+            var supply = new float[n];
+            var demand = new float[n];
+            var shelves = new int[n];
+            var wanted = new float[n];
+            for (int g = 0; g < n; g++)
+            {
+                ItemData data = town.MarketData.GetCategoryData(group[g]);
+                supply[g] = data.Supply;
+                demand[g] = data.Demand;
+                shelves[g] = book != null && book.InStore.TryGetValue(group[g].StringId, out int store)
+                    ? store
+                    : (int)Math.Min(int.MaxValue, Math.Max(0f, data.InStoreValue));
+                wanted[g] = economy.GetEstimatedDemandForCategory(town, data, group[g]);
+            }
+            TradeMath.StepSupplyAndDemand(supply, demand, shelves, wanted, null,
+                                          (g, shelf, want, was, wasWanted) =>
+                                              economy.GetSupplyDemandForCategory(town, group[g], shelf, want, was,
+                                                                                 wasWanted));
+            steppedBefore = demand[0];
+            TradeMath.ShiftsInPairOrder(supply, demand, pairs);
+            shift = TradeMath.Finite(demand[0] - steppedBefore, 0f);
+            return (shelves[0], supply[0], demand[0]);
         }
 
         private static List<(float days, int gold)> TakenAt(Settlement site)

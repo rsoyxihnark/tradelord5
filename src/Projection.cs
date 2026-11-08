@@ -325,6 +325,8 @@ namespace TradeLord
 
         internal const float ShortestWatch = 2f;
 
+        internal const int Ran = 0, NoInputs = 1, NotWorthIt = 2, PurseShort = 3, CapitalShort = 4, StopsKnown = 5;
+
         internal static float Watch(float travelCeiling)
         {
             float ceiling = TradeMath.Finite(travelCeiling, 0f);
@@ -388,7 +390,8 @@ namespace TradeLord
             for (float at = FirstDay(firstTick); at <= watch; at += 1f) Day(days, at, null, made, taken);
         }
 
-        internal static void Day(Days days, float at, Func<int, double> paidShare, List<Landing> made, List<Draw> taken)
+        internal static void Day(Days days, float at, Func<int, double> paidShare, List<Landing> made, List<Draw> taken,
+                                 int[] stopped = null)
         {
             TownBook town = days.Town;
             town.TakenIn = 0L;
@@ -420,8 +423,10 @@ namespace TradeLord
                 line.Progress = (progress > 1f ? 1f : progress) + line.Speed;
                 while (line.Progress >= 1f)
                 {
-                    bool ran = RunOnce(line, town, days.Buy, days.Sell, days.ToTown, days.MadeNow, days.TakenNow);
+                    bool ran = RunOnce(line, town, days.Buy, days.Sell, days.ToTown, days.MadeNow, days.TakenNow,
+                                       out int stoppedBy);
                     line.Progress -= 1f;
+                    if (stopped != null && stoppedBy >= 0 && stoppedBy < stopped.Length) stopped[stoppedBy]++;
                     if (!ran) break;
                 }
             }
@@ -465,8 +470,9 @@ namespace TradeLord
 
         private static bool RunOnce(ShopLine line, TownBook town, Dictionary<string, int> buy,
                                     Dictionary<string, int> sell, float[] toTown,
-                                    Dictionary<string, int> made, Dictionary<string, int> taken)
+                                    Dictionary<string, int> made, Dictionary<string, int> taken, out int stoppedBy)
         {
+            stoppedBy = Ran;
             int k = line.Shop;
             bool owned = k >= 0 && k < town.Capital.Length;
             int need = 0;
@@ -478,15 +484,31 @@ namespace TradeLord
                 foreach (var (kind, count) in line.Inputs)
                 {
                     town.Units.TryGetValue(kind, out int have);
-                    if (have < count) return false;
+                    if (have < count)
+                    {
+                        stoppedBy = NoInputs;
+                        return false;
+                    }
                     cost += (long)buy[kind] * count;
                 }
             long income = 0;
             foreach (var (kind, count) in line.Outputs) income += (long)sell[kind] * count;
             double bar = line.Hidden || !(line.Pace > 0f) ? cost : cost + PayOverInputsPerPace / line.Pace;
-            if (income <= bar) return false;
-            if (line.TradeGoodsOnly && town.Gold < income) return false;
-            if (owned && town.Capital[k] < cost) return false;
+            if (income <= bar)
+            {
+                stoppedBy = NotWorthIt;
+                return false;
+            }
+            if (line.TradeGoodsOnly && town.Gold < income)
+            {
+                stoppedBy = PurseShort;
+                return false;
+            }
+            if (owned && town.Capital[k] < cost)
+            {
+                stoppedBy = CapitalShort;
+                return false;
+            }
 
             if (fromWarehouse) town.Warehouse[k] -= need;
             else

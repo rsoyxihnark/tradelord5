@@ -821,7 +821,10 @@ namespace TradeLord
                 {
                     int paid = gold;
                     if (selling)
+                    {
                         Guard.Run("GameTradeBook", () => GameTradeBook.Sold(_unit.EquipmentElement, paid, Muted));
+                        if (Site != null) Guard.Run("RideCheck.YouSold", () => RideCheck.YouSoldAt(Site, paid));
+                    }
                     else if (Met == null || !Met.IsVillager)
                         Guard.Run("GameTradeBook", () => GameTradeBook.Bought(_unit.EquipmentElement, paid));
                     return true;

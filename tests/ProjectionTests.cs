@@ -686,6 +686,69 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_workshop_run_names_the_gate_that_held_it_back_and_runs_as_it_did_without_it()
+        {
+            TownBook bare = Town(1);
+            Shelve(bare, "wool", 0, 20);
+            Shelve(bare, "cloth", 0, 150);
+            var stopped = new int[WorkshopRuns.StopsKnown];
+            WorkshopRuns.Days days = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, bare, null,
+                                                        null, Flat);
+            WorkshopRuns.Day(days, 1f, null, null, null, stopped);
+            Assert.Equal(1, stopped[WorkshopRuns.NoInputs]);
+            Assert.Equal(0, stopped[WorkshopRuns.Ran]);
+
+            TownBook cheap = Town(1);
+            Shelve(cheap, "wool", 10, 20);
+            Shelve(cheap, "cloth", 0, 150);
+            stopped = new int[WorkshopRuns.StopsKnown];
+            days = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, cheap, null, null,
+                                      (kind, store, selling) => kind == "wool" ? 20 : 30);
+            WorkshopRuns.Day(days, 1f, null, null, null, stopped);
+            Assert.Equal(1, stopped[WorkshopRuns.NotWorthIt]);
+
+            TownBook poor = Town(1, gold: 10);
+            Shelve(poor, "wool", 10, 20);
+            Shelve(poor, "cloth", 0, 150);
+            stopped = new int[WorkshopRuns.StopsKnown];
+            days = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, poor, null, null, Flat);
+            WorkshopRuns.Day(days, 1f, null, null, null, stopped);
+            Assert.Equal(1, stopped[WorkshopRuns.PurseShort]);
+
+            TownBook broke = Town(1, capital: 5);
+            Shelve(broke, "wool", 10, 20);
+            Shelve(broke, "cloth", 0, 150);
+            stopped = new int[WorkshopRuns.StopsKnown];
+            days = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, broke, null, null, Flat);
+            WorkshopRuns.Day(days, 1f, null, null, null, stopped);
+            Assert.Equal(1, stopped[WorkshopRuns.CapitalShort]);
+
+            TownBook fed = Town(2);
+            Shelve(fed, "wool", 100, 20);
+            Shelve(fed, "cloth", 0, 150);
+            TownBook twin = Town(2);
+            Shelve(twin, "wool", 100, 20);
+            Shelve(twin, "cloth", 0, 150);
+            stopped = new int[WorkshopRuns.StopsKnown];
+            var made = new List<Landing>();
+            var same = new List<Landing>();
+            WorkshopRuns.Days counted = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 2f, "wool", "cloth"),
+                                                                                 Line(1, 0f, 0.5f, "wool", "cloth") },
+                                                           fed, null, null, Flat);
+            WorkshopRuns.Days plain = WorkshopRuns.Begin(new List<ShopLine> { Line(0, 0f, 2f, "wool", "cloth"),
+                                                                               Line(1, 0f, 0.5f, "wool", "cloth") },
+                                                         twin, null, null, Flat);
+            for (float at = 1f; at <= 4f; at += 1f)
+            {
+                WorkshopRuns.Day(counted, at, null, made, null, stopped);
+                WorkshopRuns.Day(plain, at, null, same, null);
+            }
+            Assert.Equal(Made(same, "cloth"), Made(made, "cloth"));
+            Assert.Equal(Made(made, "cloth"), stopped[WorkshopRuns.Ran]);
+            Assert.Equal(twin.Gold, fed.Gold);
+        }
+
+        [Fact]
         public void A_faster_line_runs_more_than_once_a_day_and_a_slower_one_skips_days()
         {
             TownBook town = Town(2);
