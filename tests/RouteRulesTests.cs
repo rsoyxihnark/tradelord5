@@ -130,11 +130,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_simulation_that_holds_up_beats_one_that_collapses()
+        public void A_price_walk_already_taken_off_the_profit_does_not_lower_Conf_again()
         {
             float holds = Confidence.Of(true, 100, 95, 100, 1, 1f, 0, -1f);
-            float collapses = Confidence.Of(true, 100, 20, 100, 1, 1f, 0, -1f);
-            Assert.True(collapses < holds);
+            float slides = Confidence.Of(true, 100, 20, 100, 1, 1f, 0, -1f);
+            Assert.Equal(holds, slides);
+            Assert.Equal(Confidence.Of(true, 100, 100, 100, 1, 1f, 0, -1f), slides);
+            Assert.Equal(1f, Confidence.PartsOf(true, 100, 20, 100, 1, 1f, 0, -1f).Resilience);
+            Assert.True(Confidence.Of(false, 100, 100, 100, 1, 1f, 0, -1f) < slides);
         }
 
         [Fact]

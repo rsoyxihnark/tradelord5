@@ -526,8 +526,9 @@ namespace TradeLord
             float age = Options.Current.Omniscient || ledger == null ? -1f
                 : ledger.ObservationAgeDays(item, to);
             int wanted = worthThere > int.MaxValue ? int.MaxValue : (int)worthThere;
-            parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, caravans, age);
-            float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, caravans, age);
+            int counted = Confidence.CaravansLeftToCount(caravans, Forecast.On);
+            parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, counted, age);
+            float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, counted, age);
             if (Options.Current.TrustWhatAMarketPaid && ledger != null &&
                 ledger.PromiseScoreAt(to.StringId, out int arrivals, out float held))
                 trust = Confidence.AsPromisesHaveHeld(1f, arrivals, held);
@@ -542,7 +543,8 @@ namespace TradeLord
             float age = s.Omniscient || ledger == null ? -1f : ledger.ObservationAgeDays(item, to);
             int whole = profit >= int.MaxValue ? int.MaxValue : (int)Math.Max(0L, profit);
             int level = flat >= int.MaxValue ? int.MaxValue : (int)Math.Max(0L, flat);
-            confidence = Confidence.Of(simulated, level, whole, stock, units, days, caravans, age);
+            confidence = Confidence.Of(simulated, level, whole, stock, units, days,
+                                       Confidence.CaravansLeftToCount(caravans, Forecast.On), age);
             trust = 1f;
             if (s.TrustWhatAMarketPaid && ledger != null && to != null &&
                 ledger.PromiseScoreAt(to.StringId, out int arrivals, out float heldThere))
@@ -597,7 +599,8 @@ namespace TradeLord
                 int flatSell = firstSell * bought;
                 int flat = (conservative ? (int)TradePolicy.Realizable(flatSell) : flatSell) - firstPaid * bought;
                 int caravans = pressure.TryGetValue(to, out int n) ? n : 0;
-                float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, stock, caravans,
+                float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,
+                                      Confidence.StockThatCanRunShort(stock, 0f), caravans,
                                       out float confidence, out float trust);
                 if (!s.PickTheBuyerOnTheWholeStack)
                 {

@@ -125,6 +125,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_sale_the_forecast_prices_is_not_marked_down_again_for_the_caravans_going_there()
+        {
+            Assert.Equal(0, Confidence.CaravansLeftToCount(6, true));
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, true), -1f).Quiet);
+            Assert.Equal(Confidence.Of(true, 1, 1, 0, 1, 1f, 0, -1f),
+                         Confidence.Of(true, 1, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, true), -1f));
+        }
+
+        [Fact]
+        public void With_the_forecast_off_a_sale_is_still_marked_down_for_the_caravans_going_there()
+        {
+            Assert.Equal(6, Confidence.CaravansLeftToCount(6, false));
+            Assert.True(Confidence.Of(true, 1, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, false), -1f) <
+                        Confidence.Of(true, 1, 1, 0, 1, 1f, 0, -1f));
+        }
+
+        [Fact]
         public void With_the_forecast_off_the_market_you_stand_in_is_still_read_by_its_caravans()
         {
             Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false, 0f));

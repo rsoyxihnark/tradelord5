@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.9.23
+
+- Fixed the map marker lowering a market's Conf for caravans and villagers heading there, which Count what is on its way already counts
+- Fixed TradeLord aiming goods from the villagers' offer at a town that takes part of them over one that takes them all
+- Fixed Conf marking down goods bought or sold in bulk a second time for how their price slides unit by unit
+- The hint for Rank routes by confidence no longer names margin, and names a flat quote among what lowers Conf
+
 ## 2.9.22
 
 - Fixed TradeLord buying lesser goods first in the market you are in, because buying most of a thin shelf there lowered Conf

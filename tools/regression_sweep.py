@@ -11624,7 +11624,8 @@ def every_market_in_reach_is_weighed_for_the_whole_load():
                         "while (bought < units)",
                         "if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;",
                         "if (purse > 0 && (long)drawn + sold + price > purse) break;",
-                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, stock, caravans,",
+                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,",
+                        "Confidence.StockThatCanRunShort(stock, 0f), caravans,",
                         "if (best != null && key <= bestKey) continue;")
             and "shortlist" not in sale
             and sale.count("foreach (") == 1)
@@ -14190,7 +14191,8 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
                         "Ladder ladder = SellLadder(to, item, quoted, landed);",
                         "int price = ladder.At(held + bought);",
                         "if (price <= 0) break;",
-                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, stock, caravans,",
+                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,",
+                        "Confidence.StockThatCanRunShort(stock, 0f), caravans,",
                         "rungs = ladder;")
             and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed) ??" in ladder
             and "trust = Confidence.AsPromisesHaveHeld(1f, arrivals, heldThere);" in score
@@ -18970,7 +18972,7 @@ def the_turkish_text_calls_the_campaign_and_the_smithy_by_one_word():
     smithy = [k for k, said in en.items() if 'smithy' in said.lower()]
     cargo = [k for k, said in en.items() if 'cargo' in said.lower()]
     margin = [k for k, said in en.items() if 'margin' in said.lower()]
-    return (len(campaign) >= 4 and len(smithy) >= 2 and len(cargo) >= 10 and len(margin) >= 10
+    return (len(campaign) >= 4 and len(smithy) >= 2 and len(cargo) >= 10 and len(margin) >= 9
             and all('sefer' in tr[k].lower() for k in campaign)
             and all('demirhane' in tr[k].lower() for k in smithy)
             and all('yük' in tr[k].lower() for k in cargo)
@@ -22248,8 +22250,9 @@ def a_markets_narrow_till_and_its_traffic_both_count_against_its_conf():
                         "if (parts.Depth < 1f) EngineTally.TillCountedAgainst++;",
                         "if (parts.Quiet < 1f) EngineTally.TrafficCountedAgainst++;",
                         "confSaid = Confidence.Spelled(parts)")
-            and "parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, caravans, age);" in side
-            and "float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, caravans, age);" in side
+            and ordered(side, "int counted = Confidence.CaravansLeftToCount(caravans, Forecast.On);",
+                        "parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, counted, age);",
+                        "float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, counted, age);")
             and "int wanted = worthThere > int.MaxValue ? int.MaxValue : (int)worthThere;" in side
             and "if (!p.IsCaravan && !p.IsVillager) continue;" in pressure
             and ordered(tally, '"marker Conf today: "', '" of them on a village and "',
@@ -25329,6 +25332,40 @@ def a_thin_shelf_where_you_stand_leaves_conf_whole():
 
 chk("2.9.22", "a good in the market you stand in keeps its whole Conf however much of its shelf you buy, while a market you have still to reach loses Conf to a shelf too thin for what you plan to buy",
     a_thin_shelf_where_you_stand_leaves_conf_whole())
+
+def a_sale_the_forecast_prices_keeps_its_conf_and_a_price_walk_counts_once():
+    conf = S['Confidence.cs']
+    side = method_body(S['Plan.cs'], "internal static float SellSide(")
+    score = method_body(S['Plan.cs'], "internal static float SaleScore(")
+    best = method_body(S['Plan.cs'], "internal static TradeRoute BestSale(")
+    told = [spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())]
+    words = {ENGLISH: "a flat quote", TRANSLATIONS['Türkçe']: "düz fiyat", TRANSLATIONS['Русский']: "цена одной ставкой",
+             TRANSLATIONS['简体中文']: "整批一口价"}
+    return (side and score and best
+            and "public static int CaravansLeftToCount(int caravans, bool forecastOn) => forecastOn ? 0 : caravans;" in conf
+            and ordered(side, "int counted = Confidence.CaravansLeftToCount(caravans, Forecast.On);",
+                        "parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, counted, age);",
+                        "float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, counted, age);")
+            and "Confidence.CaravansLeftToCount(caravans, Forecast.On), age);" in score
+            and ordered(best, "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,",
+                        "Confidence.StockThatCanRunShort(stock, 0f), caravans,")
+            and ordered(method_body(conf, "public static float Of("), "float resilience = Unsimulated;",
+                        "if (simulated && flatProfit > 0)", "resilience = 1f;")
+            and "p.Resilience = simulated && flatProfit > 0 ? 1f : Unsimulated;" in conf
+            and "simulatedProfit / flatProfit" not in conf
+            and len(told) == 4 and len(words) == 4
+            and all(word in spoken(path)['TL310'] for path, word in words.items())
+            and all("margin" not in told[0]['TL310'] for _ in [0])
+            and "a price that could not be walked unit by unit" in README
+            and "how much of the margin survives" not in README
+            and "A_price_walk_already_taken_off_the_profit_does_not_lower_Conf_again" in ROUTETESTS
+            and all(one in EXPIRYTESTS for one in
+                    ("A_sale_the_forecast_prices_is_not_marked_down_again_for_the_caravans_going_there",
+                     "With_the_forecast_off_a_sale_is_still_marked_down_for_the_caravans_going_there")))
+
+
+chk("2.9.23", "a sale the forecast prices is no longer marked down again for the caravans heading there, villagers met on the road are bought from with no depth, and a price walk already in the profit no longer lowers Conf",
+    a_sale_the_forecast_prices_keeps_its_conf_and_a_price_walk_counts_once())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

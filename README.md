@@ -33,7 +33,7 @@
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A route whose prices could not be walked that way is marked on its confidence figure
 - ✅ A confidence score on each route, which starts at profit per day and is marked down by everything that could eat it
-- ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how soon the shelf empties under Left
+- ✅ What marks it down: a price that could not be walked unit by unit, how much of the good a market you have still to reach has in stock, how long the trip is, how old the prices are, and how soon its shelf empties under Left
 - ✅ With Live world prices or Count what is on its way to a market off, the NPC caravans sitting at or heading for those two markets mark it down in place of Left
 - ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
 - ✅ What this means says how close the price has come to that promised Sell price, above or below, over how many prices it has checked, and the tally carries on across your campaign

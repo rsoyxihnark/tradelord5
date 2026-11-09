@@ -27,6 +27,8 @@ namespace TradeLord
         public static int StockThatCanRunShort(int shelf, float daysToTheBuyTown) =>
             daysToTheBuyTown > 0f ? shelf : 0;
 
+        public static int CaravansLeftToCount(int caravans, bool forecastOn) => forecastOn ? 0 : caravans;
+
         public const int EnoughArrivals = 5;
 
         public const float MostItDiscounts = 0.25f;
@@ -64,7 +66,7 @@ namespace TradeLord
         {
             float resilience = Unsimulated;
             if (simulated && flatProfit > 0)
-                resilience = Clamp((float)simulatedProfit / flatProfit);
+                resilience = 1f;
 
             float depth = 1f;
             if (stock > 0 && units > 0)
@@ -106,7 +108,7 @@ namespace TradeLord
                                     float runsOutInDays = NotKnown, float daysToTheBuyTown = 0f)
         {
             Parts p;
-            p.Resilience = simulated && flatProfit > 0 ? Clamp((float)simulatedProfit / flatProfit) : Unsimulated;
+            p.Resilience = simulated && flatProfit > 0 ? 1f : Unsimulated;
             p.Depth = stock > 0 && units > 0 ? Clamp(stock / (units * 1.5f)) : 1f;
             p.Haste = Haste(travelDays);
             p.Quiet = runsOutInDays >= 0f
