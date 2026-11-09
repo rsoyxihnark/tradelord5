@@ -18358,8 +18358,8 @@ def each_promise_names_the_five_parts_of_its_conf():
             and ordered(parts, "p.Resilience = ", "p.Depth = ", "p.Haste = ", "p.Quiet = ", "p.Fresh = ")
             and ordered(between(conf, "public static string Spelled(Parts p) =>", ";"), '"resilience "', '" x depth "',
                         '" x haste "', '" x quiet "', '" x fresh "')
-            and "Parts = Confidence.PartsOf(q.Simulated, flat, profit, leg.Shelf, q.Units, leg.Days, leg.Caravans," in scan
-            and "float confidence = Confidence.Of(q.Simulated, flat, profit, leg.Shelf, q.Units, leg.Days," in scan
+            and "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans," in scan
+            and "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days," in scan
             and "Parts = route.Parts" in promise
             and "internal TradeLord.Confidence.Parts Parts;" in S['Hindsight.cs']
             and '(said.Parts.Haste > 0f ? " (" + Confidence.Spelled(said.Parts) + ")" : "")' in kept
@@ -21107,10 +21107,11 @@ def one_engine_weighs_each_route_at_its_conf_and_trust():
     sized = plan_sized()
     ctor = method_body(S['Plan.cs'], "internal RouteScan(LedgerBehavior ledger, MobileParty party, Settlement here)")
     return (sized and ctor
-            and ordered(sized, "float confidence = Confidence.Of(q.Simulated, flat, profit, leg.Shelf, q.Units, leg.Days,",
+            and ordered(sized, "int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);",
+                        "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,",
                         "leg.Caravans, leg.Age, lasts, leg.ToBuy);",
                         "Confidence = confidence, Score = perDay * confidence * leg.Trust, Trust = leg.Trust,",
-                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, leg.Shelf, q.Units, leg.Days, leg.Caravans,")
+                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans,")
             and "_rankByScore = Options.Current.ConfidenceRanking;" in ctor
             and "_trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;" in ctor
             and "Trust = TrustAt(to)" in plan_best())
@@ -25308,6 +25309,26 @@ def a_shelf_running_low_after_you_buy_where_you_stand_leaves_conf_whole():
 
 chk("2.9.21", "a good in the market you stand in keeps its whole Conf however soon its shelf runs low after you buy, other markets still lose Conf to a shelf that empties before you get there, and the buying plan spells out each Conf",
     a_shelf_running_low_after_you_buy_where_you_stand_leaves_conf_whole())
+
+def a_thin_shelf_where_you_stand_leaves_conf_whole():
+    conf = S['Confidence.cs']
+    scan = route_scan()
+    return (ordered(conf, "public static int StockThatCanRunShort(int shelf, float daysToTheBuyTown) =>",
+                    "daysToTheBuyTown > 0f ? shelf : 0;", "public const int EnoughArrivals = 5;")
+            and "if (stock > 0 && units > 0)" in method_body(conf, "public static float Of(")
+            and "p.Depth = stock > 0 && units > 0 ? Clamp(stock / (units * 1.5f)) : 1f;" in conf
+            and scan.count("Confidence.StockThatCanRunShort(") == 1
+            and ordered(scan, "int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);",
+                        "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,",
+                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans,")
+            and "leg.Shelf, q.Units" not in scan
+            and all(one in EXPIRYTESTS for one in
+                    ("A_thin_shelf_in_the_market_you_stand_in_leaves_Conf_whole",
+                     "A_thin_shelf_in_a_market_you_have_still_to_reach_still_lowers_Conf")))
+
+
+chk("2.9.22", "a good in the market you stand in keeps its whole Conf however much of its shelf you buy, while a market you have still to reach loses Conf to a shelf too thin for what you plan to buy",
+    a_thin_shelf_where_you_stand_leaves_conf_whole())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

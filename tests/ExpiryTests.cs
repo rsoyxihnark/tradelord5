@@ -106,6 +106,25 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_thin_shelf_in_the_market_you_stand_in_leaves_Conf_whole()
+        {
+            int here = Confidence.StockThatCanRunShort(22, 0f);
+            Assert.Equal(1f, Confidence.PartsOf(true, 300, 300, here, 22, 0.6f, 0, 0f).Depth);
+            Assert.Equal(Confidence.Of(true, 300, 300, 1000, 22, 0.6f, 0, 0f),
+                         Confidence.Of(true, 300, 300, here, 22, 0.6f, 0, 0f));
+            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 0, 0f) < Confidence.Of(true, 300, 300, here, 22, 0.6f, 0, 0f));
+        }
+
+        [Fact]
+        public void A_thin_shelf_in_a_market_you_have_still_to_reach_still_lowers_Conf()
+        {
+            int there = Confidence.StockThatCanRunShort(22, 0.3f);
+            Assert.Equal(22, there);
+            Assert.Equal(22f / 33f, Confidence.PartsOf(true, 300, 300, there, 22, 0.9f, 0, 0f).Depth, 4);
+            Assert.Equal(0, Confidence.StockThatCanRunShort(22, -1f));
+        }
+
+        [Fact]
         public void With_the_forecast_off_the_market_you_stand_in_is_still_read_by_its_caravans()
         {
             Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false, 0f));

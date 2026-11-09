@@ -24,6 +24,9 @@ namespace TradeLord
         public static float Lasts(float runsOutInDays, bool forecastOn, float daysToTheBuyTown) =>
             forecastOn && !(runsOutInDays >= 0f && daysToTheBuyTown > 0f) ? float.MaxValue : runsOutInDays;
 
+        public static int StockThatCanRunShort(int shelf, float daysToTheBuyTown) =>
+            daysToTheBuyTown > 0f ? shelf : 0;
+
         public const int EnoughArrivals = 5;
 
         public const float MostItDiscounts = 0.25f;

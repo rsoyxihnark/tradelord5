@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.22
+
+- Fixed TradeLord buying lesser goods first in the market you are in, because buying most of a thin shelf there lowered Conf
+
 ## 2.9.21
 
 - Fixed TradeLord buying lesser goods first in the market you are in, because a shelf running low after you buy lowered Conf

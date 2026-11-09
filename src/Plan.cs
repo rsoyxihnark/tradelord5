@@ -405,7 +405,8 @@ namespace TradeLord
             int flat = (conservative ? (int)TradePolicy.Realizable(flatSell) : flatSell) - q.OpeningBuyPrice * q.Units;
             float runsOut = Forecast.RunsOutIn(leg.From, leg.Item, leg.OnTheShelfNow, q.Units, leg.ToBuy);
             float lasts = Confidence.Lasts(runsOut, Forecast.On, leg.ToBuy);
-            float confidence = Confidence.Of(q.Simulated, flat, profit, leg.Shelf, q.Units, leg.Days,
+            int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);
+            float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,
                                              leg.Caravans, leg.Age, lasts, leg.ToBuy);
             float perDay = TradeMath.PerDay(profit, leg.Days);
             bool sized = fits < leg.Units;
@@ -418,7 +419,7 @@ namespace TradeLord
                 TravelDays = leg.Days, TotalProfit = profit, ProfitPerDay = perDay,
                 Confidence = confidence, Score = perDay * confidence * leg.Trust, Trust = leg.Trust,
                 Simulated = q.Simulated, Caravans = leg.Caravans,
-                Parts = Confidence.PartsOf(q.Simulated, flat, profit, leg.Shelf, q.Units, leg.Days, leg.Caravans,
+                Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans,
                                            leg.Age, lasts, leg.ToBuy),
                 StillComing = TradeMath.StillComing(q.Units, leg.OnTheShelfNow),
                 RunsOutInDays = runsOut,
