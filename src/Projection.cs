@@ -303,6 +303,9 @@ namespace TradeLord
         internal TradeMath.Picks Picks;
         internal string PickKind;
         internal float Credit = TradeMath.ARunsCreditStartsAt;
+        internal int Attempts;
+        internal int Attempt;
+        internal int Allowed;
     }
 
     internal sealed class TownBook
@@ -428,6 +431,8 @@ namespace TradeLord
                 if (!(line.Speed > 0f)) continue;
                 float progress = TradeMath.Finite(line.Progress, 0f);
                 line.Progress = (progress > 1f ? 1f : progress) + line.Speed;
+                line.Attempts = line.Progress >= 1f ? (int)Math.Floor(line.Progress) : 0;
+                line.Attempt = 0;
                 while (line.Progress >= 1f)
                 {
                     bool ran = RunOnce(line, town, days.Buy, days.Sell, days.ToTown, days.MadeNow, days.TakenNow,
@@ -541,15 +546,20 @@ namespace TradeLord
             }
             if (picked)
             {
-                long other = income - (long)sell[line.PickKind] * picks;
-                float credit = line.Credit + (float)TradeMath.ShareOfPicksClearing(line.Picks, (bar - other) / picks);
-                if (credit < 1f)
+                if (line.Attempt++ == 0)
                 {
-                    line.Credit = credit;
+                    long other = income - (long)sell[line.PickKind] * picks;
+                    double share = TradeMath.ShareOfPicksClearing(line.Picks, (bar - other) / picks);
+                    float credit = line.Credit + (float)TradeMath.RunsAChainOfPicksMakes(share, line.Attempts);
+                    line.Allowed = Math.Min(line.Attempts, (int)Math.Floor(credit));
+                    line.Credit = credit - line.Allowed;
+                }
+                if (line.Allowed <= 0)
+                {
                     stoppedBy = NotWorthIt;
                     return false;
                 }
-                line.Credit = credit - 1f;
+                line.Allowed--;
             }
 
             if (fromWarehouse) town.Warehouse[k] -= need;

@@ -3582,6 +3582,18 @@ namespace TradeLord
 
         public const float ARunsCreditStartsAt = 0.5f;
 
+        public static double RunsAChainOfPicksMakes(double share, int attempts)
+        {
+            if (!(share > 0d) || attempts <= 0) return 0d;
+            double each = share > 1d ? 1d : share, reached = 1d, runs = 0d;
+            for (int j = 0; j < attempts; j++)
+            {
+                reached *= each;
+                runs += reached;
+            }
+            return runs;
+        }
+
         public static float HoursTheWorkshopReadingWasOff(float tickIn)
         {
             if (float.IsNaN(tickIn) || tickIn < 0f || tickIn > 1f) return float.NaN;

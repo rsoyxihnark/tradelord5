@@ -14030,8 +14030,8 @@ def a_workshop_run_counts_only_while_the_town_feeds_it_and_it_pays():
                         "if (line.TradeGoodsOnly && town.Gold < income)", "stoppedBy = PurseShort;\n                return false;",
                         "if (owned && town.Capital[k] < cost)", "stoppedBy = CapitalShort;\n                return false;",
                         "if (picked)",
-                        "float credit = line.Credit + (float)TradeMath.ShareOfPicksClearing(line.Picks, (bar - other) / picks);",
-                        "if (credit < 1f)", "stoppedBy = NotWorthIt;\n                    return false;")
+                        "double share = TradeMath.ShareOfPicksClearing(line.Picks, (bar - other) / picks);",
+                        "if (line.Allowed <= 0)", "stoppedBy = NotWorthIt;\n                    return false;")
             and ordered(run, "town.Gold += buy[kind];", "int paid = Math.Min(MostPaidForAnOutput, buy[kind]);",
                         "town.Gold -= paid;", "return true;")
             and ordered(begin, "landing.Add((arriving[i].Days, arriving[i].Category, arriving[i].Units, arriving[i].Draw));",
@@ -25095,7 +25095,8 @@ def a_gear_line_runs_as_often_as_the_games_random_pick_clears_its_bar():
             and "_makePicks[key] = TradeMath.TheGamesPicks(preferred.Count > 0 ? preferred : every);" in f
             and "_makePicks.Clear();" in method_body(f, "internal static void Forget()")
             and ordered(run, "bool picked = line.Picks != null && picks > 0;", "if (owned && town.Capital[k] < cost)",
-                        "line.Credit = credit;", "line.Credit = credit - 1f;")
+                        "line.Allowed = Math.Min(line.Attempts, (int)Math.Floor(credit));",
+                        "line.Credit = credit - line.Allowed;", "line.Allowed--;")
             and "A_workshop_runs_its_equipment_line_as_often_as_the_games_random_pick_would_clear_the_bar" in MATHTESTS
             and "A_gear_line_whose_random_pick_clears_the_bar_two_times_in_five_runs_two_days_in_five" in PROJECTIONTESTS)
 
@@ -25195,6 +25196,27 @@ def villagers_home_with_unsold_goods_take_them_out_on_a_trip_of_their_own():
 
 chk("2.9.17", "Count what is on its way counts the trip villagers make with goods they brought home unsold, before their store's next trip unless the store is ready by then, and TradeLord.log's villager check says so",
     villagers_home_with_unsold_goods_take_them_out_on_a_trip_of_their_own())
+
+
+def a_gear_lines_day_runs_as_often_as_the_games_chain_of_picks():
+    p = S['Projection.cs']
+    day = method_body(p, "internal static void Day(")
+    run = method_body(p, "private static bool RunOnce")
+    chain = method_body(S['TradeMath.cs'], "public static double RunsAChainOfPicksMakes(double share, int attempts)")
+    return (day and run and chain
+            and ordered(day, "line.Progress = (progress > 1f ? 1f : progress) + line.Speed;",
+                        "line.Attempts = line.Progress >= 1f ? (int)Math.Floor(line.Progress) : 0;", "line.Attempt = 0;",
+                        "while (line.Progress >= 1f)")
+            and ordered(run, "if (line.Attempt++ == 0)",
+                        "float credit = line.Credit + (float)TradeMath.RunsAChainOfPicksMakes(share, line.Attempts);",
+                        "line.Allowed = Math.Min(line.Attempts, (int)Math.Floor(credit));")
+            and ordered(chain, "reached *= each;", "runs += reached;")
+            and "A_gear_lines_day_makes_as_many_runs_as_the_games_chain_of_picks_would" in MATHTESTS
+            and "A_gear_line_with_three_tries_a_day_runs_as_often_as_the_games_chain_of_picks" in PROJECTIONTESTS)
+
+
+chk("2.9.18", "on a day the game can run a workshop's gear line more than once, Count what is on its way counts as many runs as the game's chain of random picks makes, each try only after the one before it passed",
+    a_gear_lines_day_runs_as_often_as_the_games_chain_of_picks())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

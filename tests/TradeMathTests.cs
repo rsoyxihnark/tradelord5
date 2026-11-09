@@ -3501,6 +3501,16 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_gear_lines_day_makes_as_many_runs_as_the_games_chain_of_picks_would()
+        {
+            Assert.Equal(0.7d + 0.49d + 0.343d + 0.2401d, TradeMath.RunsAChainOfPicksMakes(0.7d, 4), 6);
+            Assert.Equal(0.4d, TradeMath.RunsAChainOfPicksMakes(0.4d, 1), 6);
+            Assert.Equal(3d, TradeMath.RunsAChainOfPicksMakes(1.5d, 3), 6);
+            Assert.Equal(0d, TradeMath.RunsAChainOfPicksMakes(0.5d, 0), 6);
+            Assert.Equal(0d, TradeMath.RunsAChainOfPicksMakes(double.NaN, 2), 6);
+        }
+
+        [Fact]
         public void A_market_the_road_rules_out_is_one_that_could_not_beat_the_runner_up_even_at_its_fullest()
         {
             Assert.True(Marks.TheRoadRulesItOut(1000L, 5000L, 2f, 1f, 500f));

@@ -823,6 +823,29 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_gear_line_with_three_tries_a_day_runs_as_often_as_the_games_chain_of_picks()
+        {
+            TownBook town = Town(1, gold: 5000);
+            Shelve(town, "hardwood", 200, 20);
+            var line = new ShopLine { Shop = 0, Progress = 0f, Speed = 3f, Pace = 5f, TradeGoodsOnly = false };
+            line.Inputs.Add(("hardwood", 2));
+            line.Outputs.Add(("arrows", 1));
+            line.Aside.Add("arrows");
+            line.Picks = new TradeMath.Picks
+            {
+                PerValue = new[] { 50d, 150d }, Below = new[] { 0d, 0.2d, 1d }, Factor = 1f
+            };
+            line.PickKind = "arrows";
+            var stopped = new int[WorkshopRuns.StopsKnown];
+            WorkshopRuns.Days days = WorkshopRuns.Begin(new List<ShopLine> { line }, town, null, null,
+                                                        (kind, store, selling) => kind == "arrows" ? 300 : 20);
+            for (int day = 1; day <= 5; day++) WorkshopRuns.Day(days, day, null, null, null, stopped);
+            Assert.Equal(10, stopped[WorkshopRuns.Ran]);
+            Assert.Equal(5, stopped[WorkshopRuns.NotWorthIt]);
+            Assert.Equal(200 - 10 * 2, town.Units["hardwood"]);
+        }
+
+        [Fact]
         public void A_faster_line_runs_more_than_once_a_day_and_a_slower_one_skips_days()
         {
             TownBook town = Town(2);
