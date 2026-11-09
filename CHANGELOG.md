@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.19
+
+- Fixed Count what is on its way sending villagers' unsold goods back to town alone instead of with their village's next trip (#197)
+- Fixed Count what is on its way counting a village's next trip fuller than its villagers can carry beside the goods they brought home (#197)
+- Fixed Count what is on its way leaving perk, building and culture bonuses out of the horses and mules villages make
+
 ## 2.9.18
 
 - Fixed Count what is on its way counting too few weapons, shields and clothing on days a workshop makes them more than once (#198)

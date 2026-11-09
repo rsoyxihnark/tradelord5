@@ -22541,12 +22541,14 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
                         "bool looted = village.VillageState == Village.VillageStates.Looted;",
                         "if ((village.VillageState != Village.VillageStates.Normal && !looted) || home.Party?.MapEvent != null) return;",
                         "if (FactionManager.IsAtWarAgainstFaction(home.MapFaction, town.MapFaction)) return;",
-                        "float rate = item.IsMountable || looted", "? each * (level + 1) * 0.5f",
+                        "float rate = looted || (item.IsMountable && TheModelRollsDiceFor(model, village, item))",
+                        "? each * (level + 1) * 0.5f",
                         ": model.CalculateDailyProductionAmount(village, item).ResultNumber;",
                         "float flat = TradeMath.EtaDays(RoadBetween(home, town), speed);",
                         "float ride = TradeMath.TheRideToCount(learned?.Out, flat, _outRatios);",
                         "float rideBack = TradeMath.TheRideToCount(learned?.Back, flat, _backRatios);",
-                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch, next, scale,", "rideBack);",
+                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch, next, scale,",
+                        "rideBack, TradeMath.RoomBesideWhatIsBroughtHome(room, broughtNow, weight, onHoof));",
                         "foreach (TradeMath.VillageLoad load in loads) _villageLoadsAhead.Add((home, town, villagers, items, load));")
             and ordered(method_body(f, "private static void ANextTripsSale("),
                         "if (items[i]?.ItemCategory != null && units > 0) sold.Add((items[i], units));",
@@ -22566,7 +22568,7 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
                         "float setOut = ready + (k == 0 && !raised ? wait + again : wait);",
                         "if (setOut + ride > watch) break;",
                         "units[i] = at[i] * share;",
-                        "float cut = room > 0f && carried > room ? room / carried : 1f;",
+                        "float cut = (capped || room > 0f) && carried > cap ? cap / carried : 1f;",
                         "back = setOut + ride + stay + rideHome;")
             and "string villages = Forecast.TheVillagesSend();" in method_body(S['Marker.cs'], "private static void Ultra(")
             and all(one in MATHTESTS for one in
@@ -24376,7 +24378,8 @@ def a_villages_next_trip_follows_its_hour_its_hearth_and_its_healing():
                         "_villageMadeAt[settlement.StringId] = CampaignTime.Now.ToDays;")
             and "_villageMadeAt.Clear();" in method_body(f, "internal static void Forget()")
             and "_villageMadeAt" not in method_body(f, "private static void Build()")
-            and ordered(follow, "float rate = item.IsMountable || looted", "float food = looted ? level + 1f :",
+            and ordered(follow, "float rate = looted || (item.IsMountable && TheModelRollsDiceFor(model, village, item))",
+                        "float food = looted ? level + 1f :",
                         "int ideal = TradeMath.IdealVillagers(",
                         "MinimumNumberOfVillagersAtVillagerParty, village.Hearth, goodsADay);",
                         "TradeMath.RoomOnceToppedUp(villagers.InventoryCapacity, villagers.MemberRoster.TotalManCount, ideal,",
@@ -24387,7 +24390,7 @@ def a_villages_next_trip_follows_its_hour_its_hearth_and_its_healing():
                         "? TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)",
                         ": TradeMath.AVillagesTickUnseen;",
                         "heldNow, madeADayEach, weight, onHoof, room, back, villagers != null, ride, watch, next, scale,",
-                        "rideBack);",
+                        "rideBack, TradeMath.RoomBesideWhatIsBroughtHome(room, broughtNow, weight, onHoof));",
                         "if (known) _villageHoursKnown++;", "if (looted) _villagesHealing++;")
             and ordered(heal, "new ExplainedNumber(TradeMath.AVillageHealsADayBy(home.MapFaction?.CurrentTotalStrength ?? 0f));",
                         "PerkHelper.AddPerkBonusForTown(DefaultPerks.Medicine.CleanInfrastructure, village.TradeBound.Town, false,",
@@ -25172,30 +25175,22 @@ chk("2.9.17", "Count what is on its way prices a workshop's gear at the quality 
     a_gear_lines_picks_carry_the_quality_the_game_rolls())
 
 
-def villagers_home_with_unsold_goods_take_them_out_on_a_trip_of_their_own():
+def villagers_home_with_unsold_goods_are_counted_and_the_villager_check_says_so():
     f = S['Forecast.cs']
-    m = S['TradeMath.cs']
     c = S['RideCheck.cs']
     follow = method_body(f, "private static void FollowAVillage(Village village, float watch, float speed)")
-    trip = method_body(m, "public static List<VillageLoad> TheTripWithGoodsBroughtHome(")
-    return (follow and trip
+    return (follow
             and ordered(follow, "ItemRoster carried = villagers?.ItemRoster;",
                         "villagers.CurrentSettlement != town && villagers.TargetSettlement != town",
                         "if (item == ridden) amount -= (int)(0.5f * villagers.MemberRoster.TotalManCount);",
-                        "loads = TradeMath.TheTripWithGoodsBroughtHome(loads, home2 => TradeMath.WhatAVillageSends(")
-            and ordered(trip, "float leaves = Math.Max(0f, Finite(home, 0f)) + DaysUntilARollTakes(VillagersSetOutAnHourWith);",
-                        "if (fromTheStore != null && fromTheStore.Count > 0 && fromTheStore[0].SetOut <= leaves &&",
-                        "first.Brought = true;",
-                        "float back = leaves + ride + DaysUntilARollTakes(VillagersLeaveATownAnHourWith) + rideHome;",
-                        "List<VillageLoad> after = fromTheStoreOnceBack?.Invoke(back);")
+                        "if (broughtNow != null) loads = TradeMath.TheTripWithGoodsBroughtHome(loads, broughtNow);")
             and "trip.Brought = Forecast.TheNextTripCarriesWhatItBroughtHome(one.id, one.days);" in c
             and '(one.Brought ? "with the goods its party brought home unsold"' in c
-            and f.count("_broughtTrips.Clear();") == 2
-            and "Villagers_home_with_goods_left_unsold_take_them_out_first_unless_the_store_is_ready_by_then" in MATHTESTS)
+            and f.count("_broughtTrips.Clear();") == 2)
 
 
-chk("2.9.17", "Count what is on its way counts the trip villagers make with goods they brought home unsold, before their store's next trip unless the store is ready by then, and TradeLord.log's villager check says so",
-    villagers_home_with_unsold_goods_take_them_out_on_a_trip_of_their_own())
+chk("2.9.17", "Count what is on its way counts the goods villagers brought home unsold, and TradeLord.log's villager check says when a next trip carries them",
+    villagers_home_with_unsold_goods_are_counted_and_the_villager_check_says_so())
 
 
 def a_gear_lines_day_runs_as_often_as_the_games_chain_of_picks():
@@ -25217,6 +25212,54 @@ def a_gear_lines_day_runs_as_often_as_the_games_chain_of_picks():
 
 chk("2.9.18", "on a day the game can run a workshop's gear line more than once, Count what is on its way counts as many runs as the game's chain of random picks makes, each try only after the one before it passed",
     a_gear_lines_day_runs_as_often_as_the_games_chain_of_picks())
+
+def goods_brought_home_ride_with_the_stores_next_trip_in_the_room_they_leave():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    follow = method_body(f, "private static void FollowAVillage(Village village, float watch, float speed)")
+    trip = method_body(m, "public static List<VillageLoad> TheTripWithGoodsBroughtHome(")
+    beside = method_body(m, "public static float RoomBesideWhatIsBroughtHome(")
+    sends = method_body(m, "public static List<VillageLoad> WhatAVillageSends(")
+    return (follow and trip and beside and sends
+            and ordered(follow, "broughtNow = new float[items.Count];",
+                        "List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(",
+                        "rideBack, TradeMath.RoomBesideWhatIsBroughtHome(room, broughtNow, weight, onHoof));",
+                        "if (broughtNow != null) loads = TradeMath.TheTripWithGoodsBroughtHome(loads, broughtNow);",
+                        "if (loads.Count == 0) return;")
+            and "home2 =>" not in follow
+            and ordered(sends, "float firstRoom = float.NaN)",
+                        "bool capped = k == 0 && firstRoom >= 0f && !float.IsInfinity(firstRoom);",
+                        "float cap = capped ? firstRoom : room;",
+                        "float cut = (capped || room > 0f) && carried > cap ? cap / carried : 1f;")
+            and ordered(beside, "if (!onHoof[i]) carried += each * Math.Max(0f, Finite(weight[i], 0f));",
+                        "return Math.Max(0f, room - carried);")
+            and ordered(trip, "VillageLoad first = fromTheStore[0];", "first.Units[i] += each;",
+                        "first.Brought = true;", "fromTheStore[0] = first;")
+            and "DaysUntilARollTakes" not in trip and "new VillageLoad" not in trip
+            and "Villagers_home_with_goods_left_unsold_take_them_out_with_their_stores_next_trip_in_the_room_left" in MATHTESTS
+            and "Goods_brought_home_take_room_only_from_the_first_trip_and_animals_take_none" in MATHTESTS)
+
+
+chk("2.9.19", "goods villagers brought home unsold ride with their village's next trip, in the room those goods leave, and set off on no trip of their own",
+    goods_brought_home_ride_with_the_stores_next_trip_in_the_room_they_leave())
+
+
+def a_villages_horses_and_mules_are_counted_with_their_bonuses_and_no_dice():
+    f = S['Forecast.cs']
+    follow = method_body(f, "private static void FollowAVillage(Village village, float watch, float speed)")
+    rolls = method_body(f, "private static bool TheModelRollsDiceFor(")
+    return (follow and rolls
+            and ordered(follow, "float rate = looted || (item.IsMountable && TheModelRollsDiceFor(model, village, item))",
+                        "? each * (level + 1) * 0.5f",
+                        ": model.CalculateDailyProductionAmount(village, item).ResultNumber;")
+            and ordered(rolls, "model.GetType() != typeof(DefaultVillageProductionCalculatorModel)) return true;",
+                        "item.Tier == ItemObject.ItemTiers.Tier2",
+                        "PerkHelper.GetPerkValueForTown(DefaultPerks.Riding.Shepherd, town);")
+            and "GetWarehouseCapacity" not in f)
+
+
+chk("2.9.19", "Count what is on its way counts a village's horses and mules with the perks, buildings and culture the game counts, and calls the game's count only when it rolls no dice",
+    a_villages_horses_and_mules_are_counted_with_their_bonuses_and_no_dice())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

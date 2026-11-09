@@ -1835,39 +1835,38 @@ namespace TradeLord
             public bool Brought;
         }
 
-        public static List<VillageLoad> TheTripWithGoodsBroughtHome(List<VillageLoad> fromTheStore,
-                                                                    Func<float, List<VillageLoad>> fromTheStoreOnceBack,
-                                                                    float[] brought, float home, float ride,
-                                                                    float rideBack, float watch)
+        public static float RoomBesideWhatIsBroughtHome(float room, float[] brought, float[] weight, bool[] onHoof)
         {
-            float units = 0f;
-            for (int i = 0; brought != null && i < brought.Length; i++) units += Math.Max(0f, Finite(brought[i], 0f));
-            if (!(units > 0f) || !(ride >= 0f) || float.IsInfinity(ride) || float.IsInfinity(home)) return fromTheStore;
-            float leaves = Math.Max(0f, Finite(home, 0f)) + DaysUntilARollTakes(VillagersSetOutAnHourWith);
-            if (leaves + ride > watch) return fromTheStore;
-            if (fromTheStore != null && fromTheStore.Count > 0 && fromTheStore[0].SetOut <= leaves &&
-                fromTheStore[0].Units != null && fromTheStore[0].Units.Length == brought.Length)
+            if (!(room > 0f) || float.IsInfinity(room) || brought == null || weight == null || onHoof == null ||
+                weight.Length != brought.Length || onHoof.Length != brought.Length)
+                return float.NaN;
+            float units = 0f, carried = 0f;
+            for (int i = 0; i < brought.Length; i++)
             {
-                VillageLoad first = fromTheStore[0];
-                for (int i = 0; i < brought.Length; i++) first.Units[i] += Math.Max(0f, Finite(brought[i], 0f));
-                first.Brought = true;
-                fromTheStore[0] = first;
-                return fromTheStore;
+                float each = Math.Max(0f, Finite(brought[i], 0f));
+                units += each;
+                if (!onHoof[i]) carried += each * Math.Max(0f, Finite(weight[i], 0f));
             }
-            float rideHome = rideBack >= 0f && !float.IsInfinity(rideBack) ? rideBack : ride;
-            float back = leaves + ride + DaysUntilARollTakes(VillagersLeaveATownAnHourWith) + rideHome;
-            var all = new List<VillageLoad>
+            if (!(units > 0f)) return float.NaN;
+            return Math.Max(0f, room - carried);
+        }
+
+        public static List<VillageLoad> TheTripWithGoodsBroughtHome(List<VillageLoad> fromTheStore, float[] brought)
+        {
+            if (fromTheStore == null || fromTheStore.Count == 0 || brought == null) return fromTheStore;
+            VillageLoad first = fromTheStore[0];
+            if (first.Units == null || first.Units.Length != brought.Length) return fromTheStore;
+            float units = 0f;
+            for (int i = 0; i < brought.Length; i++)
             {
-                new VillageLoad
-                {
-                    Days = leaves + ride, Units = (float[])brought.Clone(), SetOut = leaves, Ready = home, Back = home,
-                    Brought = true
-                }
-            };
-            List<VillageLoad> after = fromTheStoreOnceBack?.Invoke(back);
-            for (int k = 0; after != null && k < after.Count && all.Count < MostLoadsAVillageIsFollowedFor; k++)
-                all.Add(after[k]);
-            return all;
+                float each = Math.Max(0f, Finite(brought[i], 0f));
+                first.Units[i] += each;
+                units += each;
+            }
+            if (!(units > 0f)) return fromTheStore;
+            first.Brought = true;
+            fromTheStore[0] = first;
+            return fromTheStore;
         }
 
         public const float TheDiceFillAStoreWithin = 0.5f;
@@ -1964,7 +1963,8 @@ namespace TradeLord
 
         public static List<VillageLoad> WhatAVillageSends(float[] held, float[] made, float[] weight, bool[] onHoof,
                                                          float room, float home, bool raised, float ride, float watch,
-                                                         float nextTick, float[] scale, float rideBack = float.NaN)
+                                                         float nextTick, float[] scale, float rideBack = float.NaN,
+                                                         float firstRoom = float.NaN)
         {
             float rideHome = rideBack >= 0f && !float.IsInfinity(rideBack) ? rideBack : ride;
             var loads = new List<VillageLoad>();
@@ -2026,7 +2026,9 @@ namespace TradeLord
                     units[i] = at[i] * share;
                     if (!onHoof[i]) carried += units[i] * Math.Max(0f, Finite(weight[i], 0f));
                 }
-                float cut = room > 0f && carried > room ? room / carried : 1f;
+                bool capped = k == 0 && firstRoom >= 0f && !float.IsInfinity(firstRoom);
+                float cap = capped ? firstRoom : room;
+                float cut = (capped || room > 0f) && carried > cap ? cap / carried : 1f;
                 heldAll = 0f;
                 for (int i = 0; i < n; i++)
                 {

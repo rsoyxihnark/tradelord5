@@ -1049,7 +1049,7 @@ namespace TradeLord
             foreach (var (item, each) in village.VillageType.Productions)
             {
                 if (item == null) continue;
-                float rate = item.IsMountable || looted
+                float rate = looted || (item.IsMountable && TheModelRollsDiceFor(model, village, item))
                     ? each * (level + 1) * 0.5f
                     : model.CalculateDailyProductionAmount(village, item).ResultNumber;
                 rate = TradeMath.Finite(rate, 0f);
@@ -1099,17 +1099,16 @@ namespace TradeLord
                 : TradeMath.AVillagesTickUnseen;
             if (looted) _villagesLooted++;
             float[] heldNow = held.ToArray(), madeADayEach = made.ToArray();
-            List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
-                heldNow, madeADayEach, weight, onHoof, room, back, villagers != null, ride, watch, next, scale,
-                rideBack);
+            float[] broughtNow = null;
             if (brought.Count > 0)
             {
-                var units = new float[items.Count];
-                foreach (var (at, count) in brought) units[at] += count;
-                loads = TradeMath.TheTripWithGoodsBroughtHome(loads, home2 => TradeMath.WhatAVillageSends(
-                        heldNow, madeADayEach, weight, onHoof, room, home2, true, ride, watch, next, scale, rideBack),
-                    units, back, ride, rideBack, watch);
+                broughtNow = new float[items.Count];
+                foreach (var (at, count) in brought) broughtNow[at] += count;
             }
+            List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
+                heldNow, madeADayEach, weight, onHoof, room, back, villagers != null, ride, watch, next, scale,
+                rideBack, TradeMath.RoomBesideWhatIsBroughtHome(room, broughtNow, weight, onHoof));
+            if (broughtNow != null) loads = TradeMath.TheTripWithGoodsBroughtHome(loads, broughtNow);
             if (loads.Count == 0) return;
 
             _villagesFollowed++;
@@ -1118,6 +1117,14 @@ namespace TradeLord
             foreach (TradeMath.VillageLoad load in loads) _villageLoadsAhead.Add((home, town, villagers, items, load));
             NoteTheNextTrips(home, villagers != null && (villagers.CurrentSettlement == town || villagers.TargetSettlement == town),
                              loads);
+        }
+
+        private static bool TheModelRollsDiceFor(VillageProductionCalculatorModel model, Village village, ItemObject item)
+        {
+            if (model == null || model.GetType() != typeof(DefaultVillageProductionCalculatorModel)) return true;
+            Town town = village.TradeBound?.Town;
+            return town != null && item.Tier == ItemObject.ItemTiers.Tier2 &&
+                   PerkHelper.GetPerkValueForTown(DefaultPerks.Riding.Shepherd, town);
         }
 
         private static void NoteTheNextTrips(Settlement home, bool inTown, List<TradeMath.VillageLoad> loads)

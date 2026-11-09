@@ -3435,45 +3435,68 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Villagers_home_with_goods_left_unsold_take_them_out_first_unless_the_store_is_ready_by_then()
+        public void Villagers_home_with_goods_left_unsold_take_them_out_with_their_stores_next_trip_in_the_room_left()
         {
-            float wait = TradeMath.DaysUntilARollTakes(TradeMath.VillagersSetOutAnHourWith);
-            float stay = TradeMath.DaysUntilARollTakes(TradeMath.VillagersLeaveATownAnHourWith);
-            var late = new List<TradeMath.VillageLoad>
-            {
-                new TradeMath.VillageLoad { Days = 3f, Units = new[] { 10f, 0f }, SetOut = 2.5f, Ready = 2f, Back = 0f }
-            };
-            float askedBack = float.NaN;
-            List<TradeMath.VillageLoad> loads = TradeMath.TheTripWithGoodsBroughtHome(late, back =>
-            {
-                askedBack = back;
-                return new List<TradeMath.VillageLoad>
-                {
-                    new TradeMath.VillageLoad { Days = back + 1f, Units = new[] { 12f, 0f }, SetOut = back + 0.5f }
-                };
-            }, new[] { 0f, 70f }, 0f, 0.4f, 0.5f, 7f);
-            Assert.Equal(2, loads.Count);
-            Assert.True(loads[0].Brought);
-            Assert.Equal(wait, loads[0].SetOut, 4);
-            Assert.Equal(wait + 0.4f, loads[0].Days, 4);
-            Assert.Equal(70f, loads[0].Units[1], 4);
-            Assert.Equal(wait + 0.4f + stay + 0.5f, askedBack, 4);
-            Assert.Equal(12f, loads[1].Units[0], 4);
-            Assert.False(loads[1].Brought);
+            float share = TradeMath.ShareVillagersLoad();
+            float wait = (1f / 0.15f - 0.5f) / 24f;
+            var brought = new[] { 0f, 0f, 10f };
+            var weight = new[] { 1f, 1f, 2f };
+            var onHoof = new[] { false, false, false };
+            float left = TradeMath.RoomBesideWhatIsBroughtHome(50f, brought, weight, onHoof);
+            Assert.Equal(30f, left, 4);
+            List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f, 0f }, new[] { 10f, 2f, 0f }, weight, onHoof,
+                50f, 0f, true, 0.25f, 7f, 0.5f, new[] { 1f }, float.NaN, left);
+            Assert.Equal(3, loads.Count);
+            Assert.Equal(30f, loads[0].Units[0] + loads[0].Units[1], 2);
+            Assert.Equal(50f * share, loads[1].Units[0], 2);
+            Assert.Equal(16f * share, loads[1].Units[1], 2);
 
-            var ready = new List<TradeMath.VillageLoad>
-            {
-                new TradeMath.VillageLoad { Days = 0.3f, Units = new[] { 10f, 0f }, SetOut = 0.1f, Ready = 0f, Back = 0f }
-            };
-            List<TradeMath.VillageLoad> merged = TradeMath.TheTripWithGoodsBroughtHome(ready, back => null,
-                                                                                       new[] { 0f, 5f }, 0f, 0.2f, 0.2f, 7f);
-            Assert.Single(merged);
+            List<TradeMath.VillageLoad> merged = TradeMath.TheTripWithGoodsBroughtHome(loads, brought);
+            Assert.Same(loads, merged);
+            Assert.Equal(3, merged.Count);
             Assert.True(merged[0].Brought);
-            Assert.Equal(5f, merged[0].Units[1], 4);
-            Assert.Same(ready, TradeMath.TheTripWithGoodsBroughtHome(ready, back => null, new[] { 0f, 0f }, 0f, 0.2f,
-                                                                     0.2f, 7f));
-            Assert.Same(late, TradeMath.TheTripWithGoodsBroughtHome(late, back => null, new[] { 0f, 9f }, 6.9f, 0.4f,
-                                                                    0.5f, 7f));
+            Assert.False(merged[1].Brought);
+            Assert.Equal(wait + 0.25f, merged[0].Days, 3);
+            Assert.Equal(10f, merged[0].Units[2], 4);
+            Assert.Equal(50f, merged[0].Units[0] + merged[0].Units[1] + 2f * merged[0].Units[2], 2);
+
+            var none = new List<TradeMath.VillageLoad>();
+            Assert.Empty(TradeMath.TheTripWithGoodsBroughtHome(none, brought));
+            Assert.Same(loads, TradeMath.TheTripWithGoodsBroughtHome(loads, new[] { 0f, 9f }));
+            Assert.False(TradeMath.TheTripWithGoodsBroughtHome(
+                new List<TradeMath.VillageLoad>
+                {
+                    new TradeMath.VillageLoad { Days = 0.5f, Units = new[] { 4f, 0f, 0f }, SetOut = 0.25f }
+                }, new[] { 0f, 0f, 0f })[0].Brought);
+        }
+
+        [Fact]
+        public void Goods_brought_home_take_room_only_from_the_first_trip_and_animals_take_none()
+        {
+            float share = TradeMath.ShareVillagersLoad();
+            Assert.Equal(50f, TradeMath.RoomBesideWhatIsBroughtHome(50f, new[] { 0f, 0f, 10f }, new[] { 1f, 1f, 2f },
+                                                                   new[] { false, false, true }), 4);
+            Assert.Equal(0f, TradeMath.RoomBesideWhatIsBroughtHome(15f, new[] { 0f, 0f, 10f }, new[] { 1f, 1f, 2f },
+                                                                  new[] { false, false, false }), 4);
+            Assert.True(float.IsNaN(TradeMath.RoomBesideWhatIsBroughtHome(0f, new[] { 1f }, new[] { 1f }, new[] { false })));
+            Assert.True(float.IsNaN(TradeMath.RoomBesideWhatIsBroughtHome(50f, new[] { 0f }, new[] { 1f }, new[] { false })));
+            Assert.True(float.IsNaN(TradeMath.RoomBesideWhatIsBroughtHome(50f, null, new[] { 1f }, new[] { false })));
+
+            List<TradeMath.VillageLoad> full = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f, 5f }, new[] { 10f, 2f, 0f }, new[] { 1f, 1f, 50f }, new[] { false, false, true },
+                50f, 0f, true, 0.25f, 7f, 0.5f, new[] { 1f }, float.NaN, 0f);
+            Assert.Equal(0f, full[0].Units[0] + full[0].Units[1], 4);
+            Assert.Equal(5f * share, full[0].Units[2], 3);
+
+            List<TradeMath.VillageLoad> plain = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                0f, 0f, true, 0.25f, 7f, 0.5f, new[] { 1f });
+            List<TradeMath.VillageLoad> unset = TradeMath.WhatAVillageSends(
+                new[] { 40f, 20f }, new[] { 10f, 2f }, new[] { 1f, 1f }, new[] { false, false },
+                0f, 0f, true, 0.25f, 7f, 0.5f, new[] { 1f }, float.NaN, float.NaN);
+            Assert.Equal(plain.Count, unset.Count);
+            for (int k = 0; k < plain.Count; k++) Assert.Equal(plain[k].Units[0], unset[k].Units[0], 4);
         }
 
         [Fact]
