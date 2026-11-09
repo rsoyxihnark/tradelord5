@@ -300,6 +300,9 @@ namespace TradeLord
         internal readonly List<(string category, int count)> Inputs = new List<(string, int)>();
         internal readonly List<(string category, int count)> Outputs = new List<(string, int)>();
         internal readonly List<string> Aside = new List<string>();
+        internal TradeMath.Picks Picks;
+        internal string PickKind;
+        internal float Credit = TradeMath.ARunsCreditStartsAt;
     }
 
     internal sealed class TownBook
@@ -512,10 +515,16 @@ namespace TradeLord
                     cost += (long)buy[kind] * count;
                 }
             long income = 0;
-            foreach (var (kind, count) in line.Outputs) income += (long)sell[kind] * count;
+            int picks = 0;
+            foreach (var (kind, count) in line.Outputs)
+            {
+                income += (long)sell[kind] * count;
+                if (kind == line.PickKind) picks += count;
+            }
             double bar = line.Hidden || !(line.Pace > 0f) ? cost : cost + PayOverInputsPerPace / line.Pace;
             cleared = income - bar;
-            if (income <= bar)
+            bool picked = line.Picks != null && picks > 0;
+            if (!picked && income <= bar)
             {
                 stoppedBy = NotWorthIt;
                 return false;
@@ -529,6 +538,18 @@ namespace TradeLord
             {
                 stoppedBy = CapitalShort;
                 return false;
+            }
+            if (picked)
+            {
+                long other = income - (long)sell[line.PickKind] * picks;
+                float credit = line.Credit + (float)TradeMath.ShareOfPicksClearing(line.Picks, (bar - other) / picks);
+                if (credit < 1f)
+                {
+                    line.Credit = credit;
+                    stoppedBy = NotWorthIt;
+                    return false;
+                }
+                line.Credit = credit - 1f;
             }
 
             if (fromWarehouse) town.Warehouse[k] -= need;

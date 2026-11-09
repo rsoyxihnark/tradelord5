@@ -311,14 +311,18 @@ namespace TradeLord
 
         private static bool _buyMarkRestored;
 
+        internal static bool WouldBeDue(Vec2 at) =>
+            (int)CampaignTime.Now.ToHours != _hour || at.DistanceSquared(_at) > MovedFar;
+
         internal static bool DueAgain(Vec2 at)
         {
-            int hour = (int)CampaignTime.Now.ToHours;
-            if (hour == _hour && at.DistanceSquared(_at) <= MovedFar) return false;
-            _hour = hour;
+            if (!WouldBeDue(at)) return false;
+            _hour = (int)CampaignTime.Now.ToHours;
             _at = at;
             return true;
         }
+
+        internal static void DueNow() => _hour = -1;
 
         internal static void ForgetWhatYouCarry()
         {
@@ -456,6 +460,7 @@ namespace TradeLord
             internal int NoTill;
             internal int Unseen;
             internal int PastCeiling;
+            internal int LongerRoad;
             internal int NoRoad;
             internal int Shut;
             internal int AtWar;
@@ -491,12 +496,14 @@ namespace TradeLord
             Settlement target = null;
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;
+            long frameBefore = Travel.FrameTicksSoFar();
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
             HoldThePayings();
             try { if (on) target = TheMarkFairlyWeighed(out how); }
             finally { LetThePayingsGo(); }
-            how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
-                       System.Diagnostics.Stopwatch.Frequency;
+            long spent = System.Diagnostics.Stopwatch.GetTimestamp() - started;
+            Travel.SpentThisFrame(spent, frameBefore);
+            how.Took = spent * 1000d / System.Diagnostics.Stopwatch.Frequency;
 
             int hour = (int)CampaignTime.Now.ToHours;
             Settlement was = _picked;
@@ -1472,7 +1479,11 @@ namespace TradeLord
                          (how.Bar.ToString("0") == how.Rate.ToString("0")
                              ? " profit a day"
                              : " profit a day as weighed at the Conf of selling there") + ", in " +
-                         how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
+                         how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms" +
+                         (how.LongerRoad > 0
+                             ? ", " + how.LongerRoad + " of those left once the road there was timed longer than the " +
+                               "straight line"
+                             : ""));
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
                          " with nothing in the till, " +
                          (how.Unseen > 0 ? how.Unseen + " with no price you have seen, " : "") +
@@ -1930,16 +1941,26 @@ namespace TradeLord
             for (int at = 0; at < reachable.Count; at++)
             {
                 var (s, market, gold, ride) = reachable[at];
+                long could = -1L;
                 if (s != holder && s != how.Intended)
                 {
                     if (TradeMath.PerDay(gold, ride) <= bar) break;
                     float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;
                     if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;
-                    float fetches = TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride);
+                    could = MostThisCargoCouldFetch(s, market, party, cargo);
+                    float fetches = TradeMath.PerDay(could, ride);
                     if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;
                 }
+                float straight = ride;
                 ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }
+                if (could >= 0L && ride > straight &&
+                    Marks.TheRoadRulesItOut(gold, could, ride, oneBasis ? Confidence.MostItCanBe(ride) : 1f,
+                                            how.RunnerUpJudged))
+                {
+                    how.LongerRoad++;
+                    continue;
+                }
                 gold = PurseOf(s, ride);
                 if (gold <= 0) { how.NoTill++; continue; }
                 how.Told++;

@@ -320,6 +320,16 @@ def code_only(src):
 HANDED_ON = {
     "public static void ExecuteResupply": ("Resupply(pass, aDayFirst);",
                                            "private static void Resupply(Pass pass, bool aDayFirst)"),
+    "private static void Build": ("while (_stagesDone < StagesInABuild) Stage();",
+                                  ("private static void Begin()", "private static void ReadTheRoad()",
+                                   "private static void TheShopsBeforeTheRoad()",
+                                   "private static void TheCaravansOnArrival()", "private static void TheShops()",
+                                   "private static void ThePurses()")),
+    "private static void Build()": ("while (_stagesDone < StagesInABuild) Stage();",
+                                    ("private static void Begin()", "private static void ReadTheRoad()",
+                                     "private static void TheShopsBeforeTheRoad()",
+                                     "private static void TheCaravansOnArrival()", "private static void TheShops()",
+                                     "private static void ThePurses()")),
 }
 
 def method_body(src, signature):
@@ -337,7 +347,8 @@ def method_body(src, signature):
                         body = src[i:k + 1]
                         handed = HANDED_ON.get(signature)
                         if handed and handed[0] in body:
-                            body += "\n" + method_body(src, handed[1])
+                            for onto in (handed[1] if isinstance(handed[1], tuple) else (handed[1],)):
+                                body += "\n" + method_body(src, onto)
                         return body
     _lost.append(signature)
     return ''
@@ -7775,7 +7786,8 @@ def the_walk_starts_from_what_the_market_will_hold_when_you_get_there():
 def the_forecast_is_read_once_an_hour_and_again_when_a_setting_moves():
     build = method_body(S['Forecast.cs'], "private static void Build")
     return (ordered(build,
-                    "if (Freshness.Fresh(ref _readStamp)) return;",
+                    "if (!Freshness.Fresh(ref _readStamp)) Begin();",
+                    "Freshness.Taken(ref _readStamp);",
                     "_landing.Clear();",
                     'Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);',
                     'Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);')
@@ -14008,9 +14020,12 @@ def a_workshop_run_counts_only_while_the_town_feeds_it_and_it_pays():
                         "cost += (long)buy[kind] * count;",
                         "income += (long)sell[kind] * count;",
                         "double bar = line.Hidden || !(line.Pace > 0f) ? cost : cost + PayOverInputsPerPace / line.Pace;",
-                        "if (income <= bar)", "stoppedBy = NotWorthIt;\n                return false;",
+                        "if (!picked && income <= bar)", "stoppedBy = NotWorthIt;\n                return false;",
                         "if (line.TradeGoodsOnly && town.Gold < income)", "stoppedBy = PurseShort;\n                return false;",
-                        "if (owned && town.Capital[k] < cost)", "stoppedBy = CapitalShort;\n                return false;")
+                        "if (owned && town.Capital[k] < cost)", "stoppedBy = CapitalShort;\n                return false;",
+                        "if (picked)",
+                        "float credit = line.Credit + (float)TradeMath.ShareOfPicksClearing(line.Picks, (bar - other) / picks);",
+                        "if (credit < 1f)", "stoppedBy = NotWorthIt;\n                    return false;")
             and ordered(run, "town.Gold += buy[kind];", "int paid = Math.Min(MostPaidForAnOutput, buy[kind]);",
                         "town.Gold -= paid;", "return true;")
             and ordered(begin, "landing.Add((arriving[i].Days, arriving[i].Category, arriving[i].Units, arriving[i].Draw));",
@@ -14356,12 +14371,13 @@ def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
     return (update and ultra and plan
             and ordered(update, "long started = System.Diagnostics.Stopwatch.GetTimestamp();",
                         "if (on) target = TheMarkFairlyWeighed(out how);",
-                        "how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /",
-                        "System.Diagnostics.Stopwatch.Frequency;")
+                        "long spent = System.Diagnostics.Stopwatch.GetTimestamp() - started;",
+                        "how.Took = spent * 1000d / System.Diagnostics.Stopwatch.Frequency;")
             and "DateTime" not in update
             and ordered(ultra, 'how.Bar.ToString("0") +',
                         '" profit a day as weighed at the Conf of selling there") + ", in " +',
-                        'how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");',
+                        'how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms" +',
+                        '" of those left once the road there was timed longer than the "',
                         '"  ultralog: left out before pricing, "')
             and "how.Bar = bar;" in method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
             and ordered(plan, "TradeRoute row = market.PlanFor(item);",
@@ -21654,16 +21670,26 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "float soonest = Travel.StraightDaysFromParty(s);",
                         "if (cap <= 0f) { reachable.Add((s, market, purse, soonest)); continue; }",
                         "reachable.Sort(FastestPurseFirst);",
-                        "if (s != holder && s != how.Intended)\n"
+                        "long could = -1L;\n"
+                        "                if (s != holder && s != how.Intended)\n"
                         "                {\n"
                         "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
                         "                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;\n"
                         "                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;\n"
-                        "                    float fetches = TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride);\n"
+                        "                    could = MostThisCargoCouldFetch(s, market, party, cargo);\n"
+                        "                    float fetches = TradeMath.PerDay(could, ride);\n"
                         "                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;\n"
                         "                }\n"
+                        "                float straight = ride;\n"
                         "                ride = Travel.EstimateDaysFromParty(s);\n"
                         "                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }\n"
+                        "                if (could >= 0L && ride > straight &&\n"
+                        "                    Marks.TheRoadRulesItOut(gold, could, ride, oneBasis ? Confidence.MostItCanBe(ride) : 1f,\n"
+                        "                                            how.RunnerUpJudged))\n"
+                        "                {\n"
+                        "                    how.LongerRoad++;\n"
+                        "                    continue;\n"
+                        "                }\n"
                         "                gold = PurseOf(s, ride);\n"
                         "                if (gold <= 0) { how.NoTill++; continue; }\n"
                         "                how.Told++;",
@@ -21691,7 +21717,8 @@ def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
                 "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
                 "                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;\n"
                 "                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;\n"
-                "                    float fetches = TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride);\n"
+                "                    could = MostThisCargoCouldFetch(s, market, party, cargo);\n"
+                "                    float fetches = TradeMath.PerDay(could, ride);\n"
                 "                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;\n"
                 "                }" in best
             and best.count("<= bar) break;") == 1
@@ -21886,8 +21913,11 @@ def the_log_says_what_the_busiest_frame_cost():
     said = method_body(tr, "internal static string TheRideTo(Settlement target)")
     fill = method_body(tr, "private static void FillTheRoadsNow()")
     return (ride and work and stop and frame and said and fill
-            and tr.count("_frameTicks +=") == 4
+            and tr.count("_frameTicks +=") == 5
             and ordered(method_body(tr, "internal static void SpentOnAScan"),
+                        "long inner = _frameTicks - before;",
+                        "_frameTicks += spent > inner ? spent - inner : 0L;")
+            and ordered(method_body(tr, "internal static void SpentThisFrame(long spent, long before)"),
                         "long inner = _frameTicks - before;",
                         "_frameTicks += spent > inner ? spent - inner : 0L;")
             and "internal static long FrameTicksSoFar() => _frameTicks;" in tr
@@ -24365,7 +24395,7 @@ def a_villages_next_trip_follows_its_hour_its_hearth_and_its_healing():
                         "int Warehouse(int j) => AVillagesWarehouse(madeAll * Scale(j));",
                         "heldAll >= Warehouse(ticked) * AVillageStopsMakingPastItsWarehouseBy)",
                         "while (TickAt(ticked + 1) <= ready) Make();",
-                        "while (!(Scale(ticked) > 0f && heldAll >= Warehouse(ticked)))",
+                        "while (!(Scale(ticked) > 0f && heldAll + TheDiceFillAStoreWithin >= Warehouse(ticked)))",
                         "while (TickAt(ticked + 1) <= setOut) Make();")
             and "public static int HearthLevelOf(float hearth) => hearth >= 600f ? 2 : hearth >= 200f ? 1 : 0;" in m
             and "public static float AVillageGrowsItsHearthBy(float hearth) => hearth < 300f ? 4f : hearth < 600f ? 1.2f : 0.2f;" in m
@@ -24770,7 +24800,7 @@ def the_forecast_steps_town_use_reprices_workshops_counts_gear_and_learns_villag
     run = method_body(p, "private static bool RunOnce")
     read = method_body(f, "private static ShopBook ReadTheShops(")
     weighed = method_body(f, "private static (double perValue, int value) TheMakeWeighed(")
-    paid = method_body(f, "private static int WhatTheTownPaysForWhatItsShopsMake(")
+    paid = method_body(f, "private static (int paid, TradeMath.Picks picks) WhatTheTownPaysForWhatItsShopsMake(")
     left = method_body(f, "internal static void VillagersLeft(MobileParty party, Settlement left)")
     entered = method_body(f, "internal static void VillagersEntered(MobileParty party, Settlement entered)")
     watch = method_body(f, "internal static void WatchTheVillagersRide()")
@@ -24785,7 +24815,7 @@ def the_forecast_steps_town_use_reprices_workshops_counts_gear_and_learns_villag
             and ordered(method_body(f, "internal static TownTickSaid WhatATownTickShouldDo(Town town)"),
                         "long useTicksBefore = _useTicks;", "try { return WhatATownTickWillDo(town, site); }",
                         "finally { _useTicks = useTicksBefore; }")
-            and ordered(read, "int paid = WhatTheTownPaysForWhatItsShopsMake(town, category, live);", "line.Aside.Add(kind);",
+            and ordered(read, "var (paid, picks) = WhatTheTownPaysForWhatItsShopsMake(town, category, live);", "line.Aside.Add(kind);",
                         "lines.RemoveAll(line => !EveryKindPriced(line.Inputs, standing) ||",
                         "!EveryOutputPriced(line.Outputs, standing, expected));",
                         "if (!standing.TryGetValue(kind, out var at)) return expected.TryGetValue(kind, out int paid) ? paid : 0;")
@@ -24794,8 +24824,8 @@ def the_forecast_steps_town_use_reprices_workshops_counts_gear_and_learns_villag
                         'item.Culture == null || item.Culture.StringId == "neutral_culture" || item.Culture == culture',
                         "TradeMath.TheGamesPickWeighed(preferred.Count > 0 ? preferred : every);")
             and "GetBasePriceFactor(" in paid and "TradeMath.ATownPaysForAMake(perValue, factor);" in paid
-            and ordered(paid, "if (!live && _makePaid.TryGetValue(key, out int known)) return known;",
-                        "if (!live) _makePaid[key] = paid;")
+            and ordered(paid, "if (!live && _makePaid.TryGetValue(key, out var known)) return known;",
+                        "if (!live) _makePaid[key] = (paid, picks);")
             and "GetWarehouseCapacity" not in ALL
             and "trip.StoreHolds = Forecast.TheStoreTradeLordCounts(party.HomeSettlement);" in c
             and "_villageStore[home.StringId] = TradeMath.AVillagesWarehouse(madeADay);" in f
@@ -24971,6 +25001,118 @@ def the_ledger_on_the_road_shows_days_and_score_from_where_you_stand():
 chk("2.9.0", "on the road the TradeLord ledger shows Days and Score from where your party stands, timed as the map marker times a Buy From, orders its routes by that Score before keeping the best 30, and leaves the routes it was handed as they were",
     the_ledger_on_the_road_shows_days_and_score_from_where_you_stand())
 
+
+
+def the_hourly_forecast_is_built_over_several_frames_before_the_map_marker_weighs():
+    f = S['Forecast.cs']
+    tr = S['Trading.cs']
+    c = S['RideCheck.cs']
+    build = method_body(f, "private static void Build()")
+    warm = method_body(f, "internal static bool WarmedAStage()")
+    stage = method_body(f, "private static void Stage()")
+    tick = method_body(tr, "private void OnTick(float dt)")
+    daily = method_body(tr, "private void OnDailyTick()")
+    hour = method_body(c, "internal static void TheHourOnceWarm()")
+    return (build and warm and stage and tick and daily and hour
+            and "internal const int StagesInABuild = 5;" in f
+            and ordered(build, "if (_building) return;", "if (!Freshness.Fresh(ref _readStamp)) Begin();",
+                        "while (_stagesDone < StagesInABuild) Stage();")
+            and ordered(warm, "if (!On || Campaign.Current == null || _building) return false;",
+                        "long frame = Travel.Frame;", "if (_warmedFrame == frame) return true;",
+                        "if (fresh && _stagesDone >= StagesInABuild) return false;", "if (!fresh) Begin();",
+                        "_warmedFrame = frame;", "Stage();\n            return true;")
+            and ordered(stage, "long before = Travel.FrameTicksSoFar();", "_building = true;",
+                        "if (stage == 0) ReadTheRoad();", "else if (stage == 1) TheShopsBeforeTheRoad();",
+                        "else if (stage == 2) TheCaravansOnArrival();", "else if (stage == 3) TheShops();",
+                        "else ThePurses();", "_building = false;", "_stagesDone = stage + 1;",
+                        "Travel.SpentThisFrame(Stopwatch.GetTimestamp() - from, before);")
+            and ordered(tick, "if (!Marker.WouldBeDue(party.GetPosition2D)) return;",
+                        "if (Options.Current.MarkBestSellTownOnMap && _markerWaited < Forecast.StagesInABuild + 1)",
+                        'Guard.Run("Action.MarkerSaleTakenIn", Forecast.TakeInYourNewSale);',
+                        'Guard.Run("Action.MarkerWarming", () => warming = Forecast.WarmedAStage());',
+                        "_markerWaited++;", "_markerWaited = 0;", "if (!Marker.DueAgain(party.GetPosition2D)) return;",
+                        'Guard.Run("Action.MarkerAsYouMove", Marker.Update);')
+            and ordered(daily, 'Guard.Run("Action.MarkerToday", Marker.SayHowItHeldToday);',
+                        "if (MobileParty.MainParty != null && MobileParty.MainParty.CurrentSettlement == null) Marker.DueNow();",
+                        'else Guard.Run("Action.DailyTick", Marker.Update);')
+            and ordered(method_body(c, "internal static void Hourly()"), "if (!double.IsNaN(_hourDue)) TheHour();",
+                        "_hourDue = CampaignTime.Now.ToHours;")
+            and ordered(hour, "if (_hourWaited < Forecast.StagesInABuild + 1 && Forecast.WarmedAStage())",
+                        "_hourWaited++;", "TheHour();")
+            and 'Guard.Run("RideCheck.Hour", RideCheck.TheHourOnceWarm);' in c
+            and "_frame++;" in method_body(S['Travel.cs'], "internal static void NewFrame()")
+            and ordered(method_body(S['Marker.cs'], "internal static void Update"),
+                        "long frameBefore = Travel.FrameTicksSoFar();",
+                        "Travel.SpentThisFrame(spent, frameBefore);"))
+
+
+chk("2.9.16", "the hourly forecast is built a part a frame before the map marker weighs again on the road, the daily weighing and the hourly log checks wait for it, and the busiest frame counts both",
+    the_hourly_forecast_is_built_over_several_frames_before_the_map_marker_weighs())
+
+
+def the_map_marker_leaves_a_market_its_timed_road_rules_out_before_pricing_it():
+    best = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    rule = method_body(S['Rules.cs'], "internal static bool TheRoadRulesItOut(")
+    return (best and rule
+            and ordered(rule, "long most = purse < couldFetch ? purse : couldFetch;", "if (most <= 0L) return true;",
+                        "return TradeMath.PerDay(most, ride) * mostConf <= toBeat;")
+            and ordered(best, "if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }",
+                        "if (could >= 0L && ride > straight &&", "how.RunnerUpJudged))", "how.LongerRoad++;",
+                        "gold = PurseOf(s, ride);")
+            and "A_market_the_road_rules_out_is_one_that_could_not_beat_the_runner_up_even_at_its_fullest" in MATHTESTS)
+
+
+chk("2.9.16", "with Town travel ceiling off the map marker leaves unpriced a market whose timed road means it could not beat the runner up even at its fullest, so its choice is the same",
+    the_map_marker_leaves_a_market_its_timed_road_rules_out_before_pricing_it())
+
+
+def a_gear_line_runs_as_often_as_the_games_random_pick_clears_its_bar():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    run = method_body(S['Projection.cs'], "private static bool RunOnce")
+    read = method_body(f, "private static ShopBook ReadTheShops(")
+    picks = method_body(m, "public static (double[] perValue, double[] below) TheGamesPicks(")
+    share = method_body(m, "public static double ShareOfPicksClearing(Picks picks, double need)")
+    return (run and read and picks and share
+            and "internal float Credit = TradeMath.ARunsCreditStartsAt;" in S['Projection.cs']
+            and "public const float ARunsCreditStartsAt = 0.5f;" in m
+            and "double weight = 1d / (Math.Max(100, each) + 100d);" in picks
+            and "if (ATownPaysForAMake(picks.PerValue[mid], picks.Factor) > need) hi = mid;" in share
+            and ordered(read, "var (paid, picks) = WhatTheTownPaysForWhatItsShopsMake(town, category, live);",
+                        "if (picks != null) picked[kind] = picks;",
+                        "if (line.Aside.Count == 1 && picked.TryGetValue(line.Aside[0], out TradeMath.Picks one))",
+                        "line.Picks = one;", "line.PickKind = line.Aside[0];")
+            and "_makePicks[key] = TradeMath.TheGamesPicks(preferred.Count > 0 ? preferred : every);" in f
+            and "_makePicks.Clear();" in method_body(f, "internal static void Forget()")
+            and ordered(run, "bool picked = line.Picks != null && picks > 0;", "if (owned && town.Capital[k] < cost)",
+                        "line.Credit = credit;", "line.Credit = credit - 1f;")
+            and "A_workshop_runs_its_equipment_line_as_often_as_the_games_random_pick_would_clear_the_bar" in MATHTESTS
+            and "A_gear_line_whose_random_pick_clears_the_bar_two_times_in_five_runs_two_days_in_five" in PROJECTIONTESTS)
+
+
+chk("2.9.16", "Count what is on its way runs a workshop's gear line as often as the game's random pick of what it makes would clear the run's bar, not every time the average one would",
+    a_gear_line_runs_as_often_as_the_games_random_pick_clears_its_bar())
+
+
+def a_villages_store_counts_full_once_the_games_rounding_fills_it_half_the_time():
+    m = S['TradeMath.cs']
+    c = S['RideCheck.cs']
+    return ("public const float TheDiceFillAStoreWithin = 0.5f;" in m
+            and "heldAll + TheDiceFillAStoreWithin >= Warehouse(ticked)" in
+                method_body(m, "public static List<VillageLoad> WhatAVillageSends(")
+            and "A_store_the_games_rounding_fills_at_least_half_the_time_counts_as_full_on_that_tick" in MATHTESTS
+            and ordered(method_body(c, "internal static void Arrived(MobileParty party, Settlement at)"),
+                        "if (Writing && party.IsVillager && party.StringId != null && at == party.HomeSettlement)",
+                        "_broughtHome[party.StringId] = UnitsBroughtToSell(party);")
+            and "one.BroughtHome = _broughtHome.TryGetValue(party.StringId, out int brought) ? brought : -1;" in
+                method_body(c, "private static void VillagersLeftHome(")
+            and '" of that load brought back home unsold from their last trip"' in
+                method_body(c, "private static string WhatMadeItReady(Counted one)")
+            and "_broughtHome.Clear();" in method_body(c, "internal static void Forget()"))
+
+
+chk("2.9.16", "a village's store counts as full on the tick the game's rounding fills it at least half the time, and TradeLord.log's villager check says how much of a load came home unsold",
+    a_villages_store_counts_full_once_the_games_rounding_fills_it_half_the_time())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

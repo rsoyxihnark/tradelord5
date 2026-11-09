@@ -215,6 +215,7 @@ namespace TradeLord
             _usedUp.Clear();
             _makePaid.Clear();
             _makeWeighed.Clear();
+            _makePicks.Clear();
             _shopsCanMake.Clear();
             _indexes.Clear();
             _coastIndexes.Clear();
@@ -462,10 +463,62 @@ namespace TradeLord
             return _landing.TryGetValue(site.StringId, out List<Landing> listed) ? listed : null;
         }
 
+        internal const int StagesInABuild = 5;
+
+        private static int _stagesDone = StagesInABuild;
+        private static bool _building;
+        private static long _warmedFrame = -1L;
+
         private static void Build()
         {
-            if (Freshness.Fresh(ref _readStamp)) return;
+            if (_building) return;
+            if (!Freshness.Fresh(ref _readStamp)) Begin();
+            while (_stagesDone < StagesInABuild) Stage();
+        }
+
+        internal static bool WarmedAStage()
+        {
+            if (!On || Campaign.Current == null || _building) return false;
+            long frame = Travel.Frame;
+            if (_warmedFrame == frame) return true;
+            bool fresh = Freshness.Fresh(ref _readStamp);
+            if (fresh && _stagesDone >= StagesInABuild) return false;
+            if (!fresh) Begin();
+            _warmedFrame = frame;
+            Stage();
+            return true;
+        }
+
+        private static void Begin()
+        {
             Freshness.Taken(ref _readStamp);
+            _stagesDone = 0;
+        }
+
+        private static void Stage()
+        {
+            int stage = _stagesDone;
+            long before = Travel.FrameTicksSoFar();
+            long from = Stopwatch.GetTimestamp();
+            _building = true;
+            try
+            {
+                if (stage == 0) ReadTheRoad();
+                else if (stage == 1) TheShopsBeforeTheRoad();
+                else if (stage == 2) TheCaravansOnArrival();
+                else if (stage == 3) TheShops();
+                else ThePurses();
+            }
+            finally
+            {
+                _building = false;
+                _stagesDone = stage + 1;
+                Travel.SpentThisFrame(Stopwatch.GetTimestamp() - from, before);
+            }
+        }
+
+        private static void ReadTheRoad()
+        {
             _landing.Clear();
             _spending.Clear();
             _drawing.Clear();
@@ -503,14 +556,30 @@ namespace TradeLord
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);
             Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);
+        }
+
+        private static void TheShopsBeforeTheRoad()
+        {
             long shopsFrom = Stopwatch.GetTimestamp();
             Guard.Run("Forecast.WorkshopsAhead", WhatTheShopsWillMakeBeforeTheRoadArrives);
             _shopTicks = Stopwatch.GetTimestamp() - shopsFrom;
+        }
+
+        private static void TheCaravansOnArrival()
+        {
             Guard.Run("Forecast.CaravansOnArrival", FollowTheCaravans);
+        }
+
+        private static void TheShops()
+        {
             Guard.Run("Forecast.WorkshopsAheadForgotten", ForgetWhatTheShopsWereCountedToMake);
-            shopsFrom = Stopwatch.GetTimestamp();
+            long shopsFrom = Stopwatch.GetTimestamp();
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
             _shopTicks += Stopwatch.GetTimestamp() - shopsFrom;
+        }
+
+        private static void ThePurses()
+        {
             long pursesFrom = Stopwatch.GetTimestamp();
             Guard.Run("Forecast.Purses", SettleThePurses);
             _purseTicks = Stopwatch.GetTimestamp() - pursesFrom;
@@ -2013,19 +2082,29 @@ namespace TradeLord
                 standing[one.Key] = (stands, data.Supply, data.Demand);
             }
             var expected = new Dictionary<string, int>(StringComparer.Ordinal);
+            var picked = new Dictionary<string, TradeMath.Picks>(StringComparer.Ordinal);
             foreach (ShopLine line in lines)
                 foreach (var (kind, _) in line.Outputs)
                 {
                     if (standing.ContainsKey(kind) || expected.ContainsKey(kind) ||
                         !kinds.TryGetValue(kind, out ItemCategory category))
                         continue;
-                    int paid = WhatTheTownPaysForWhatItsShopsMake(town, category, live);
-                    if (paid > 0) expected[kind] = paid;
+                    var (paid, picks) = WhatTheTownPaysForWhatItsShopsMake(town, category, live);
+                    if (paid <= 0) continue;
+                    expected[kind] = paid;
+                    if (picks != null) picked[kind] = picks;
                 }
             foreach (ShopLine line in lines)
+            {
                 foreach (var (kind, _) in line.Outputs)
                     if (!standing.ContainsKey(kind) && expected.ContainsKey(kind) && !line.Aside.Contains(kind))
                         line.Aside.Add(kind);
+                if (line.Aside.Count == 1 && picked.TryGetValue(line.Aside[0], out TradeMath.Picks one))
+                {
+                    line.Picks = one;
+                    line.PickKind = line.Aside[0];
+                }
+            }
             lines.RemoveAll(line => !EveryKindPriced(line.Inputs, standing) ||
                                     !EveryOutputPriced(line.Outputs, standing, expected));
             if (lines.Count == 0) return null;
@@ -2109,25 +2188,32 @@ namespace TradeLord
         private static readonly Dictionary<(string kind, string culture), (double perValue, int value)> _makeWeighed =
             new Dictionary<(string, string), (double, int)>();
 
-        private static readonly Dictionary<(string site, string kind), int> _makePaid =
-            new Dictionary<(string, string), int>();
+        private static readonly Dictionary<(string kind, string culture), (double[] perValue, double[] below)>
+            _makePicks = new Dictionary<(string, string), (double[], double[])>();
 
-        private static int WhatTheTownPaysForWhatItsShopsMake(Town town, ItemCategory category, bool live)
+        private static readonly Dictionary<(string site, string kind), (int paid, TradeMath.Picks picks)> _makePaid =
+            new Dictionary<(string, string), (int, TradeMath.Picks)>();
+
+        private static (int paid, TradeMath.Picks picks) WhatTheTownPaysForWhatItsShopsMake(Town town, ItemCategory category,
+                                                                                           bool live)
         {
-            if (town?.Settlement?.StringId == null || category?.StringId == null) return 0;
+            if (town?.Settlement?.StringId == null || category?.StringId == null) return (0, null);
             var key = (town.Settlement.StringId, category.StringId);
-            if (!live && _makePaid.TryGetValue(key, out int known)) return known;
+            if (!live && _makePaid.TryGetValue(key, out var known)) return known;
             var (perValue, value) = TheMakeWeighed(category, town.Culture);
             int paid = 0;
+            TradeMath.Picks picks = null;
             if (perValue > 0d)
             {
                 ItemData data = town.MarketData.GetCategoryData(category);
                 float factor = Campaign.Current.Models.TradeItemPriceFactorModel.GetBasePriceFactor(
                     category, data.InStoreValue, data.Supply, data.Demand, true, value);
                 paid = TradeMath.ATownPaysForAMake(perValue, factor);
+                if (_makePicks.TryGetValue((category.StringId, town.Culture?.StringId ?? ""), out var curve))
+                    picks = new TradeMath.Picks { PerValue = curve.perValue, Below = curve.below, Factor = factor };
             }
-            if (!live) _makePaid[key] = paid;
-            return paid;
+            if (!live) _makePaid[key] = (paid, picks);
+            return (paid, picks);
         }
 
         private static (double perValue, int value) TheMakeWeighed(ItemCategory category, CultureObject culture)
@@ -2157,6 +2243,7 @@ namespace TradeLord
                 }
             kept = TradeMath.TheGamesPickWeighed(preferred.Count > 0 ? preferred : every);
             _makeWeighed[key] = kept;
+            _makePicks[key] = TradeMath.TheGamesPicks(preferred.Count > 0 ? preferred : every);
             return kept;
         }
 

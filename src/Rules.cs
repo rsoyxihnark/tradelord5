@@ -138,6 +138,13 @@ namespace TradeLord
     {
         internal static bool OutEarns(float back, float marked) => back > 0f && back > marked;
 
+        internal static bool TheRoadRulesItOut(long purse, long couldFetch, float ride, float mostConf, float toBeat)
+        {
+            long most = purse < couldFetch ? purse : couldFetch;
+            if (most <= 0L) return true;
+            return TradeMath.PerDay(most, ride) * mostConf <= toBeat;
+        }
+
         internal const int ABeatenMarkIsRememberedFor = 24;
         internal const float AComebackMustBeatTheMarkBy = 1.25f;
 

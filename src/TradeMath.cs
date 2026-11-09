@@ -1834,6 +1834,8 @@ namespace TradeLord
             public bool Unraised;
         }
 
+        public const float TheDiceFillAStoreWithin = 0.5f;
+
         public static int AVillagesWarehouse(float madeADay) =>
             (int)Math.Ceiling(Math.Max(1f, Finite(madeADay, 0f)) * AVillageWarehouseHoldsDays);
 
@@ -1972,7 +1974,7 @@ namespace TradeLord
                 float ready = Math.Max(since, back);
                 if (float.IsInfinity(ready) || ready > watch) break;
                 while (TickAt(ticked + 1) <= ready) Make();
-                while (!(Scale(ticked) > 0f && heldAll >= Warehouse(ticked)))
+                while (!(Scale(ticked) > 0f && heldAll + TheDiceFillAStoreWithin >= Warehouse(ticked)))
                 {
                     if (TickAt(ticked + 1) > watch) return loads;
                     ready = TickAt(ticked + 1);
@@ -3456,6 +3458,55 @@ namespace TradeLord
             double paid = Math.Floor(perValue * factor);
             return paid >= int.MaxValue ? int.MaxValue : Math.Max(1, (int)paid);
         }
+
+        public sealed class Picks
+        {
+            public double[] PerValue;
+            public double[] Below;
+            public float Factor;
+        }
+
+        public static (double[] perValue, double[] below) TheGamesPicks(IList<(int value, float penalty)> items)
+        {
+            var kept = new List<(double perValue, double weight)>();
+            double weights = 0d;
+            for (int i = 0; items != null && i < items.Count; i++)
+            {
+                var (each, penalty) = items[i];
+                if (each <= 0 || float.IsNaN(penalty) || penalty <= -1f) continue;
+                double weight = 1d / (Math.Max(100, each) + 100d);
+                kept.Add((each / (1d + penalty), weight));
+                weights += weight;
+            }
+            kept.Sort((x, y) => x.perValue.CompareTo(y.perValue));
+            var perValue = new double[kept.Count];
+            var below = new double[kept.Count + 1];
+            for (int i = 0; i < kept.Count; i++)
+            {
+                perValue[i] = kept[i].perValue;
+                below[i + 1] = below[i] + (weights > 0d ? kept[i].weight / weights : 0d);
+            }
+            if (kept.Count > 0) below[kept.Count] = 1d;
+            return (perValue, below);
+        }
+
+        public static double ShareOfPicksClearing(Picks picks, double need)
+        {
+            if (picks?.PerValue == null || picks.Below == null || picks.PerValue.Length == 0 ||
+                picks.Below.Length != picks.PerValue.Length + 1 || double.IsNaN(need))
+                return 0d;
+            int lo = 0, hi = picks.PerValue.Length;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (ATownPaysForAMake(picks.PerValue[mid], picks.Factor) > need) hi = mid;
+                else lo = mid + 1;
+            }
+            double share = 1d - picks.Below[lo];
+            return share < 0d ? 0d : share > 1d ? 1d : share;
+        }
+
+        public const float ARunsCreditStartsAt = 0.5f;
 
         public static float HoursTheWorkshopReadingWasOff(float tickIn)
         {

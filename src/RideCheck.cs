@@ -62,6 +62,7 @@ namespace TradeLord
         private void OnTick(float dt)
         {
             Guard.Run("RideCheck.Tick", dt, RideCheck.Tick);
+            Guard.Run("RideCheck.Hour", RideCheck.TheHourOnceWarm);
             Guard.Run("TownCheck.After", TownCheck.Tick);
         }
 
@@ -165,6 +166,7 @@ namespace TradeLord
             internal float DiceSaid = float.NaN;
             internal int StoreAtCount = -1;
             internal int StoreAtLeaving = -1;
+            internal int BroughtHome = -1;
             internal int StoreHolds = -1;
         }
 
@@ -227,6 +229,8 @@ namespace TradeLord
 
         internal static void Forget()
         {
+            _hourDue = double.NaN;
+            _broughtHome.Clear();
             _ride = default(Open);
             _riding = false;
             _triedTo = null;
@@ -374,8 +378,12 @@ namespace TradeLord
             if (_ride.Carried != null) Log.Write("  what carries you: " + _ride.Carried);
         }
 
+        private static readonly Dictionary<string, int> _broughtHome = new Dictionary<string, int>(StringComparer.Ordinal);
+
         internal static void Arrived(MobileParty party, Settlement at)
         {
+            if (Writing && party.IsVillager && party.StringId != null && at == party.HomeSettlement)
+                _broughtHome[party.StringId] = UnitsBroughtToSell(party);
             if (party == MobileParty.MainParty) Reached(at);
             else if (party.IsCaravan || party.IsVillager) ACaravanReached(party, at);
             if (party.IsCaravan || party.IsVillager) ACountedCaravanCame(party, at);
@@ -539,6 +547,7 @@ namespace TradeLord
             one.LeftHomeAt = CampaignTime.Now.ToHours;
             int store = StoreHeld(at);
             one.StoreAtLeaving = store < 0 ? -1 : store + UnitsBroughtToSell(party);
+            one.BroughtHome = _broughtHome.TryGetValue(party.StringId, out int brought) ? brought : -1;
         }
 
         private static int UnitsBroughtToSell(MobileParty party)
@@ -575,7 +584,10 @@ namespace TradeLord
                   (one.StoreHolds >= 0
                       ? ", its store holding " + one.StoreAtCount + " of the " + one.StoreHolds + " TradeLord counts it " +
                         "can hold when counted" +
-                        (one.StoreAtLeaving >= 0 ? " and " + one.StoreAtLeaving + " when they left, their load counted in" : "")
+                        (one.StoreAtLeaving >= 0 ? " and " + one.StoreAtLeaving + " when they left, their load counted in" : "") +
+                        (one.BroughtHome > 0
+                            ? ", " + one.BroughtHome + " of that load brought back home unsold from their last trip"
+                            : "")
                       : "");
 
         internal static void YouSoldAt(Settlement site, int gold)
@@ -635,10 +647,37 @@ namespace TradeLord
             }
         }
 
+        private static double _hourDue = double.NaN;
+        private static int _hourWaited;
+
         internal static void Hourly()
         {
             if (!Writing || Campaign.Current == null) return;
-            double now = CampaignTime.Now.ToHours;
+            if (!double.IsNaN(_hourDue)) TheHour();
+            _hourDue = CampaignTime.Now.ToHours;
+            _hourWaited = 0;
+        }
+
+        internal static void TheHourOnceWarm()
+        {
+            if (double.IsNaN(_hourDue)) return;
+            if (!Writing || Campaign.Current == null)
+            {
+                _hourDue = double.NaN;
+                return;
+            }
+            if (_hourWaited < Forecast.StagesInABuild + 1 && Forecast.WarmedAStage())
+            {
+                _hourWaited++;
+                return;
+            }
+            TheHour();
+        }
+
+        private static void TheHour()
+        {
+            double now = _hourDue;
+            _hourDue = double.NaN;
             JudgeTheCounted(now);
             CheckThePurses(now);
         }

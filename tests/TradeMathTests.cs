@@ -3393,6 +3393,58 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_store_the_games_rounding_fills_at_least_half_the_time_counts_as_full_on_that_tick()
+        {
+            float wait = (1f / 0.15f - 0.5f) / 24f;
+            List<TradeMath.VillageLoad> half = TradeMath.WhatAVillageSends(
+                new[] { 30f }, new[] { 7.5f }, new[] { 1f }, new[] { false }, 0f, 0f, true, 0.25f, 7f, 0.5f,
+                new[] { 1f });
+            Assert.Equal(38, TradeMath.AVillagesWarehouse(7.5f));
+            Assert.Equal(0.5f, half[0].Ready, 3);
+            Assert.Equal(0.5f + wait + 0.25f, half[0].Days, 3);
+            List<TradeMath.VillageLoad> short1 = TradeMath.WhatAVillageSends(
+                new[] { 29f }, new[] { 7.5f }, new[] { 1f }, new[] { false }, 0f, 0f, true, 0.25f, 7f, 0.5f,
+                new[] { 1f });
+            Assert.Equal(1.5f, short1[0].Ready, 3);
+            List<TradeMath.VillageLoad> exact = TradeMath.WhatAVillageSends(
+                new[] { 37f }, new[] { 7.5f }, new[] { 1f }, new[] { false }, 0f, 0f, true, 0.25f, 7f, 0.5f,
+                new[] { 1f });
+            Assert.Equal(0.5f, exact[0].Ready, 3);
+        }
+
+        [Fact]
+        public void A_workshop_runs_its_equipment_line_as_often_as_the_games_random_pick_would_clear_the_bar()
+        {
+            var (perValue, below) = TradeMath.TheGamesPicks(new List<(int value, float penalty)>
+            {
+                (300, 0f), (100, 0f), (200, 0f), (0, 0f), (500, float.NaN)
+            });
+            Assert.Equal(new[] { 100d, 200d, 300d }, perValue);
+            double w1 = 1d / 200d, w2 = 1d / 300d, w3 = 1d / 400d, all = w1 + w2 + w3;
+            Assert.Equal(0d, below[0], 6);
+            Assert.Equal(w1 / all, below[1], 6);
+            Assert.Equal(1d, below[3], 6);
+            var picks = new TradeMath.Picks { PerValue = perValue, Below = below, Factor = 1f };
+            Assert.Equal(1d, TradeMath.ShareOfPicksClearing(picks, 99d), 6);
+            Assert.Equal((w2 + w3) / all, TradeMath.ShareOfPicksClearing(picks, 100d), 6);
+            Assert.Equal(w3 / all, TradeMath.ShareOfPicksClearing(picks, 250d), 6);
+            Assert.Equal(0d, TradeMath.ShareOfPicksClearing(picks, 300d), 6);
+            picks.Factor = 2f;
+            Assert.Equal(w3 / all, TradeMath.ShareOfPicksClearing(picks, 500d), 6);
+            Assert.Equal(0d, TradeMath.ShareOfPicksClearing(null, 1d), 6);
+        }
+
+        [Fact]
+        public void A_market_the_road_rules_out_is_one_that_could_not_beat_the_runner_up_even_at_its_fullest()
+        {
+            Assert.True(Marks.TheRoadRulesItOut(1000L, 5000L, 2f, 1f, 500f));
+            Assert.False(Marks.TheRoadRulesItOut(1000L, 5000L, 2f, 1f, 499f));
+            Assert.True(Marks.TheRoadRulesItOut(5000L, 1000L, 2f, 1f, 500f));
+            Assert.True(Marks.TheRoadRulesItOut(5000L, 4000L, 2f, 0.25f, 500f));
+            Assert.True(Marks.TheRoadRulesItOut(0L, 4000L, 2f, 1f, 0f));
+        }
+
+        [Fact]
         public void Villagers_take_three_fifths_of_each_good_and_set_out_about_seven_hours_after_the_warehouse_fills()
         {
             Assert.Equal(1f - 0.8f * 0.8f * 0.8f * 0.8f, TradeMath.ShareVillagersLoad(), 4);

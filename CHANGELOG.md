@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.16
+
+- Fixed the campaign map stuttering every in-game hour on the road while the map marker weighs your cargo again (#199)
+- The map marker weighs your cargo again in less time with Town travel ceiling off (#199)
+- Fixed Count what is on its way counting workshops making clothing, weapons and shields more or less often than the game makes them (#198)
+- Fixed Count what is on its way counting some villages' next trip a day late when their store was just short of full (#197)
+- Fixed TradeLord.log's busiest frame leaving out the hourly forecast and the map marker (#199)
+- With Enable extended debug logging on, TradeLord.log says how many markets the map marker left once their road was timed (#199)
+- With Enable extended debug logging on, TradeLord.log's villager check says how much of a village's load came home unsold (#197)
+
 ## 2.9.15
 
 - Fixed Count what is on its way getting wrong how much of a good a town uses up when demand moves to a good standing in for it (#190)

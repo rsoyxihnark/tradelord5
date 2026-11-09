@@ -369,9 +369,24 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null || party.CurrentSettlement != null) return;
             NoteTheRoadTaken(party);
+            if (!Marker.WouldBeDue(party.GetPosition2D)) return;
+            if (Options.Current.MarkBestSellTownOnMap && _markerWaited < Forecast.StagesInABuild + 1)
+            {
+                Guard.Run("Action.MarkerSaleTakenIn", Forecast.TakeInYourNewSale);
+                bool warming = false;
+                Guard.Run("Action.MarkerWarming", () => warming = Forecast.WarmedAStage());
+                if (warming)
+                {
+                    _markerWaited++;
+                    return;
+                }
+            }
+            _markerWaited = 0;
             if (!Marker.DueAgain(party.GetPosition2D)) return;
             Guard.Run("Action.MarkerAsYouMove", Marker.Update);
         }
+
+        private static int _markerWaited;
 
         private void OnDailyTick()
         {
@@ -384,7 +399,8 @@ namespace TradeLord
                     Drove.LogState("at " + here.Name + (HasAMarket(here) ? "" : ", which has no market"), shed);
             });
             Guard.Run("Action.MarkerToday", Marker.SayHowItHeldToday);
-            Guard.Run("Action.DailyTick", Marker.Update);
+            if (MobileParty.MainParty != null && MobileParty.MainParty.CurrentSettlement == null) Marker.DueNow();
+            else Guard.Run("Action.DailyTick", Marker.Update);
         }
 
         private void OnSettlementLeft(MobileParty party, Settlement settlement)

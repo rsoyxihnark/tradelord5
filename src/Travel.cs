@@ -1849,13 +1849,25 @@ namespace TradeLord
             Campaign.Current != null && MobileParty.MainParty != null && Mission.Current == null &&
             Game.Current?.GameStateManager?.ActiveState is MapState;
 
+        private static long _frame;
+
+        internal static long Frame => _frame;
+
         internal static void NewFrame()
         {
             if (_frameTicks > _busiestFrame) _busiestFrame = _frameTicks;
             _frameTicks = 0L;
+            _frame++;
         }
 
         internal static long FrameTicksSoFar() => _frameTicks;
+
+        internal static void SpentThisFrame(long spent, long before)
+        {
+            long inner = _frameTicks - before;
+            if (inner < 0L) inner = 0L;
+            _frameTicks += spent > inner ? spent - inner : 0L;
+        }
 
         internal static void SpentOnAScan(long spent, long before)
         {
