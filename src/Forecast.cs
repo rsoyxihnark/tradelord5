@@ -1842,12 +1842,6 @@ namespace TradeLord
             return then > 0 ? then : now;
         }
 
-        private static bool Moved(Town town, ItemCategory kind, (int inStore, float supply, float demand) at)
-        {
-            ItemData data = town.MarketData.GetCategoryData(kind);
-            return at.inStore != data.InStoreValue || at.supply != data.Supply || at.demand != data.Demand;
-        }
-
         internal static (ItemCategory kind, float now, float said)? WhatACaravanWasCountedToMeet(string caravan,
                                                                                                 Settlement site)
         {
