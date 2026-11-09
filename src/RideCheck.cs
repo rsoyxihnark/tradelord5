@@ -581,9 +581,9 @@ namespace TradeLord
             double.IsNaN(one.ReadyAt) || double.IsNaN(one.BackAt)
                 ? ""
                 : "; TradeLord had it ready " +
-                  (one.Brought ? "with the goods its party brought home unsold"
-                   : one.ReadyAt <= one.SetOffAt + 0.01d ? "when it was counted"
+                  (one.ReadyAt <= one.SetOffAt + 0.01d ? "when it was counted"
                    : one.ReadyAt > one.BackAt + 0.01d ? "once its store filled" : "once its party got home") +
+                  (one.Brought ? ", with the goods its party brought home unsold" : "") +
                   (one.StoreHolds >= 0
                       ? ", its store holding " + one.StoreAtCount + " of the " + one.StoreHolds + " TradeLord counts it " +
                         "can hold when counted" +
@@ -616,22 +616,7 @@ namespace TradeLord
                 if (one.Town == at.StringId && double.IsNaN(one.YouReachedAt)) one.YouReachedAt = now;
         }
 
-        private static bool BringsGoods(MobileParty party)
-        {
-            ItemRoster carried = party?.ItemRoster;
-            if (carried == null) return false;
-            ItemObject kept = null;
-            for (int k = 0; k < carried.Count; k++)
-            {
-                ItemObject item = carried.GetItemAtIndex(k);
-                if (item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000)) kept = item;
-            }
-            int keeps = (int)(0.5f * party.MemberRoster.TotalManCount);
-            for (int k = 0; k < carried.Count; k++)
-                if (TradeMath.UnitsVillagersBringToSell(carried.GetElementNumber(k), carried.GetItemAtIndex(k) == kept, keeps) > 0)
-                    return true;
-            return false;
-        }
+        private static bool BringsGoods(MobileParty party) => UnitsBroughtToSell(party) > 0;
 
         internal static void ACaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
         {

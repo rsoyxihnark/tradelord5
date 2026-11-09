@@ -430,7 +430,7 @@ namespace TradeLord.Mcm
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL279}Count what is on its way to a market", Order = 10, RequireRestart = false,
-            HintText = "{=TL396}Counts what caravans and workshops bring or take and the town uses up before you arrive; a village follows its town. It sets route stock and, with Bulk price simulation on, route and tooltip prices and where to sell. Live world prices only.")]
+            HintText = "{=TL396}Counts what caravans, villagers, workshops and the town add and take before you arrive; a village follows its town. It sets route stock and, with Bulk price simulation on, route and tooltip prices and where to sell. Live world prices only.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 

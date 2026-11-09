@@ -1,38 +1,42 @@
 # Changelog
 
+## 2.9.20
+
+- Fixed TradeLord.log's villager check giving goods brought home unsold as the reason a village's next trip was ready (#197)
+- Fixed the Count what is on its way to a market hint and What this means in the TradeLord ledger leaving out villagers
+
 ## 2.9.19
 
-- Fixed Count what is on its way sending villagers' unsold goods back to town alone instead of with their village's next trip (#197)
-- Fixed Count what is on its way counting a village's next trip fuller than its villagers can carry beside the goods they brought home (#197)
-- Fixed Count what is on its way leaving perk, building and culture bonuses out of the horses and mules villages make
+- Fixed Count what is on its way to a market counting a village's next trip fuller than its villagers can carry beside the goods they brought home (#197)
+- Fixed Count what is on its way to a market leaving perk, building and culture bonuses out of the horses and mules villages make
 
 ## 2.9.18
 
-- Fixed Count what is on its way counting too few weapons, shields and clothing on days a workshop makes them more than once (#198)
+- Fixed Count what is on its way to a market counting too few weapons, shields and clothing on days a workshop makes them more than once (#198)
 
 ## 2.9.17
 
 - Fixed the campaign map still stuttering a little every in-game hour on the road while caravans and villagers are followed (#199)
-- Fixed Count what is on its way leaving out the quality the game rolls for the weapons, armour and clothing workshops make (#198)
-- Fixed Count what is on its way leaving out the trip villagers make with goods they brought home unsold (#197)
+- Fixed Count what is on its way to a market leaving out the quality the game rolls for the weapons, armour and clothing workshops make (#198)
+- Fixed Count what is on its way to a market leaving out the goods villagers bring home unsold (#197)
 - With Enable extended debug logging on, TradeLord.log's villager check says when a next trip carries goods its party brought home (#197)
 
 ## 2.9.16
 
 - Fixed the campaign map stuttering every in-game hour on the road while the map marker weighs your cargo again (#199)
 - The map marker weighs your cargo again in less time with Town travel ceiling off (#199)
-- Fixed Count what is on its way counting workshops making clothing, weapons and shields more or less often than the game makes them (#198)
-- Fixed Count what is on its way counting some villages' next trip a day late when their store was just short of full (#197)
+- Fixed Count what is on its way to a market counting workshops making clothing, weapons and shields more or less often than the game makes them (#198)
+- Fixed Count what is on its way to a market counting some villages' next trip a day late when their store was just short of full (#197)
 - Fixed TradeLord.log's busiest frame leaving out the hourly forecast and the map marker (#199)
 - With Enable extended debug logging on, TradeLord.log says how many markets the map marker left once their road was timed (#199)
 - With Enable extended debug logging on, TradeLord.log's villager check says how much of a village's load came home unsold (#197)
 
 ## 2.9.15
 
-- Fixed Count what is on its way getting wrong how much of a good a town uses up when demand moves to a good standing in for it (#190)
-- Fixed Count what is on its way counting a town's workshops running again the same day at prices their first run had already moved (#191)
-- Fixed Count what is on its way leaving out the iron, hardwood, wool and leather workshops use up to make weapons, armour and gear (#191)
-- Fixed Count what is on its way timing villagers' rides at a fixed speed instead of how long each village's villagers really take (#197)
+- Fixed Count what is on its way to a market getting wrong how much of a good a town uses up when demand moves to a good standing in for it (#190)
+- Fixed Count what is on its way to a market counting a town's workshops running again the same day at prices their first run had already moved (#191)
+- Fixed Count what is on its way to a market leaving out the iron, hardwood, wool and leather workshops use up to make weapons, armour and gear (#191)
+- Fixed Count what is on its way to a market timing villagers' rides at a fixed speed instead of how long each village's villagers really take (#197)
 - Fixed TradeLord.log's villager check taking a visit villagers made before leaving their village for the next trip it was counted for (#197)
 - Fixed TradeLord.log's villager check timing a next trip's ride from an earlier time the villagers left their village (#197)
 - Fixed TradeLord.log's villager check rolling the game's own dice for a village's horses when it read how full the village store is (#197)
@@ -64,31 +68,31 @@
 
 ## 2.9.12
 
-- Fixed Count what is on its way counting villagers apart from caravans instead of in the order they reach a market (#188)
-- Fixed Count what is on its way pricing villagers' sales at today's prices instead of the prices they meet on arrival (#188)
-- Fixed Count what is on its way leaving horses and mules out of what a village's next trip sells (#196)
+- Fixed Count what is on its way to a market counting villagers apart from caravans instead of in the order they reach a market (#188)
+- Fixed Count what is on its way to a market pricing villagers' sales at today's prices instead of the prices they meet on arrival (#188)
+- Fixed Count what is on its way to a market leaving horses and mules out of what a village's next trip sells (#196)
 - Fixed TradeLord.log's villager check taking a village's empty visit to its town for the next trip it was counted for (#196)
-- Fixed Count what is on its way leaving workshops' goods out of the prices caravans and villagers meet on arrival (#191)
-- Fixed Count what is on its way counting a town's use of its goods through the day instead of once a day at its own hour (#189)
-- Fixed Count what is on its way leaving out how much of a good a town uses up when demand moves to or from a good standing in for it (#190)
-- Fixed Count what is on its way counting what a town earns from using up its goods at their worth instead of their price (#190)
-- Fixed Count what is on its way reading a town's daily hour off its workshops instead of the town's own hour (#192)
-- Fixed Count what is on its way reading the caravans' price averages too early in a new game (#193)
-- Count what is on its way now takes in a big change in your sale at the map marker's market straight away, once an hour at most (#180)
-- Fixed Count what is on its way counting your planned sale all or nothing for caravans due around the time you arrive (#180)
+- Fixed Count what is on its way to a market leaving workshops' goods out of the prices caravans and villagers meet on arrival (#191)
+- Fixed Count what is on its way to a market counting a town's use of its goods through the day instead of once a day at its own hour (#189)
+- Fixed Count what is on its way to a market leaving out how much of a good a town uses up when demand moves to or from a good standing in for it (#190)
+- Fixed Count what is on its way to a market counting what a town earns from using up its goods at their worth instead of their price (#190)
+- Fixed Count what is on its way to a market reading a town's daily hour off its workshops instead of the town's own hour (#192)
+- Fixed Count what is on its way to a market reading the caravans' price averages too early in a new game (#193)
+- Count what is on its way to a market now takes in a big change in your sale at the map marker's market straight away, once an hour at most (#180)
+- Fixed Count what is on its way to a market counting your planned sale all or nothing for caravans due around the time you arrive (#180)
 
 ## 2.9.11
 
-- Fixed Count what is on its way counting a caravan's own sale twice in the prices it buys at in the same town (#174)
-- Fixed Count what is on its way pricing all the units a caravan sells or buys at the price of the first one (#175)
-- Fixed Count what is on its way taking what caravans not bound yet draw from a town's purse at the price left after their sale (#175)
+- Fixed Count what is on its way to a market counting a caravan's own sale twice in the prices it buys at in the same town (#174)
+- Fixed Count what is on its way to a market pricing all the units a caravan sells or buys at the price of the first one (#175)
+- Fixed Count what is on its way to a market taking what caravans not bound yet draw from a town's purse at the price left after their sale (#175)
 - Fixed TradeLord.log's caravan check counting what a caravan sold at the price left after its sale instead of what it was paid (#175)
-- Fixed Count what is on its way leaving out what caravans already in a town will buy there before they leave (#176)
+- Fixed Count what is on its way to a market leaving out what caravans already in a town will buy there before they leave (#176)
 - With Enable extended debug logging on, TradeLord.log now says each hour how many caravans in a town are still to buy (#176)
-- Fixed Count what is on its way expecting caravans and villagers to set off half an hour later on average than they do (#177)
-- Fixed Count what is on its way letting a village's new villagers carry more than their men and pack animals can (#178)
-- Fixed Count what is on its way moving no demand onto a stand-in good when the town had no demand for it (#179)
-- Fixed Count what is on its way judging how much a caravan sells partly on today's prices instead of the prices it meets on arrival (#181)
+- Fixed Count what is on its way to a market expecting caravans and villagers to set off half an hour later on average than they do (#177)
+- Fixed Count what is on its way to a market letting a village's new villagers carry more than their men and pack animals can (#178)
+- Fixed Count what is on its way to a market moving no demand onto a stand-in good when the town had no demand for it (#179)
+- Fixed Count what is on its way to a market judging how much a caravan sells partly on today's prices instead of the prices it meets on arrival (#181)
 - Fixed TradeLord.log's caravan line each hour counting caravans as selling at other prices when only goods they do not sell had moved (#182)
 - Fixed TradeLord.log's caravan check counting villagers among the caravans still awaited (#183)
 - Fixed TradeLord.log's villager check counting a village's later trips against what its first trip sold (#184)
@@ -96,23 +100,23 @@
 
 ## 2.9.10
 
-- Fixed Count what is on its way pricing what a caravan buys before its own sale reaches the shelf instead of as it leaves the town (#168)
-- Fixed Count what is on its way leaving out your own sale at the market the map marker sends you to when a caravan comes after you (#168)
-- Fixed Count what is on its way holding a town's supply and demand where they stand instead of moving them each day as the game does (#168)
-- Fixed Count what is on its way reading the prices caravans weigh a market against every hour instead of once a day as the game does (#168)
+- Fixed Count what is on its way to a market pricing what a caravan buys before its own sale reaches the shelf instead of as it leaves the town (#168)
+- Fixed Count what is on its way to a market leaving out your own sale at the market the map marker sends you to when a caravan comes after you (#168)
+- Fixed Count what is on its way to a market holding a town's supply and demand where they stand instead of moving them each day as the game does (#168)
+- Fixed Count what is on its way to a market reading the prices caravans weigh a market against every hour instead of once a day as the game does (#168)
 
 ## 2.9.9
 
-- Fixed Count what is on its way counting caravans' sales and purchases at today's prices instead of the prices they meet on arrival (#168)
+- Fixed Count what is on its way to a market counting caravans' sales and purchases at today's prices instead of the prices they meet on arrival (#168)
 - With Enable extended debug logging on, TradeLord.log's caravan check now says what price a caravan was counted to meet and what it met (#168)
 - With Enable extended debug logging on, TradeLord.log now says each hour how many caravans were counted at their arrival prices (#168)
 
 ## 2.9.8
 
-- Fixed Count what is on its way timing a village's next trip as if it made goods all day instead of once a day at its own hour (#173)
-- Fixed Count what is on its way leaving out what a looted village sends once it recovers before you arrive (#173)
-- Fixed Count what is on its way missing that a village makes more or less once its hearth crosses into a new level (#173)
-- Fixed Count what is on its way expecting villagers short of men to carry less than they do once their village tops them up (#173)
+- Fixed Count what is on its way to a market timing a village's next trip as if it made goods all day instead of once a day at its own hour (#173)
+- Fixed Count what is on its way to a market leaving out what a looted village sends once it recovers before you arrive (#173)
+- Fixed Count what is on its way to a market missing that a village makes more or less once its hearth crosses into a new level (#173)
+- Fixed Count what is on its way to a market expecting villagers short of men to carry less than they do once their village tops them up (#173)
 - With Enable extended debug logging on, TradeLord.log now says for how many villages it knows the hour they make their goods (#173)
 - With Enable extended debug logging on, TradeLord.log now says how many looted villages it follows until they recover (#173)
 
@@ -163,7 +167,7 @@
 - Fixed TradeLord.log describing the ride from the market you stand in along an old road
 - Fixed TradeLord.log taking two villages that share a name for one village counted twice
 - With Enable extended debug logging on, TradeLord.log now says what sellers on the road want from a town's purse and what it can pay them
-- With Enable extended debug logging on, TradeLord.log now says what each caravan Count what is on its way counted was to sell and what it sold
+- With Enable extended debug logging on, TradeLord.log now says what each caravan Count what is on its way to a market counted was to sell and what it sold
 - With Enable extended debug logging on, TradeLord.log now checks each hour how close its forecast of every town's purse came
 - With Enable extended debug logging on, TradeLord.log now says what other parties buying food and horses and selling loot do to a town's purse and stock
 - With Enable extended debug logging on, TradeLord.log now breaks each forecast check figure down into workshops, villagers, caravans and the town's own use
@@ -382,7 +386,7 @@
 
 - Fixed TradeLord.log losing the night step, the Disorganized step, the game clock check and the ground step readings
 - Fixed TradeLord.log losing the ride check that weighs every ride you set off on against the time TradeLord gave for it
-- Fixed TradeLord.log losing the caravan ride check that weighs how close Count what is on its way came to when caravans arrived
+- Fixed TradeLord.log losing the caravan ride check that weighs how close Count what is on its way to a market came to when caravans arrived
 
 ## 2.3.0
 
@@ -515,7 +519,7 @@
 
 ## 2.0.6
 
-- Fixed Count what is on its way timing caravans and villagers along a straight line instead of the road they take
+- Fixed Count what is on its way to a market timing caravans and villagers along a straight line instead of the road they take
 - With Enable extended debug logging on, the caravan ride check in TradeLord.log now sets aside caravans and villagers that fled or fought
 - With Enable extended debug logging on, the caravan ride check in TradeLord.log now weighs the same rides against a straight line too
 - With Enable extended debug logging on, TradeLord.log now says each hour how many caravans and villagers are on their road or fleeing
@@ -552,7 +556,7 @@
 - Fixed Count what is on its way to a market expecting caravans and villagers to arrive sooner than they do
 - Fixed Count what is on its way to a market expecting caravans and villagers to arrive a third later than they do at night
 - With Enable extended debug logging on, TradeLord.log now weighs every ride you set off on against the travel time TradeLord gave for it
-- With Enable extended debug logging on, TradeLord.log now says once a day how close Count what is on its way came to when caravans arrived
+- With Enable extended debug logging on, TradeLord.log now says once a day how close Count what is on its way to a market came to when caravans arrived
 - With Enable extended debug logging on, TradeLord.log now says at nightfall and daybreak how much the night slows your party and caravans
 - With Enable extended debug logging on, TradeLord.log now checks once a day how many hours the game takes to move a party as far as its Speed
 

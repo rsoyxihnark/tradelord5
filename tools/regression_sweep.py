@@ -13549,9 +13549,9 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
             and "return firstTick > 0f && firstTick <= 1f ? TradeMath.TownTicksCountBefore(firstTick, within) : within;" in
                 method_body(p, "internal static float DaysOfUse(")
             and "A_town_uses_up_as_many_goods_a_day_as_its_budget_for_the_kind_buys_at_its_own_price" in MATHTESTS
-            and "and the town uses up before you arrive" in spoken(ENGLISH)['TL396']
-            and "what caravans, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL447']
-            and "what caravans, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL394']
+            and "what caravans, villagers, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL396']
+            and "what caravans, villagers, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL447']
+            and "what caravans, villagers, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL394']
             and said_in_every_language('TL447') and said_in_every_language('TL394')
             and "What leaves the shelf is counted too: what the town uses up every day and what its workshops take" in README)
 
@@ -14561,9 +14561,9 @@ def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
             and en['TL345'].endswith("until you return. ON by default.")
             and all(en[one] in M for one in ('TL329', 'TL396', 'TL345'))
             and all(said_in_every_language(one) for one in ('TL329', 'TL396', 'TL345'))
-            and "Varışınıza dek kervan ve atölyelerin getirip götürdüğünü" in tr['TL396']
+            and "Varışınıza dek kervan, köylü ve atölyelerin getirip götürdüğünü" in tr['TL396']
             and "Toplu fiyat benzetimi açıkken de rota ve ipucu fiyatlarını" in tr['TL396'] and "ve nerede satacağını belirler" in tr['TL396']
-            and "до приезда привезут или увезут караваны и мастерские" in ru['TL396']
+            and "до приезда добавят и заберут караваны, крестьяне, мастерские и город" in ru['TL396']
             and "在你到达之前给市场带来或带走的东西" in cn['TL396']
             and "siz oraya dönene kadar atlar" in tr['TL345'] and "Orada gerçekten satacağı yüke" in tr['TL345']
             and "oraya yoldakileri de sayar" in tr['TL329']
@@ -17424,7 +17424,7 @@ def every_line_of_what_this_means_fits_its_window():
                     for path in [ENGLISH] + list(TRANSLATIONS.values())
                     for one in measured
                     for clause in spoken(path)[one].split(' | ') if clause.strip())
-            and "{=TL394} | prices and stock count what caravans, workshops and the town add and take before you arrive" in built)
+            and "{=TL394} | prices and stock count what caravans, villagers, workshops and the town add and take before you arrive" in built)
 
 chk("1.100.0", "every line of What this means in the TradeLord ledger fits on one line of its window in every language, so no line runs on into the next",
     every_line_of_what_this_means_fits_its_window())
@@ -24780,8 +24780,9 @@ def the_forecast_follows_every_seller_in_arrival_order_and_counts_each_town_day_
                         "if (!one.NextTrip || one.CameWithGoods) return;",
                         "one.ArrivedAt = double.NaN;")
             and "if (one.Villagers) one.CameWithGoods = BringsGoods(party);" in method_body(c, "private static void ACountedCaravanCame(")
-            and "TradeMath.UnitsVillagersBringToSell(carried.GetElementNumber(k), carried.GetItemAtIndex(k) == kept, keeps) > 0" in
-                method_body(c, "private static bool BringsGoods(MobileParty party)")
+            and "private static bool BringsGoods(MobileParty party) => UnitsBroughtToSell(party) > 0;" in c
+            and "units += TradeMath.UnitsVillagersBringToSell(carried.GetElementNumber(k), carried.GetItemAtIndex(k) == kept, keeps);" in
+                method_body(c, "private static int UnitsBroughtToSell(MobileParty party)")
             and ordered(judge, "if (one.NextTrip && !double.IsNaN(one.ArrivedAt) && !gone && party.CurrentSettlement?.StringId == one.Town &&",
                         "!one.CameWithGoods)", "one.ArrivedAt = double.NaN;", "bool left = !double.IsNaN(one.ArrivedAt)")
             and all(one in COMPAT for one in ('"_priceDictionary"', '"_coastalPriceDictionary"',
@@ -25185,7 +25186,7 @@ def villagers_home_with_unsold_goods_are_counted_and_the_villager_check_says_so(
                         "if (item == ridden) amount -= (int)(0.5f * villagers.MemberRoster.TotalManCount);",
                         "if (broughtNow != null) loads = TradeMath.TheTripWithGoodsBroughtHome(loads, broughtNow);")
             and "trip.Brought = Forecast.TheNextTripCarriesWhatItBroughtHome(one.id, one.days);" in c
-            and '(one.Brought ? "with the goods its party brought home unsold"' in c
+            and '(one.Brought ? ", with the goods its party brought home unsold" : "")' in c
             and f.count("_broughtTrips.Clear();") == 2)
 
 
@@ -25260,6 +25261,27 @@ def a_villages_horses_and_mules_are_counted_with_their_bonuses_and_no_dice():
 
 chk("2.9.19", "Count what is on its way counts a village's horses and mules with the perks, buildings and culture the game counts, and calls the game's count only when it rolls no dice",
     a_villages_horses_and_mules_are_counted_with_their_bonuses_and_no_dice())
+
+def the_villager_check_says_what_made_a_trip_ready_and_then_the_goods_brought_home():
+    ready = method_body(S['RideCheck.cs'], "private static string WhatMadeItReady(Counted one)")
+    return (ready
+            and ordered(ready, '"; TradeLord had it ready " +', '"when it was counted"', '"once its store filled"',
+                        '"once its party got home"', '", with the goods its party brought home unsold"'))
+
+
+chk("2.9.20", "TradeLord.log's villager check says what made a next trip ready, and only then that it carries goods brought home unsold",
+    the_villager_check_says_what_made_a_trip_ready_and_then_the_goods_brought_home())
+
+
+def the_forecast_hint_and_what_this_means_name_the_villagers_in_every_language():
+    named = {ENGLISH: "villagers", TRANSLATIONS['Türkçe']: "köylü", TRANSLATIONS['Русский']: "крестьяне",
+             TRANSLATIONS['简体中文']: "村民"}
+    return (len(named) == 4
+            and all(word in spoken(path)[one] for path, word in named.items() for one in ('TL396', 'TL394', 'TL447')))
+
+
+chk("2.9.20", "the Count what is on its way to a market hint and What this means in the TradeLord ledger name the villagers it counts in every language",
+    the_forecast_hint_and_what_this_means_name_the_villagers_in_every_language())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
