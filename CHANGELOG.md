@@ -56,10 +56,6 @@
 - With Enable extended debug logging on, TradeLord.log's forecast check also scores each figure on TradeLord's own curve (#97)
 - With Enable extended debug logging on, TradeLord.log's forecast check counts the figures that moved more than twice what was said (#97)
 
-## 2.9.13
-
-- Fixed the TradeLord ledger expecting some markets to pay far more for a good than they will
-
 ## 2.9.12
 
 - Fixed Count what is on its way counting villagers apart from caravans instead of in the order they reach a market (#188)
