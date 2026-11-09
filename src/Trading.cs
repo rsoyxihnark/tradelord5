@@ -370,7 +370,7 @@ namespace TradeLord
             if (party == null || party.CurrentSettlement != null) return;
             NoteTheRoadTaken(party);
             if (!Marker.WouldBeDue(party.GetPosition2D)) return;
-            if (Options.Current.MarkBestSellTownOnMap && _markerWaited < Forecast.StagesInABuild + 1)
+            if (Options.Current.MarkBestSellTownOnMap && _markerWaited < Forecast.FramesAWarmUpWaits)
             {
                 Guard.Run("Action.MarkerSaleTakenIn", Forecast.TakeInYourNewSale);
                 bool warming = false;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.9.17
+
+- Fixed the campaign map still stuttering a little every in-game hour on the road while caravans and villagers are followed (#199)
+- Fixed Count what is on its way leaving out the quality the game rolls for the weapons, armour and clothing workshops make (#198)
+- Fixed Count what is on its way leaving out the trip villagers make with goods they brought home unsold (#197)
+- With Enable extended debug logging on, TradeLord.log's villager check says when a next trip carries goods its party brought home (#197)
+
 ## 2.9.16
 
 - Fixed the campaign map stuttering every in-game hour on the road while the map marker weighs your cargo again (#199)

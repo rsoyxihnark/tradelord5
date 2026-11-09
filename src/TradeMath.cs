@@ -1832,6 +1832,42 @@ namespace TradeLord
             public float Ready;
             public float Back;
             public bool Unraised;
+            public bool Brought;
+        }
+
+        public static List<VillageLoad> TheTripWithGoodsBroughtHome(List<VillageLoad> fromTheStore,
+                                                                    Func<float, List<VillageLoad>> fromTheStoreOnceBack,
+                                                                    float[] brought, float home, float ride,
+                                                                    float rideBack, float watch)
+        {
+            float units = 0f;
+            for (int i = 0; brought != null && i < brought.Length; i++) units += Math.Max(0f, Finite(brought[i], 0f));
+            if (!(units > 0f) || !(ride >= 0f) || float.IsInfinity(ride) || float.IsInfinity(home)) return fromTheStore;
+            float leaves = Math.Max(0f, Finite(home, 0f)) + DaysUntilARollTakes(VillagersSetOutAnHourWith);
+            if (leaves + ride > watch) return fromTheStore;
+            if (fromTheStore != null && fromTheStore.Count > 0 && fromTheStore[0].SetOut <= leaves &&
+                fromTheStore[0].Units != null && fromTheStore[0].Units.Length == brought.Length)
+            {
+                VillageLoad first = fromTheStore[0];
+                for (int i = 0; i < brought.Length; i++) first.Units[i] += Math.Max(0f, Finite(brought[i], 0f));
+                first.Brought = true;
+                fromTheStore[0] = first;
+                return fromTheStore;
+            }
+            float rideHome = rideBack >= 0f && !float.IsInfinity(rideBack) ? rideBack : ride;
+            float back = leaves + ride + DaysUntilARollTakes(VillagersLeaveATownAnHourWith) + rideHome;
+            var all = new List<VillageLoad>
+            {
+                new VillageLoad
+                {
+                    Days = leaves + ride, Units = (float[])brought.Clone(), SetOut = leaves, Ready = home, Back = home,
+                    Brought = true
+                }
+            };
+            List<VillageLoad> after = fromTheStoreOnceBack?.Invoke(back);
+            for (int k = 0; after != null && k < after.Count && all.Count < MostLoadsAVillageIsFollowedFor; k++)
+                all.Add(after[k]);
+            return all;
         }
 
         public const float TheDiceFillAStoreWithin = 0.5f;
@@ -3436,17 +3472,21 @@ namespace TradeLord
             return rideDays * (share < 0f ? 0f : share > 1f ? 1f : share);
         }
 
-        public static (double perValue, int value) TheGamesPickWeighed(IList<(int value, float penalty)> items)
+        public static (double perValue, int value) TheGamesPickWeighed(IList<(int value, float penalty)> items) =>
+            TheGamesPickWeighed(Unmodified(items));
+
+        public static (double perValue, int value) TheGamesPickWeighed(
+            IList<(int value, int priced, float penalty, double share)> items)
         {
             double weights = 0d, perValue = 0d, value = 0d;
             for (int i = 0; items != null && i < items.Count; i++)
             {
-                var (each, penalty) = items[i];
-                if (each <= 0 || float.IsNaN(penalty) || penalty <= -1f) continue;
-                double weight = 1d / (Math.Max(100, each) + 100d);
+                var (each, priced, penalty, share) = items[i];
+                if (each <= 0 || priced <= 0 || float.IsNaN(penalty) || penalty <= -1f || !(share > 0d)) continue;
+                double weight = share / (Math.Max(100, each) + 100d);
                 weights += weight;
-                perValue += weight * each / (1d + penalty);
-                value += weight * each;
+                perValue += weight * priced / (1d + penalty);
+                value += weight * priced;
             }
             if (!(weights > 0d)) return (0d, 0);
             return (perValue / weights, (int)Math.Round(value / weights, MidpointRounding.AwayFromZero));
@@ -3459,6 +3499,36 @@ namespace TradeLord
             return paid >= int.MaxValue ? int.MaxValue : Math.Max(1, (int)paid);
         }
 
+        private static List<(int value, int priced, float penalty, double share)> Unmodified(
+            IList<(int value, float penalty)> items)
+        {
+            var all = new List<(int value, int priced, float penalty, double share)>();
+            for (int i = 0; items != null && i < items.Count; i++) all.Add((items[i].value, items[i].value, items[i].penalty, 1d));
+            return all;
+        }
+
+        public static void AddTheGamesQualities(List<(int value, int priced, float penalty, double share)> into, int value,
+                                                float penalty, IList<(float priceFactor, float score)> qualities,
+                                                float unmodifiedScore)
+        {
+            if (into == null) return;
+            double scores = unmodifiedScore > 0f ? unmodifiedScore : 0f;
+            for (int i = 0; qualities != null && i < qualities.Count; i++)
+                if (qualities[i].score > 0f && qualities[i].priceFactor > 0f) scores += qualities[i].score;
+            if (!(scores > 0d))
+            {
+                into.Add((value, value, penalty, 1d));
+                return;
+            }
+            if (unmodifiedScore > 0f) into.Add((value, value, penalty, unmodifiedScore / scores));
+            for (int i = 0; qualities != null && i < qualities.Count; i++)
+            {
+                var (factor, score) = qualities[i];
+                if (!(score > 0f) || !(factor > 0f)) continue;
+                into.Add((value, (int)Math.Round(value * factor), penalty, score / scores));
+            }
+        }
+
         public sealed class Picks
         {
             public double[] PerValue;
@@ -3466,16 +3536,20 @@ namespace TradeLord
             public float Factor;
         }
 
-        public static (double[] perValue, double[] below) TheGamesPicks(IList<(int value, float penalty)> items)
+        public static (double[] perValue, double[] below) TheGamesPicks(IList<(int value, float penalty)> items) =>
+            TheGamesPicks(Unmodified(items));
+
+        public static (double[] perValue, double[] below) TheGamesPicks(
+            IList<(int value, int priced, float penalty, double share)> items)
         {
             var kept = new List<(double perValue, double weight)>();
             double weights = 0d;
             for (int i = 0; items != null && i < items.Count; i++)
             {
-                var (each, penalty) = items[i];
-                if (each <= 0 || float.IsNaN(penalty) || penalty <= -1f) continue;
-                double weight = 1d / (Math.Max(100, each) + 100d);
-                kept.Add((each / (1d + penalty), weight));
+                var (each, priced, penalty, share) = items[i];
+                if (each <= 0 || priced <= 0 || float.IsNaN(penalty) || penalty <= -1f || !(share > 0d)) continue;
+                double weight = share / (Math.Max(100, each) + 100d);
+                kept.Add((priced / (1d + penalty), weight));
                 weights += weight;
             }
             kept.Sort((x, y) => x.perValue.CompareTo(y.perValue));

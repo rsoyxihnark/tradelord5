@@ -167,6 +167,7 @@ namespace TradeLord
             internal int StoreAtCount = -1;
             internal int StoreAtLeaving = -1;
             internal int BroughtHome = -1;
+            internal bool Brought;
             internal int StoreHolds = -1;
         }
 
@@ -487,6 +488,7 @@ namespace TradeLord
                     trip.DiceSaid = diceSaid * 24f;
                     trip.StoreAtCount = StoreHeld(party.HomeSettlement);
                     trip.StoreHolds = Forecast.TheStoreTradeLordCounts(party.HomeSettlement);
+                    trip.Brought = Forecast.TheNextTripCarriesWhatItBroughtHome(one.id, one.days);
                 }
                 if (kind == TradeMath.TillDraw.VillagesNextTrips) _nextTripsDay++;
                 else _villagersDay++;
@@ -579,7 +581,8 @@ namespace TradeLord
             double.IsNaN(one.ReadyAt) || double.IsNaN(one.BackAt)
                 ? ""
                 : "; TradeLord had it ready " +
-                  (one.ReadyAt <= one.SetOffAt + 0.01d ? "when it was counted"
+                  (one.Brought ? "with the goods its party brought home unsold"
+                   : one.ReadyAt <= one.SetOffAt + 0.01d ? "when it was counted"
                    : one.ReadyAt > one.BackAt + 0.01d ? "once its store filled" : "once its party got home") +
                   (one.StoreHolds >= 0
                       ? ", its store holding " + one.StoreAtCount + " of the " + one.StoreHolds + " TradeLord counts it " +
@@ -666,7 +669,7 @@ namespace TradeLord
                 _hourDue = double.NaN;
                 return;
             }
-            if (_hourWaited < Forecast.StagesInABuild + 1 && Forecast.WarmedAStage())
+            if (_hourWaited < Forecast.FramesAWarmUpWaits && Forecast.WarmedAStage())
             {
                 _hourWaited++;
                 return;

@@ -200,6 +200,8 @@ namespace TradeLord
         internal static void Forget()
         {
             _readStamp.Stale();
+            _followOrder = null;
+            _villageAt = -1;
             _landing.Clear();
             _spending.Clear();
             _drawing.Clear();
@@ -251,6 +253,7 @@ namespace TradeLord
             _villagersAhead.Clear();
             _villageLoadsAhead.Clear();
             _nextTrips.Clear();
+            _broughtTrips.Clear();
             _villagersLike.Clear();
             _caravanMeets.Clear();
             _ticksAhead.Clear();
@@ -463,7 +466,9 @@ namespace TradeLord
             return _landing.TryGetValue(site.StringId, out List<Landing> listed) ? listed : null;
         }
 
-        internal const int StagesInABuild = 5;
+        internal const int StagesInABuild = 6;
+
+        internal const int FramesAWarmUpWaits = 24;
 
         private static int _stagesDone = StagesInABuild;
         private static bool _building;
@@ -473,7 +478,7 @@ namespace TradeLord
         {
             if (_building) return;
             if (!Freshness.Fresh(ref _readStamp)) Begin();
-            while (_stagesDone < StagesInABuild) Stage();
+            while (_stagesDone < StagesInABuild) Stage(false);
         }
 
         internal static bool WarmedAStage()
@@ -485,7 +490,7 @@ namespace TradeLord
             if (fresh && _stagesDone >= StagesInABuild) return false;
             if (!fresh) Begin();
             _warmedFrame = frame;
-            Stage();
+            Stage(true);
             return true;
         }
 
@@ -493,26 +498,32 @@ namespace TradeLord
         {
             Freshness.Taken(ref _readStamp);
             _stagesDone = 0;
+            _followOrder = null;
+            _villageAt = -1;
         }
 
-        private static void Stage()
+        private static void Stage(bool inPart)
         {
             int stage = _stagesDone;
+            bool whole = true;
             long before = Travel.FrameTicksSoFar();
             long from = Stopwatch.GetTimestamp();
             _building = true;
             try
             {
                 if (stage == 0) ReadTheRoad();
-                else if (stage == 1) TheShopsBeforeTheRoad();
-                else if (stage == 2) TheCaravansOnArrival();
-                else if (stage == 3) TheShops();
+                else if (stage == 1 && inPart) whole = SomeVillages();
+                else if (stage == 1) TheVillages();
+                else if (stage == 2) TheShopsBeforeTheRoad();
+                else if (stage == 3 && inPart) whole = SomeCaravansOnArrival();
+                else if (stage == 3) TheCaravansOnArrival();
+                else if (stage == 4) TheShops();
                 else ThePurses();
             }
             finally
             {
                 _building = false;
-                _stagesDone = stage + 1;
+                if (whole) _stagesDone = stage + 1;
                 Travel.SpentThisFrame(Stopwatch.GetTimestamp() - from, before);
             }
         }
@@ -547,6 +558,7 @@ namespace TradeLord
             _villagersAhead.Clear();
             _villageLoadsAhead.Clear();
             _nextTrips.Clear();
+            _broughtTrips.Clear();
             _villagersLike.Clear();
             _caravanMeets.Clear();
             _ticksAhead.Clear();
@@ -554,12 +566,27 @@ namespace TradeLord
             _makePaid.Clear();
             if (_indexes.Count == 0) Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
+        }
+
+        private static void TheVillages()
+        {
             Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);
-            Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);
+        }
+
+        private static bool SomeVillages()
+        {
+            bool done = true;
+            Guard.Run("Forecast.VillagesInPart", () =>
+            {
+                if (_villageAt < 0) ReadyTheVillages();
+                done = ReadSomeVillages(AFrameSpendsOnTheCaravans);
+            });
+            return done;
         }
 
         private static void TheShopsBeforeTheRoad()
         {
+            Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);
             long shopsFrom = Stopwatch.GetTimestamp();
             Guard.Run("Forecast.WorkshopsAhead", WhatTheShopsWillMakeBeforeTheRoadArrives);
             _shopTicks = Stopwatch.GetTimestamp() - shopsFrom;
@@ -568,6 +595,17 @@ namespace TradeLord
         private static void TheCaravansOnArrival()
         {
             Guard.Run("Forecast.CaravansOnArrival", FollowTheCaravans);
+        }
+
+        private static bool SomeCaravansOnArrival()
+        {
+            bool done = true;
+            Guard.Run("Forecast.CaravansOnArrivalInPart", () =>
+            {
+                if (_followOrder == null) ReadyTheCaravans();
+                done = FollowSomeCaravans(AFrameSpendsOnTheCaravans);
+            });
+            return done;
         }
 
         private static void TheShops()
@@ -893,7 +931,16 @@ namespace TradeLord
                    " day(s) of them kept";
         }
 
+        private static int _villageAt = -1;
+        private static float _villageWatch, _villageSpeed;
+
         private static void ReadWhatTheVillagesWillSend()
+        {
+            if (_villageAt < 0) ReadyTheVillages();
+            ReadSomeVillages(long.MaxValue);
+        }
+
+        private static void ReadyTheVillages()
         {
             _villagesFollowed = 0;
             _villageHoursKnown = 0;
@@ -903,18 +950,32 @@ namespace TradeLord
             _villageWorth = 0;
             _villageSoonest = float.PositiveInfinity;
             _villageTicks = 0L;
+            _villageWatch = WorkshopRuns.Watch(MarketRank.Ceiling(false, Options.Current));
+            _villageSpeed = Campaign.Current.EstimatedAverageVillagerPartySpeed;
+            _villageAt = 0;
+        }
+
+        private static bool ReadSomeVillages(long budget)
+        {
             MBReadOnlyList<Village> villages = Village.All;
-            if (villages == null) return;
-            long started = Stopwatch.GetTimestamp();
-            float watch = WorkshopRuns.Watch(MarketRank.Ceiling(false, Options.Current));
-            float speed = Campaign.Current.EstimatedAverageVillagerPartySpeed;
-            for (int i = 0; i < villages.Count; i++)
+            if (_villageAt < 0 || villages == null)
             {
-                Village village = villages[i];
+                _villageAt = -1;
+                return true;
+            }
+            long started = Stopwatch.GetTimestamp();
+            float watch = _villageWatch, speed = _villageSpeed;
+            while (_villageAt < villages.Count)
+            {
+                Village village = villages[_villageAt++];
                 if (village?.Settlement == null) continue;
                 Guard.Run("Forecast.Village", village, one => FollowAVillage(one, watch, speed));
+                if (Stopwatch.GetTimestamp() - started >= budget) break;
             }
-            _villageTicks = Stopwatch.GetTimestamp() - started;
+            _villageTicks += Stopwatch.GetTimestamp() - started;
+            if (_villageAt < villages.Count) return false;
+            _villageAt = -1;
+            return true;
         }
 
         private static float MenANewPartySetsOutWith(Village village)
@@ -966,6 +1027,21 @@ namespace TradeLord
                 ItemObject item = roster.GetItemAtIndex(k);
                 int amount = roster.GetElementNumber(k);
                 if (item != null && amount > 0) held[At(item)] += amount;
+            }
+            var brought = new List<(int at, float units)>();
+            ItemRoster carried = villagers?.ItemRoster;
+            if (carried != null && villagers.CurrentSettlement != town && villagers.TargetSettlement != town &&
+                (villagers.CurrentSettlement == home || villagers.TargetSettlement == home))
+            {
+                ItemObject ridden = ThePackAnimalVillagersKeep(carried);
+                for (int k = 0; k < carried.Count; k++)
+                {
+                    ItemObject item = carried.GetItemAtIndex(k);
+                    int amount = carried.GetElementNumber(k);
+                    if (item == null || amount <= 0) continue;
+                    if (item == ridden) amount -= (int)(0.5f * villagers.MemberRoster.TotalManCount);
+                    if (amount > 0) brought.Add((At(item), amount));
+                }
             }
             VillageProductionCalculatorModel model = Campaign.Current.Models.VillageProductionCalculatorModel;
             int level = village.GetHearthLevel();
@@ -1022,9 +1098,18 @@ namespace TradeLord
                 ? TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)
                 : TradeMath.AVillagesTickUnseen;
             if (looted) _villagesLooted++;
+            float[] heldNow = held.ToArray(), madeADayEach = made.ToArray();
             List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
-                held.ToArray(), made.ToArray(), weight, onHoof, room, back, villagers != null, ride, watch, next, scale,
+                heldNow, madeADayEach, weight, onHoof, room, back, villagers != null, ride, watch, next, scale,
                 rideBack);
+            if (brought.Count > 0)
+            {
+                var units = new float[items.Count];
+                foreach (var (at, count) in brought) units[at] += count;
+                loads = TradeMath.TheTripWithGoodsBroughtHome(loads, home2 => TradeMath.WhatAVillageSends(
+                        heldNow, madeADayEach, weight, onHoof, room, home2, true, ride, watch, next, scale, rideBack),
+                    units, back, ride, rideBack, watch);
+            }
             if (loads.Count == 0) return;
 
             _villagesFollowed++;
@@ -1040,6 +1125,7 @@ namespace TradeLord
             if (home?.StringId == null || loads == null) return;
             float stay = TradeMath.DaysUntilARollTakes(TradeMath.VillagersLeaveATownAnHourWith);
             var trips = new List<(float, float, float, float, float[], float)>();
+            var brought = new List<float>();
             for (int k = 0; k < loads.Count; k++)
             {
                 TradeMath.VillageLoad load = loads[k];
@@ -1053,8 +1139,25 @@ namespace TradeLord
                             : new[] { TradeMath.VillagersSetOutAnHourWith };
                 float said = k > 0 ? float.NaN : load.SetOut - load.Ready + (stayed ? stay : 0f);
                 trips.Add((load.Days, load.SetOut, load.Ready, load.Back, dice, said));
+                if (load.Brought) brought.Add(load.Days);
             }
             _nextTrips[home.StringId] = trips;
+            if (brought.Count > 0) _broughtTrips[home.StringId] = brought;
+            else _broughtTrips.Remove(home.StringId);
+        }
+
+        private static readonly Dictionary<string, List<float>> _broughtTrips =
+            new Dictionary<string, List<float>>(StringComparer.Ordinal);
+
+        internal static bool TheNextTripCarriesWhatItBroughtHome(string homeId, float days)
+        {
+            if (homeId == null || !_nextTrips.TryGetValue(homeId, out var trips) || trips.Count == 0 ||
+                !_broughtTrips.TryGetValue(homeId, out List<float> brought))
+                return false;
+            int best = 0;
+            for (int k = 1; k < trips.Count; k++)
+                if (Math.Abs(trips[k].days - days) < Math.Abs(trips[best].days - days)) best = k;
+            return brought.Contains(trips[best].days);
         }
 
         internal static bool TheNextTripDueIn(string homeId, float days, out float setOut, out float ready, out float back,
@@ -1461,7 +1564,19 @@ namespace TradeLord
             return _averageValues.TryGetValue(kind.StringId, out float value) ? value : 1f;
         }
 
+        private static List<int> _followOrder;
+        private static int _followAt, _followInTown, _followOnFoot, _followFromHome;
+        private static float _followTrust;
+
+        private static readonly long AFrameSpendsOnTheCaravans = Stopwatch.Frequency * 15L / 1000L;
+
         private static void FollowTheCaravans()
+        {
+            if (_followOrder == null) ReadyTheCaravans();
+            FollowSomeCaravans(long.MaxValue);
+        }
+
+        private static void ReadyTheCaravans()
         {
             _caravansFollowed = _caravansAhead.Count;
             _caravansWaiting = 0;
@@ -1481,9 +1596,23 @@ namespace TradeLord
             }
             foreach (var one in _villagersAhead) arrive.Add(one.days);
             foreach (var one in _villageLoadsAhead) arrive.Add(one.load.Days);
-            float trust = TrustEarned();
-            foreach (int i in TradeMath.InTheOrderTheyArrive(arrive))
+            _followTrust = TrustEarned();
+            _followInTown = inTown;
+            _followOnFoot = onFoot;
+            _followFromHome = fromHome;
+            _followOrder = TradeMath.InTheOrderTheyArrive(arrive);
+            _followAt = 0;
+        }
+
+        private static bool FollowSomeCaravans(long budget)
+        {
+            if (_followOrder == null) return true;
+            float trust = _followTrust;
+            int inTown = _followInTown, onFoot = _followOnFoot, fromHome = _followFromHome;
+            long from = Stopwatch.GetTimestamp();
+            while (_followAt < _followOrder.Count)
             {
+                int i = _followOrder[_followAt++];
                 long started = Stopwatch.GetTimestamp();
                 bool caravan = i < onFoot;
                 if (i < inTown)
@@ -1510,7 +1639,11 @@ namespace TradeLord
                 long took = Stopwatch.GetTimestamp() - started;
                 if (caravan) _caravanTicks += took;
                 else _villageTicks += took;
+                if (Stopwatch.GetTimestamp() - from >= budget) break;
             }
+            if (_followAt < _followOrder.Count) return false;
+            _followOrder = null;
+            return true;
         }
 
         internal static string TheCaravansMeet()
@@ -2230,16 +2363,25 @@ namespace TradeLord
                         _shopsCanMake[item.ItemCategory.StringId] = listed = new List<ItemObject>();
                     listed.Add(item);
                 }
-            var preferred = new List<(int value, float penalty)>();
-            var every = new List<(int value, float penalty)>();
+            var preferred = new List<(int value, int priced, float penalty, double share)>();
+            var every = new List<(int value, int priced, float penalty, double share)>();
             TradeItemPriceFactorModel model = Campaign.Current.Models.TradeItemPriceFactorModel;
             if (_shopsCanMake.TryGetValue(category.StringId, out List<ItemObject> items))
                 foreach (ItemObject item in items)
                 {
-                    var one = (item.Value, model.GetTradePenalty(item, null, null, true, 0f, 0f, 0f));
-                    every.Add(one);
+                    float penalty = model.GetTradePenalty(item, null, null, true, 0f, 0f, 0f);
+                    ItemModifierGroup group = item.ItemComponent?.ItemModifierGroup;
+                    var qualities = new List<(float priceFactor, float score)>();
+                    for (int k = 0; group?.ItemModifiers != null && k < group.ItemModifiers.Count; k++)
+                    {
+                        ItemModifier quality = group.ItemModifiers[k];
+                        if (quality != null) qualities.Add((quality.PriceMultiplier, quality.ProductionDropScore));
+                    }
+                    int start = every.Count;
+                    TradeMath.AddTheGamesQualities(every, item.Value, penalty, qualities,
+                                                   group != null ? group.NoModifierProductionScore : 1f);
                     if (item.Culture == null || item.Culture.StringId == "neutral_culture" || item.Culture == culture)
-                        preferred.Add(one);
+                        for (int k = start; k < every.Count; k++) preferred.Add(every[k]);
                 }
             kept = TradeMath.TheGamesPickWeighed(preferred.Count > 0 ? preferred : every);
             _makeWeighed[key] = kept;

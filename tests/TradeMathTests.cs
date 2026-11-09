@@ -3435,6 +3435,72 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Villagers_home_with_goods_left_unsold_take_them_out_first_unless_the_store_is_ready_by_then()
+        {
+            float wait = TradeMath.DaysUntilARollTakes(TradeMath.VillagersSetOutAnHourWith);
+            float stay = TradeMath.DaysUntilARollTakes(TradeMath.VillagersLeaveATownAnHourWith);
+            var late = new List<TradeMath.VillageLoad>
+            {
+                new TradeMath.VillageLoad { Days = 3f, Units = new[] { 10f, 0f }, SetOut = 2.5f, Ready = 2f, Back = 0f }
+            };
+            float askedBack = float.NaN;
+            List<TradeMath.VillageLoad> loads = TradeMath.TheTripWithGoodsBroughtHome(late, back =>
+            {
+                askedBack = back;
+                return new List<TradeMath.VillageLoad>
+                {
+                    new TradeMath.VillageLoad { Days = back + 1f, Units = new[] { 12f, 0f }, SetOut = back + 0.5f }
+                };
+            }, new[] { 0f, 70f }, 0f, 0.4f, 0.5f, 7f);
+            Assert.Equal(2, loads.Count);
+            Assert.True(loads[0].Brought);
+            Assert.Equal(wait, loads[0].SetOut, 4);
+            Assert.Equal(wait + 0.4f, loads[0].Days, 4);
+            Assert.Equal(70f, loads[0].Units[1], 4);
+            Assert.Equal(wait + 0.4f + stay + 0.5f, askedBack, 4);
+            Assert.Equal(12f, loads[1].Units[0], 4);
+            Assert.False(loads[1].Brought);
+
+            var ready = new List<TradeMath.VillageLoad>
+            {
+                new TradeMath.VillageLoad { Days = 0.3f, Units = new[] { 10f, 0f }, SetOut = 0.1f, Ready = 0f, Back = 0f }
+            };
+            List<TradeMath.VillageLoad> merged = TradeMath.TheTripWithGoodsBroughtHome(ready, back => null,
+                                                                                       new[] { 0f, 5f }, 0f, 0.2f, 0.2f, 7f);
+            Assert.Single(merged);
+            Assert.True(merged[0].Brought);
+            Assert.Equal(5f, merged[0].Units[1], 4);
+            Assert.Same(ready, TradeMath.TheTripWithGoodsBroughtHome(ready, back => null, new[] { 0f, 0f }, 0f, 0.2f,
+                                                                     0.2f, 7f));
+            Assert.Same(late, TradeMath.TheTripWithGoodsBroughtHome(late, back => null, new[] { 0f, 9f }, 6.9f, 0.4f,
+                                                                    0.5f, 7f));
+        }
+
+        [Fact]
+        public void A_gear_lines_picks_carry_the_quality_the_game_rolls_for_what_it_makes_at_its_price()
+        {
+            var picks = new List<(int value, int priced, float penalty, double share)>();
+            TradeMath.AddTheGamesQualities(picks, 200, 0f, new List<(float priceFactor, float score)>
+            {
+                (1.5f, 1f), (0.5f, 2f), (2f, 0f)
+            }, 1f);
+            Assert.Equal(3, picks.Count);
+            Assert.Equal((200, 200, 0f, 0.25d), picks[0]);
+            Assert.Equal((200, 300, 0f, 0.25d), picks[1]);
+            Assert.Equal((200, 100, 0f, 0.5d), picks[2]);
+            var plain = new List<(int value, int priced, float penalty, double share)>();
+            TradeMath.AddTheGamesQualities(plain, 200, 0f, null, 0f);
+            Assert.Equal((200, 200, 0f, 1d), Assert.Single(plain));
+            var (perValue, below) = TradeMath.TheGamesPicks(picks);
+            Assert.Equal(new[] { 100d, 200d, 300d }, perValue);
+            Assert.Equal(0.5d, below[1], 6);
+            Assert.Equal(0.75d, below[2], 6);
+            var (mean, value) = TradeMath.TheGamesPickWeighed(picks);
+            Assert.Equal(175d, mean, 6);
+            Assert.Equal(175, value);
+        }
+
+        [Fact]
         public void A_market_the_road_rules_out_is_one_that_could_not_beat_the_runner_up_even_at_its_fullest()
         {
             Assert.True(Marks.TheRoadRulesItOut(1000L, 5000L, 2f, 1f, 500f));
@@ -5551,7 +5617,7 @@ namespace TradeLord.Tests
             Assert.Equal((w1 * 100d / 1.3d + w2 * 300d / 1.35d) / (w1 + w2), perValue, 6);
             Assert.Equal((int)Math.Round((w1 * 100d + w2 * 300d) / (w1 + w2)), value);
             Assert.Equal((0d, 0), TradeMath.TheGamesPickWeighed(new List<(int value, float penalty)>()));
-            Assert.Equal((0d, 0), TradeMath.TheGamesPickWeighed(null));
+            Assert.Equal((0d, 0), TradeMath.TheGamesPickWeighed((List<(int value, float penalty)>)null));
             Assert.Equal(76, TradeMath.ATownPaysForAMake(76.9d, 1f));
             Assert.Equal(1, TradeMath.ATownPaysForAMake(0.2d, 1f));
             Assert.Equal(0, TradeMath.ATownPaysForAMake(0d, 1f));
