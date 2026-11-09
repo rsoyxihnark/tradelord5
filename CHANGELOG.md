@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.9.21
+
+- Fixed TradeLord buying lesser goods first in the market you are in, because a shelf running low after you buy lowered Conf
+- With Enable extended debug logging on, TradeLord.log's buying plan now spells out what each good's Conf is made of
+
 ## 2.9.20
 
 - Fixed TradeLord.log's villager check giving goods brought home unsold as the reason a village's next trip was ready (#197)

@@ -21,8 +21,8 @@ namespace TradeLord
             return Clamp(Gone + (1f - Gone) * (slack / (slack + Patience)));
         }
 
-        public static float Lasts(float runsOutInDays, bool forecastOn) =>
-            forecastOn && !(runsOutInDays >= 0f) ? float.MaxValue : runsOutInDays;
+        public static float Lasts(float runsOutInDays, bool forecastOn, float daysToTheBuyTown) =>
+            forecastOn && !(runsOutInDays >= 0f && daysToTheBuyTown > 0f) ? float.MaxValue : runsOutInDays;
 
         public const int EnoughArrivals = 5;
 

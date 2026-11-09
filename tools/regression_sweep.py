@@ -19382,10 +19382,10 @@ chk("1.104.1", "the map marker weighs your goods at a market in the order the sa
 def a_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans():
     conf = S['Confidence.cs']
     scan = route_scan()
-    return ("public static float Lasts(float runsOutInDays, bool forecastOn) =>" in conf
-            and "forecastOn && !(runsOutInDays >= 0f) ? float.MaxValue : runsOutInDays;" in conf
+    return ("public static float Lasts(float runsOutInDays, bool forecastOn, float daysToTheBuyTown) =>" in conf
+            and "forecastOn && !(runsOutInDays >= 0f && daysToTheBuyTown > 0f) ? float.MaxValue : runsOutInDays;" in conf
             and ordered(scan, "float runsOut = Forecast.RunsOutIn(leg.From, leg.Item, leg.OnTheShelfNow, q.Units, leg.ToBuy);",
-                        "float lasts = Confidence.Lasts(runsOut, Forecast.On);",
+                        "float lasts = Confidence.Lasts(runsOut, Forecast.On, leg.ToBuy);",
                         "lasts, leg.ToBuy);", "lasts, leg.ToBuy),", "RunsOutInDays = runsOut")
             and "A_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans" in EXPIRYTESTS)
 
@@ -25282,6 +25282,32 @@ def the_forecast_hint_and_what_this_means_name_the_villagers_in_every_language()
 
 chk("2.9.20", "the Count what is on its way to a market hint and What this means in the TradeLord ledger name the villagers it counts in every language",
     the_forecast_hint_and_what_this_means_name_the_villagers_in_every_language())
+
+def a_shelf_running_low_after_you_buy_where_you_stand_leaves_conf_whole():
+    conf = S['Confidence.cs']
+    scan = route_scan()
+    plan = method_body(S['Trading.cs'], "private static void SayWhatBecameOfThePlan(")
+    return (ordered(conf, "public static float Lasts(float runsOutInDays, bool forecastOn, float daysToTheBuyTown) =>",
+                    "forecastOn && !(runsOutInDays >= 0f && daysToTheBuyTown > 0f) ? float.MaxValue : runsOutInDays;",
+                    "public const int EnoughArrivals = 5;")
+            and scan.count("Confidence.Lasts(") == 1
+            and ordered(scan, "float runsOut = Forecast.RunsOutIn(leg.From, leg.Item, leg.OnTheShelfNow, q.Units, leg.ToBuy);",
+                        "float lasts = Confidence.Lasts(runsOut, Forecast.On, leg.ToBuy);",
+                        "leg.Caravans, leg.Age, lasts, leg.ToBuy);",
+                        "leg.Age, lasts, leg.ToBuy),")
+            and "if (inside != null) return target == inside ? 0f : EstimateDaysBetween(inside, target, 0f);"
+                in method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty")
+            and ordered(plan, '" day(s), Conf " + Scoring.Share(row.Confidence) +',
+                        '(row.Parts.Haste > 0f ? " (" + Confidence.Spelled(row.Parts) + ")" : "") +',
+                        '(row.Trust < 1f ? ", trust " + Scoring.Share(row.Trust) : "") + ", " +')
+            and all(one in EXPIRYTESTS for one in
+                    ("A_shelf_that_runs_low_after_you_buy_in_the_market_you_stand_in_leaves_Conf_whole",
+                     "A_shelf_that_runs_low_before_you_reach_another_market_still_lowers_Conf",
+                     "With_the_forecast_off_the_market_you_stand_in_is_still_read_by_its_caravans")))
+
+
+chk("2.9.21", "a good in the market you stand in keeps its whole Conf however soon its shelf runs low after you buy, other markets still lose Conf to a shelf that empties before you get there, and the buying plan spells out each Conf",
+    a_shelf_running_low_after_you_buy_where_you_stand_leaves_conf_whole())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

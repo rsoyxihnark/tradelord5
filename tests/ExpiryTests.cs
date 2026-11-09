@@ -76,13 +76,41 @@ namespace TradeLord.Tests
         [Fact]
         public void A_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans()
         {
-            Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false));
-            Assert.Equal(12f, Confidence.Lasts(12f, true));
+            Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false, 1f));
+            Assert.Equal(12f, Confidence.Lasts(12f, true, 1f));
             float holds = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f,
-                                        Confidence.Lasts(Projection.NeverRunsOut, true), 1f);
+                                        Confidence.Lasts(Projection.NeverRunsOut, true, 1f), 1f);
             float empties = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f, 12f, 1f);
             Assert.True(holds > empties);
-            Assert.Equal(1f, Confidence.Holds(Confidence.Lasts(Projection.NeverRunsOut, true), 1f));
+            Assert.Equal(1f, Confidence.Holds(Confidence.Lasts(Projection.NeverRunsOut, true, 1f), 1f));
+        }
+
+        [Fact]
+        public void A_shelf_that_runs_low_after_you_buy_in_the_market_you_stand_in_leaves_Conf_whole()
+        {
+            float soon = Confidence.Lasts(0.1f, true, 0f);
+            Assert.Equal(1f, Confidence.Holds(soon, 0f));
+            float whole = Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f,
+                                        Confidence.Lasts(Projection.NeverRunsOut, true, 0f), 0f);
+            Assert.Equal(whole, Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f, soon, 0f));
+            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f, 0.1f, 0f) < whole);
+        }
+
+        [Fact]
+        public void A_shelf_that_runs_low_before_you_reach_another_market_still_lowers_Conf()
+        {
+            Assert.Equal(0.5f, Confidence.Lasts(0.5f, true, 0.3f));
+            Assert.True(Confidence.Holds(Confidence.Lasts(0.5f, true, 0.3f), 0.3f) < 1f);
+            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.9f, 4, 0f, Confidence.Lasts(0.5f, true, 0.3f), 0.3f) <
+                        Confidence.Of(true, 300, 300, 22, 22, 0.9f, 4, 0f, Confidence.Lasts(9f, true, 0.3f), 0.3f));
+        }
+
+        [Fact]
+        public void With_the_forecast_off_the_market_you_stand_in_is_still_read_by_its_caravans()
+        {
+            Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false, 0f));
+            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f, Confidence.Lasts(Projection.NeverRunsOut, false, 0f), 0f) <
+                        Confidence.Of(true, 300, 300, 22, 22, 0.6f, 0, 0f, Confidence.Lasts(Projection.NeverRunsOut, false, 0f), 0f));
         }
 
         [Fact]

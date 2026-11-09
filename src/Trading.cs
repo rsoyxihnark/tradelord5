@@ -3105,6 +3105,7 @@ namespace TradeLord
                           ", x" + one.Plan.Qty + " (up to " + one.Weighed + " before your cargo), +" + one.Plan.Profit +
                           ", " + row.TravelDays.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) +
                           " day(s), Conf " + Scoring.Share(row.Confidence) +
+                          (row.Parts.Haste > 0f ? " (" + Confidence.Spelled(row.Parts) + ")" : "") +
                           (row.Trust < 1f ? ", trust " + Scoring.Share(row.Trust) : "") + ", " +
                           one.Key.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) +
                           " a day for each unit of weight, " +
