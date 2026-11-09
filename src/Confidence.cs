@@ -29,6 +29,9 @@ namespace TradeLord
 
         public static int CaravansLeftToCount(int caravans, bool forecastOn) => forecastOn ? 0 : caravans;
 
+        public static int CaravansThatCanBeatYou(int caravans, int takingStockAtTheBuyTown, float daysToTheBuyTown) =>
+            daysToTheBuyTown > 0f ? caravans : Math.Max(0, caravans - Math.Max(0, takingStockAtTheBuyTown));
+
         public const int EnoughArrivals = 5;
 
         public const float MostItDiscounts = 0.25f;

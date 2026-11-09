@@ -202,7 +202,7 @@ namespace TradeLord
             ItemObject item, EquipmentElement held, int amount, List<(Settlement town, int price)> sells)
         {
             EngineTally.Tooltips++;
-            TradeRoute best = Plan.BestSale(item, null, Math.Max(1, amount), 0, 0, 0, null, out _, out _);
+            TradeRoute best = Plan.BestSale(item, null, Math.Max(1, amount), 0, 0, null, out _, out _);
             if (best?.To == null) return sells.Count > 0 ? sells[0] : (null, 0);
             return (best.To, TradeMath.AtThisQuality(best.SellPrice, item.Value, held.ItemValue));
         }

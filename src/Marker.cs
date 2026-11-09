@@ -2008,7 +2008,10 @@ namespace TradeLord
                                          Forecast.TillPaidOutBefore(s, ride) + TheCaravansPayIn(s, ride) +
                                          ", leaving it " + Forecast.TillOnArrival(s, ride) + " when you get there"
                                        : "") +
-                                   ", " + caravans + " caravan(s) and villager(s) at or heading there";
+                                   ", " + caravans + " caravan(s) and villager(s) at or heading there" +
+                                   (Forecast.On && caravans > 0
+                                       ? ", counted in its prices and its till, not against its Conf"
+                                       : "");
                     }
                 }
                 float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);

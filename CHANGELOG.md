@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.9.24
+
+- Fixed caravans heading for the market you are in lowering Conf there with Live world prices or Count what is on its way to a market off
+- Fixed TradeLord.log's map marker table naming the caravans heading for a market as if they still lowered its Conf
+
 ## 2.9.23
 
 - Fixed the map marker lowering a market's Conf for caravans and villagers heading there, which Count what is on its way already counts

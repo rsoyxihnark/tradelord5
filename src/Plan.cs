@@ -28,6 +28,7 @@ namespace TradeLord
         internal int Held;
         internal float Age;
         internal int Caravans;
+        internal int TakersAtBuy;
         internal float Trust = 1f;
     }
 
@@ -350,6 +351,7 @@ namespace TradeLord
                     Age = s.Omniscient ? -1f
                         : Math.Max(_ledger.ObservationAgeDays(item, from), _ledger.ObservationAgeDays(item, to)),
                     Caravans = Takers(from) + Pressure(to),
+                    TakersAtBuy = Takers(from),
                     Trust = TrustAt(to)
                 };
                 long sizing = Now();
@@ -406,8 +408,9 @@ namespace TradeLord
             float runsOut = Forecast.RunsOutIn(leg.From, leg.Item, leg.OnTheShelfNow, q.Units, leg.ToBuy);
             float lasts = Confidence.Lasts(runsOut, Forecast.On, leg.ToBuy);
             int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);
+            int rivals = Confidence.CaravansThatCanBeatYou(leg.Caravans, leg.TakersAtBuy, leg.ToBuy);
             float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,
-                                             leg.Caravans, leg.Age, lasts, leg.ToBuy);
+                                             rivals, leg.Age, lasts, leg.ToBuy);
             float perDay = TradeMath.PerDay(profit, leg.Days);
             bool sized = fits < leg.Units;
             bool moneyCapped = q.SpendCapped && (leg.ValueCap <= 0 || money < leg.ValueCap);
@@ -419,7 +422,7 @@ namespace TradeLord
                 TravelDays = leg.Days, TotalProfit = profit, ProfitPerDay = perDay,
                 Confidence = confidence, Score = perDay * confidence * leg.Trust, Trust = leg.Trust,
                 Simulated = q.Simulated, Caravans = leg.Caravans,
-                Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans,
+                Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, rivals,
                                            leg.Age, lasts, leg.ToBuy),
                 StillComing = TradeMath.StillComing(q.Units, leg.OnTheShelfNow),
                 RunsOutInDays = runsOut,
@@ -554,7 +557,7 @@ namespace TradeLord
         }
 
         internal static TradeRoute BestSale(ItemObject item, Func<int, int> paidAhead, int units, int held,
-                                            int money, int stock, Settlement notHere, out Ladder rungs, out int till)
+                                            int money, Settlement notHere, out Ladder rungs, out int till)
         {
             rungs = null;
             till = 0;
@@ -599,8 +602,7 @@ namespace TradeLord
                 int flatSell = firstSell * bought;
                 int flat = (conservative ? (int)TradePolicy.Realizable(flatSell) : flatSell) - firstPaid * bought;
                 int caravans = pressure.TryGetValue(to, out int n) ? n : 0;
-                float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,
-                                      Confidence.StockThatCanRunShort(stock, 0f), caravans,
+                float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, 0, caravans,
                                       out float confidence, out float trust);
                 if (!s.PickTheBuyerOnTheWholeStack)
                 {

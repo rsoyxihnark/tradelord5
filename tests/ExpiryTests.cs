@@ -142,11 +142,27 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void With_the_forecast_off_the_market_you_stand_in_is_still_read_by_its_caravans()
+        public void With_the_forecast_off_only_caravans_bound_for_the_sell_market_count_where_you_stand()
         {
-            Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false, 0f));
-            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f, Confidence.Lasts(Projection.NeverRunsOut, false, 0f), 0f) <
-                        Confidence.Of(true, 300, 300, 22, 22, 0.6f, 0, 0f, Confidence.Lasts(Projection.NeverRunsOut, false, 0f), 0f));
+            float off = Confidence.Lasts(Projection.NeverRunsOut, false, 0f);
+            Assert.Equal(Confidence.NotKnown, off);
+            Assert.Equal(0, Confidence.CaravansThatCanBeatYou(3, 3, 0f));
+            Assert.Equal(1, Confidence.CaravansThatCanBeatYou(4, 3, 0f));
+            Assert.Equal(0, Confidence.CaravansThatCanBeatYou(2, 5, 0f));
+            Assert.Equal(4, Confidence.CaravansThatCanBeatYou(4, -2, 0f));
+            float noneBound = Confidence.Of(true, 300, 300, 22, 22, 0.6f, Confidence.CaravansThatCanBeatYou(3, 3, 0f), 0f, off, 0f);
+            float oneBound = Confidence.Of(true, 300, 300, 22, 22, 0.6f, Confidence.CaravansThatCanBeatYou(4, 3, 0f), 0f, off, 0f);
+            Assert.Equal(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 0, 0f, off, 0f), noneBound);
+            Assert.True(oneBound < noneBound);
+        }
+
+        [Fact]
+        public void With_the_forecast_off_caravans_taking_stock_still_count_at_a_market_you_have_still_to_reach()
+        {
+            float off = Confidence.Lasts(Projection.NeverRunsOut, false, 0.4f);
+            Assert.Equal(4, Confidence.CaravansThatCanBeatYou(4, 3, 0.4f));
+            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.9f, Confidence.CaravansThatCanBeatYou(4, 3, 0.4f), 0f, off, 0.4f) <
+                        Confidence.Of(true, 300, 300, 22, 22, 0.9f, Confidence.CaravansThatCanBeatYou(1, 0, 0.4f), 0f, off, 0.4f));
         }
 
         [Fact]

@@ -11177,7 +11177,7 @@ def the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live():
     scan = route_scan()
     till = method_body(S['Plan.cs'], "internal static int TillAt(Settlement to, float days)")
     return (resale and till
-            and "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out rungs, out till);"
+            and "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, _pass.Site, out rungs, out till);"
                 in resale
             and ordered(till, "to != null && Options.Current.Omniscient",
                         "? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage)",
@@ -11624,8 +11624,7 @@ def every_market_in_reach_is_weighed_for_the_whole_load():
                         "while (bought < units)",
                         "if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;",
                         "if (purse > 0 && (long)drawn + sold + price > purse) break;",
-                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,",
-                        "Confidence.StockThatCanRunShort(stock, 0f), caravans,",
+                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, 0, caravans,",
                         "if (best != null && key <= bestKey) continue;")
             and "shortlist" not in sale
             and sale.count("foreach (") == 1)
@@ -14191,8 +14190,7 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
                         "Ladder ladder = SellLadder(to, item, quoted, landed);",
                         "int price = ladder.At(held + bought);",
                         "if (price <= 0) break;",
-                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,",
-                        "Confidence.StockThatCanRunShort(stock, 0f), caravans,",
+                        "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, 0, caravans,",
                         "rungs = ladder;")
             and "Bulk.AsItLands(to, new EquipmentElement(item), true, quoted, landed) ??" in ladder
             and "trust = Confidence.AsPromisesHaveHeld(1f, arrivals, heldThere);" in score
@@ -18360,7 +18358,7 @@ def each_promise_names_the_five_parts_of_its_conf():
             and ordered(parts, "p.Resilience = ", "p.Depth = ", "p.Haste = ", "p.Quiet = ", "p.Fresh = ")
             and ordered(between(conf, "public static string Spelled(Parts p) =>", ";"), '"resilience "', '" x depth "',
                         '" x haste "', '" x quiet "', '" x fresh "')
-            and "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans," in scan
+            and "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, rivals," in scan
             and "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days," in scan
             and "Parts = route.Parts" in promise
             and "internal TradeLord.Confidence.Parts Parts;" in S['Hindsight.cs']
@@ -21111,9 +21109,9 @@ def one_engine_weighs_each_route_at_its_conf_and_trust():
     return (sized and ctor
             and ordered(sized, "int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);",
                         "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,",
-                        "leg.Caravans, leg.Age, lasts, leg.ToBuy);",
+                        "rivals, leg.Age, lasts, leg.ToBuy);",
                         "Confidence = confidence, Score = perDay * confidence * leg.Trust, Trust = leg.Trust,",
-                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans,")
+                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, rivals,")
             and "_rankByScore = Options.Current.ConfidenceRanking;" in ctor
             and "_trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;" in ctor
             and "Trust = TrustAt(to)" in plan_best())
@@ -21170,7 +21168,7 @@ def nothing_is_left_of_the_old_deciders():
     return (buyers
             and all(name not in ALL for name in gone)
             and "one.Score = Plan.SaleScore(el.Item, town, one.Total, (long)one.First * units, units, ride, true, 0," in buyers
-            and "TradeRoute best = Plan.BestSale(item, null, Math.Max(1, amount), 0, 0, 0, null, out _, out _);" in tip
+            and "TradeRoute best = Plan.BestSale(item, null, Math.Max(1, amount), 0, 0, null, out _, out _);" in tip
             and "Elsewhere[kv.Key] = Marker.BestBuyersOf(new EquipmentElement(kv.Key), kv.Value.count)" in S['Trading.cs'])
 
 
@@ -21427,7 +21425,7 @@ def a_villagers_offer_sells_where_it_earns_most_a_day_over_what_you_paid():
     return (resale and lot
             and ordered(resale, "TradeRoute row = Plan.BestSale(item, paid > 0 ? (Func<int, int>)(ahead => paid) : null, units, 0, 0,",
                         "bool clears = row?.To != null;",
-                        "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out rungs, out till);",
+                        "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, _pass.Site, out rungs, out till);",
                         "if (row?.To == null) return false;",
                         "price = row.SellPrice;",
                         "Aim(at, row.To, price, rungs, till);")
@@ -21631,7 +21629,7 @@ def a_villagers_offer_is_weighed_once_on_what_you_pay():
             and "TradeRoute earns" not in resale and "row.TotalProfit -= row.Cost;" not in resale
             and ordered(resale, "TradeRoute row = Plan.BestSale(item, paid > 0 ? (Func<int, int>)(ahead => paid) : null, units, 0, 0,",
                         "bool clears = row?.To != null;",
-                        "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out rungs, out till);",
+                        "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, _pass.Site, out rungs, out till);",
                         "Aim(at, row.To, price, rungs, till);",
                         "if (!clears || (_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current))) return true;",
                         "_plans[item] = row;"))
@@ -25297,7 +25295,7 @@ def a_shelf_running_low_after_you_buy_where_you_stand_leaves_conf_whole():
             and scan.count("Confidence.Lasts(") == 1
             and ordered(scan, "float runsOut = Forecast.RunsOutIn(leg.From, leg.Item, leg.OnTheShelfNow, q.Units, leg.ToBuy);",
                         "float lasts = Confidence.Lasts(runsOut, Forecast.On, leg.ToBuy);",
-                        "leg.Caravans, leg.Age, lasts, leg.ToBuy);",
+                        "rivals, leg.Age, lasts, leg.ToBuy);",
                         "leg.Age, lasts, leg.ToBuy),")
             and "if (inside != null) return target == inside ? 0f : EstimateDaysBetween(inside, target, 0f);"
                 in method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty")
@@ -25307,7 +25305,7 @@ def a_shelf_running_low_after_you_buy_where_you_stand_leaves_conf_whole():
             and all(one in EXPIRYTESTS for one in
                     ("A_shelf_that_runs_low_after_you_buy_in_the_market_you_stand_in_leaves_Conf_whole",
                      "A_shelf_that_runs_low_before_you_reach_another_market_still_lowers_Conf",
-                     "With_the_forecast_off_the_market_you_stand_in_is_still_read_by_its_caravans")))
+                     "With_the_forecast_off_only_caravans_bound_for_the_sell_market_count_where_you_stand")))
 
 
 chk("2.9.21", "a good in the market you stand in keeps its whole Conf however soon its shelf runs low after you buy, other markets still lose Conf to a shelf that empties before you get there, and the buying plan spells out each Conf",
@@ -25323,7 +25321,7 @@ def a_thin_shelf_where_you_stand_leaves_conf_whole():
             and scan.count("Confidence.StockThatCanRunShort(") == 1
             and ordered(scan, "int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);",
                         "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,",
-                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, leg.Caravans,")
+                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, rivals,")
             and "leg.Shelf, q.Units" not in scan
             and all(one in EXPIRYTESTS for one in
                     ("A_thin_shelf_in_the_market_you_stand_in_leaves_Conf_whole",
@@ -25347,8 +25345,8 @@ def a_sale_the_forecast_prices_keeps_its_conf_and_a_price_walk_counts_once():
                         "parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, counted, age);",
                         "float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, counted, age);")
             and "Confidence.CaravansLeftToCount(caravans, Forecast.On), age);" in score
-            and ordered(best, "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable,",
-                        "Confidence.StockThatCanRunShort(stock, 0f), caravans,")
+            and "float key = SaleScore(item, to, profit, flat, bought, days, ladder.Walkable, 0, caravans," in best
+            and "stock" not in best
             and ordered(method_body(conf, "public static float Of("), "float resilience = Unsimulated;",
                         "if (simulated && flatProfit > 0)", "resilience = 1f;")
             and "p.Resilience = simulated && flatProfit > 0 ? 1f : Unsimulated;" in conf
@@ -25366,6 +25364,34 @@ def a_sale_the_forecast_prices_keeps_its_conf_and_a_price_walk_counts_once():
 
 chk("2.9.23", "a sale the forecast prices is no longer marked down again for the caravans heading there, villagers met on the road are bought from with no depth, and a price walk already in the profit no longer lowers Conf",
     a_sale_the_forecast_prices_keeps_its_conf_and_a_price_walk_counts_once())
+
+def caravans_taking_stock_where_you_stand_leave_conf_whole_with_the_forecast_off():
+    conf = S['Confidence.cs']
+    plan = S['Plan.cs']
+    sized = plan_sized()
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (sized and marker
+            and ordered(conf, "public static int CaravansThatCanBeatYou(int caravans, int takingStockAtTheBuyTown, float daysToTheBuyTown) =>",
+                        "daysToTheBuyTown > 0f ? caravans : Math.Max(0, caravans - Math.Max(0, takingStockAtTheBuyTown));")
+            and "internal int TakersAtBuy;" in between(plan, "internal sealed class Leg", "internal float Trust = 1f;")
+            and ordered(plan_best(), "Caravans = Takers(from) + Pressure(to),", "TakersAtBuy = Takers(from),")
+            and ordered(sized, "int rivals = Confidence.CaravansThatCanBeatYou(leg.Caravans, leg.TakersAtBuy, leg.ToBuy);",
+                        "float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,",
+                        "rivals, leg.Age, lasts, leg.ToBuy);",
+                        "Simulated = q.Simulated, Caravans = leg.Caravans,",
+                        "Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, rivals,")
+            and sized.count("leg.Caravans") == 2
+            and "int money, Settlement notHere, out Ladder rungs, out int till)" in plan
+            and ordered(marker, '", " + caravans + " caravan(s) and villager(s) at or heading there" +',
+                        "(Forecast.On && caravans > 0",
+                        '? ", counted in its prices and its till, not against its Conf"')
+            and all(one in EXPIRYTESTS for one in
+                    ("With_the_forecast_off_only_caravans_bound_for_the_sell_market_count_where_you_stand",
+                     "With_the_forecast_off_caravans_taking_stock_still_count_at_a_market_you_have_still_to_reach")))
+
+
+chk("2.9.24", "with the forecast off, caravans taking stock in the market you stand in no longer lower Conf there while those bound for the Sell At still do, and the marker's log says when the caravans it names are not counted against Conf",
+    caravans_taking_stock_where_you_stand_leave_conf_whole_with_the_forecast_off())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

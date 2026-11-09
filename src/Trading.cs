@@ -2134,7 +2134,7 @@ namespace TradeLord
             else
                 row = Plan.BestSale(item, pass.PricesAhead(el.EquipmentElement), 1,
                                     LedgerBehavior.InAll(pass.Party.ItemRoster, item) + pass.Books.Held(pass.Sim, item.StringId),
-                                    pass.Spendable(), 1, null, out _, out _);
+                                    pass.Spendable(), null, out _, out _);
             if (row?.To == null || row.QtyUncut <= 0) return (0, null, 0);
             return (TradeRules.HighestPriceThatSellsOn(row.SellPrice, TradePolicy.ResaleSafety(),
                                                        Options.Current.MinProfitMargin),
@@ -3324,7 +3324,7 @@ namespace TradeLord
                     int theirs = TheirsToSell(at);
                     row = Plan.BestSale(item, PricesAhead(at), theirs,
                                         Carried(at) + _pass.Books.Held(_pass.Sim, item.StringId), Spendable(),
-                                        theirs, null, out rungs, out till);
+                                        null, out rungs, out till);
                     if (row == null) return false;
                     EngineTally.OnTheRoad++;
                 }
@@ -3369,9 +3369,9 @@ namespace TradeLord
                 price = 0;
                 ItemObject item = Item(at);
                 TradeRoute row = Plan.BestSale(item, paid > 0 ? (Func<int, int>)(ahead => paid) : null, units, 0, 0,
-                                               units, _pass.Site, out Ladder rungs, out int till);
+                                               _pass.Site, out Ladder rungs, out int till);
                 bool clears = row?.To != null;
-                if (!clears) row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out rungs, out till);
+                if (!clears) row = Plan.BestSale(item, null, units, 0, 0, _pass.Site, out rungs, out till);
                 if (row?.To == null) return false;
                 price = row.SellPrice;
                 Aim(at, row.To, price, rungs, till);
