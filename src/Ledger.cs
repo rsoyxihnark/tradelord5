@@ -688,7 +688,8 @@ namespace TradeLord
 
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
         {
-            Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));
+            if (party != null && party.IsVillager)
+                Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));
             if (party != MobileParty.MainParty) return;
             Guard.Run("Ledger.OnSettlementEntered", () => CaptureSettlement(settlement));
         }

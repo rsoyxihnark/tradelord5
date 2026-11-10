@@ -1155,7 +1155,7 @@ def the_readme_counts_the_saved_values_right():
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
             ' strings, ' + counted + ', ' + marked + ' and a settlement reference')
     return (said in README and numbers == 9
-            and tally.get('Settlement') == 1 and switches == 1)
+            and tally.get('Settlement') == 1 and switches == 2)
 
 def readme_defaults_match_the_shipped_ones():
     def on(name):
@@ -2370,7 +2370,7 @@ chk("1.4.3", "an hourly capture can be forced, and only a forced one skips the d
 chk("1.4.3", "one rule for what the ledger will capture, and it tolerates no settlement at all",
     "if (settlement == null || (!settlement.IsTown && !settlement.IsVillage)) return;" in
     method_body(S['Ledger.cs'], "public void CaptureSettlement") and
-    "IsVillage" not in method_body(S['Ledger.cs'], "private void OnSettlementEntered"))
+    not re.search(r'\bIs(Town|Village)\b', method_body(S['Ledger.cs'], "private void OnSettlementEntered")))
 chk("1.4.3", "one definition of the livestock the mod trades",
     S['Policy.cs'].count("&& item.HorseComponent.IsLiveStock") == 1)
 chk("1.4.3", "cost basis uses recorded purchase prices, not current market quotes",
@@ -6072,7 +6072,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 20 and settled in S['Trading.cs']
+    return held == 21 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -6086,7 +6086,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "_freeText = LedgerCodec.WritePurchases(_free);",
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
-            and trade.count("dataStore.SyncData(") == 5
+            and trade.count("dataStore.SyncData(") == 7
             and ledger.count("dataStore.SyncData(") == 15)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
@@ -16721,7 +16721,7 @@ def trade_xp_is_what_the_game_gives_for_the_same_sale():
             and "Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set" in README
             and "earns only the Trade XP the game itself would give for it, which is usually none" in README
             and "Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them" in README
-            and "All it puts in a save is nine strings, nine numbers, a switch and a settlement reference" in README)
+            and "All it puts in a save is ten strings, nine numbers, two switches and a settlement reference" in README)
 
 chk("1.97.5", "Trade XP for what TradeLord sells is what the game gives for the same sale on its trade screen: a visit's sales are put together good by good as that screen does and handed to the game's own reckoning once, before any save",
     trade_xp_is_what_the_game_gives_for_the_same_sale())
@@ -25392,6 +25392,84 @@ def caravans_taking_stock_where_you_stand_leave_conf_whole_with_the_forecast_off
 
 chk("2.9.24", "with the forecast off, caravans taking stock in the market you stand in no longer lower Conf there while those bound for the Sell At still do, and the marker's log says when the caravans it names are not counted against Conf",
     caravans_taking_stock_where_you_stand_leave_conf_whole_with_the_forecast_off())
+
+def no_food_is_bought_on_a_new_campaigns_first_visit_to_a_market():
+    rules = S['Rules.cs']
+    trading = S['Trading.cs']
+    entered = method_body(trading, "private void OnSettlementEntered(")
+    launched = method_body(trading, "private void OnSessionLaunched(")
+    resupply = method_body(trading, "public static void ExecuteResupply(")
+    noted = method_body(trading, "private static void NoteTheFirstVisit(")
+    waits = method_body(trading, "private static bool FoodWaitsForTheNextMarket(")
+    made = method_body(trading, "private void OnNewGameMade(")
+    sync = method_body(trading, "public override void SyncData(")
+    forgot = method_body(trading, "private static void ForgetArrivals(")
+    road = method_body(trading, "private static void ADayOfFoodOnTheRoad(")
+    return (entered and launched and resupply and noted and waits and made and sync and forgot and road
+            and ordered(rules, "internal static string FirstVisitAt(bool firstVisitAhead, bool tradeAllowedHere, string here) =>",
+                        "firstVisitAhead && tradeAllowedHere ? here : null;",
+                        "internal static bool FirstVisitStillAhead(bool firstVisitAhead, bool tradeAllowedHere) =>",
+                        "firstVisitAhead && !tradeAllowedHere;",
+                        "internal static bool FoodWaitsForTheNextMarket(string here, string firstVisitAt) =>",
+                        "here != null && here == firstVisitAt;")
+            and "CampaignEvents.OnNewGameCreatedPartialFollowUpEndEvent.AddNonSerializedListener(this, OnNewGameMade);"
+                in trading
+            and ordered(made, "_firstVisitAhead = true;", "_firstVisitAt = null;")
+            and ordered(entered, "_visitTradeAllowed = CanTradeHere(settlement);", "if (StillTheSameArrival(settlement))",
+                        "NoteThisArrival(settlement);", "NoteTheFirstVisit(settlement);", "BeginTheRound();")
+            and ordered(launched, "if (inside != null) _visitTradeAllowed = CanTradeHere(inside);",
+                        "if (inside != null && _firstVisitAhead) NoteTheFirstVisit(inside);")
+            and trading.count("NoteTheFirstVisit(") == 3
+            and ordered(noted, "_firstVisitAt = Arrivals.FirstVisitAt(_firstVisitAhead, _visitTradeAllowed, settlement?.StringId);",
+                        "_firstVisitAhead = Arrivals.FirstVisitStillAhead(_firstVisitAhead, _visitTradeAllowed);")
+            and "if (!Arrivals.FoodWaitsForTheNextMarket(settlement?.StringId, _firstVisitAt)) return false;" in waits
+            and ordered(resupply, "_unfitted = default;", "if (Options.Current.KeepFoodDays <= 0) return;",
+                        "if (FoodWaitsForTheNextMarket(settlement)) return;", "Pass pass = Pass.Open(settlement, quiet);")
+            and trading.count("FoodWaitsForTheNextMarket(") == 3
+            and "FoodWaitsForTheNextMarket" not in road
+            and ordered(sync, 'dataStore.SyncData("TradeLord_FirstVisitAhead", ref firstVisitAhead);',
+                        "if (dataStore.IsLoading) _firstVisitAhead = firstVisitAhead;",
+                        'dataStore.SyncData("TradeLord_FirstVisitAt", ref firstVisitAt);',
+                        "if (dataStore.IsLoading) _firstVisitAt = firstVisitAt;")
+            and ordered(forgot, "_firstVisitAhead = false;", "_firstVisitAt = null;")
+            and "On your first visit to a market in a new campaign it buys no food for your party" in README
+            and all(one in ARRIVALTESTS for one in
+                    ("A_new_campaigns_first_arrival_at_a_market_it_may_trade_at_is_its_first_visit",
+                     "A_place_TradeLord_may_not_trade_at_leaves_the_first_visit_ahead",
+                     "The_next_arrival_anywhere_ends_the_first_visit",
+                     "Food_waits_for_the_next_market_only_while_the_first_visit_lasts")))
+
+
+chk("2.9.25", "no food is bought for your party while a new campaign's first visit to a market lasts, a walk straight back in is still that visit, the next arrival ends it, and a save keeps where it stands",
+    no_food_is_bought_on_a_new_campaigns_first_visit_to_a_market())
+
+def the_left_legend_line_leaves_out_the_market_you_are_in_in_every_language():
+    told = {ENGLISH: "except in the market you are in", TRANSLATIONS['T\u00fcrk\u00e7e']: "bulundu\u011funuz pazar hari\u00e7",
+            TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439']: "\u043a\u0440\u043e\u043c\u0435 \u0440\u044b\u043d\u043a\u0430, \u0433\u0434\u0435 \u0432\u044b \u0441\u0442\u043e\u0438\u0442\u0435",
+            TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587']: "\u4f60\u6240\u5728\u7684\u5e02\u573a\u9664\u5916"}
+    return (len(told) == 4
+            and all(spoken(path)['TL417'].endswith(word) for path, word in told.items())
+            and "{=TL417}" + spoken(ENGLISH)['TL417'] in S['Panel.cs'])
+
+
+chk("2.9.25", "What this means in the TradeLord ledger says in every language that a shelf that empties first lowers Conf everywhere but in the market you are in",
+    the_left_legend_line_leaves_out_the_market_you_are_in_in_every_language())
+
+def only_villagers_are_looked_at_for_a_villagers_ride():
+    entered = method_body(S['Ledger.cs'], "private void OnSettlementEntered(")
+    left = method_body(S['Ledger.cs'], "private void OnSettlementLeft(")
+    return (entered and left
+            and ordered(entered, "if (party != null && party.IsVillager)",
+                        'Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));',
+                        "if (party != MobileParty.MainParty) return;")
+            and ordered(left, "if (party == null || !party.IsVillager) return;",
+                        'Guard.Run("Forecast.VillagersLeft", () => Forecast.VillagersLeft(party, settlement));')
+            and "if (party == null || !party.IsVillager || party.StringId == null || entered?.StringId == null) return;"
+                in method_body(S['Forecast.cs'], "internal static void VillagersEntered("))
+
+
+chk("2.9.25", "a party entering a settlement is looked at for a villagers' ride only when it is villagers, as one leaving already is",
+    only_villagers_are_looked_at_for_a_villagers_ride())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

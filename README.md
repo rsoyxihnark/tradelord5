@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is nine strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is ten strings, nine numbers, two switches and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -99,6 +99,7 @@
 - ✅ Food Staged Trading lays out on the trade screen to sell on counts as food bought to trade, never as your party's own
 - ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
 - ✅ When your party is down to less than a day of its own food, a day of food is bought before any trade good
+- ✅ On your first visit to a market in a new campaign it buys no food for your party, so your starting gold goes to trade goods
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it

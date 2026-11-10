@@ -247,7 +247,7 @@
 		<string id="TL414" text="s"/>
 		<string id="TL415" text="g"/>
 		<string id="TL416" text="Kalan"/>
-		<string id="TL417" text=" | Kalan = tezgahın bu Adet'i şu andan itibaren ne kadar tutacağı; önce boşalan tezgah Güven'i düşürür"/>
+		<string id="TL417" text=" | Kalan = tezgahın bu Adet'i şu andan itibaren ne kadar tutacağı | önce boşalan tezgah Güven'i düşürür, bulunduğunuz pazar hariç"/>
 		<string id="TL418" text="Son ticaretler (son {COUNT})"/>
 		<string id="TL419" text="Son ticaretler: bu seferde henüz ticaret yapılmadı"/>
 		<string id="TL420" text="{DAYS} gün önce"/>

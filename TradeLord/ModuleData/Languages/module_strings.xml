@@ -247,7 +247,7 @@
 		<string id="TL414" text="h"/>
 		<string id="TL415" text="d"/>
 		<string id="TL416" text="Left"/>
-		<string id="TL417" text=" | Left = how long from now that shelf still holds this Qty, and a shelf that empties first lowers Conf"/>
+		<string id="TL417" text=" | Left = how long from now that shelf still holds this Qty | a shelf that empties first lowers Conf, except in the market you are in"/>
 		<string id="TL418" text="Recent trades (last {COUNT})"/>
 		<string id="TL419" text="Recent trades: nothing traded yet this campaign"/>
 		<string id="TL420" text="{DAYS} day(s) ago"/>

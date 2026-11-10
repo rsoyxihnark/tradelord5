@@ -344,6 +344,12 @@ namespace TradeLord
             string heldBack = dataStore.IsLoading ? null : _heldBackAt;
             dataStore.SyncData("TradeLord_HeldBackAt", ref heldBack);
             if (dataStore.IsLoading) _heldBackAt = heldBack;
+            bool firstVisitAhead = !dataStore.IsLoading && _firstVisitAhead;
+            dataStore.SyncData("TradeLord_FirstVisitAhead", ref firstVisitAhead);
+            if (dataStore.IsLoading) _firstVisitAhead = firstVisitAhead;
+            string firstVisitAt = dataStore.IsLoading ? null : _firstVisitAt;
+            dataStore.SyncData("TradeLord_FirstVisitAt", ref firstVisitAt);
+            if (dataStore.IsLoading) _firstVisitAt = firstVisitAt;
         }
 
         public override void RegisterEvents()
@@ -355,6 +361,18 @@ namespace TradeLord
             CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
             CampaignEvents.OnBeforeSaveEvent.AddNonSerializedListener(this, OnBeforeSave);
+            CampaignEvents.OnNewGameCreatedPartialFollowUpEndEvent.AddNonSerializedListener(this, OnNewGameMade);
+        }
+
+        private void OnNewGameMade(CampaignGameStarter starter)
+        {
+            Guard.Run("Action.OnNewGameMade", () =>
+            {
+                _firstVisitAhead = true;
+                _firstVisitAt = null;
+                Log.Write("a new campaign: TradeLord buys no food for your party on its first visit to a market, " +
+                          "and restocks your food from the market after that");
+            });
         }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => Meetings.ConversationEnded();
@@ -525,8 +543,32 @@ namespace TradeLord
                 party.GetPosition2D.DistanceSquared(_gateBehind));
         }
 
+        private static bool _firstVisitAhead;
+        private static string _firstVisitAt;
+
+        private static void NoteTheFirstVisit(Settlement settlement)
+        {
+            string was = _firstVisitAt;
+            _firstVisitAt = Arrivals.FirstVisitAt(_firstVisitAhead, _visitTradeAllowed, settlement?.StringId);
+            _firstVisitAhead = Arrivals.FirstVisitStillAhead(_firstVisitAhead, _visitTradeAllowed);
+            if (was != null && _firstVisitAt == null)
+                Log.Write("your party's first visit to a market in this campaign is behind it, so TradeLord " +
+                          "restocks your food as usual from here on");
+        }
+
+        private static bool FoodWaitsForTheNextMarket(Settlement settlement)
+        {
+            if (!Arrivals.FoodWaitsForTheNextMarket(settlement?.StringId, _firstVisitAt)) return false;
+            Log.Repeatable("resupply first visit", settlement.StringId,
+                           "resupply: " + settlement.Name + " is your party's first visit to a market in this " +
+                           "campaign, so TradeLord buys no food for your party here and your gold goes to trade goods");
+            return true;
+        }
+
         private static void ForgetArrivals()
         {
+            _firstVisitAhead = false;
+            _firstVisitAt = null;
             _lastArrivalAt = null;
             _lastTradedAt = null;
             _heldBackAt = null;
@@ -1044,6 +1086,7 @@ namespace TradeLord
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 if (inside != null) Marker.NoteALoadInside(inside);
                 if (inside != null) _lastArrivalAt = inside.StringId;
+                if (inside != null && _firstVisitAhead) NoteTheFirstVisit(inside);
                 if (inside != null) StillTheSameSitting(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreSellMark", Marker.RestoreTheSellMark);
@@ -1143,6 +1186,7 @@ namespace TradeLord
                     return;
                 }
                 NoteThisArrival(settlement);
+                NoteTheFirstVisit(settlement);
 
                 if (_visitTradeAllowed && Counter.HoldsBack())
                 {
@@ -2199,6 +2243,7 @@ namespace TradeLord
         {
             _unfitted = default;
             if (Options.Current.KeepFoodDays <= 0) return;
+            if (FoodWaitsForTheNextMarket(settlement)) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
             Resupply(pass, aDayFirst);

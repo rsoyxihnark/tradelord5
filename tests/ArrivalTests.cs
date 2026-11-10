@@ -170,5 +170,37 @@ namespace TradeLord.Tests
             Assert.False(Arrivals.LeftAloneOnArrival("town_EW1", "town_EW1", true, "town_EW1"));
             Assert.True(Arrivals.LeftAloneOnArrival("town_EW1", "town_EV4", true, "town_EW1"));
         }
+
+        [Fact]
+        public void A_new_campaigns_first_arrival_at_a_market_it_may_trade_at_is_its_first_visit()
+        {
+            Assert.Equal("town_ES3", Arrivals.FirstVisitAt(true, true, "town_ES3"));
+            Assert.False(Arrivals.FirstVisitStillAhead(true, true));
+        }
+
+        [Fact]
+        public void A_place_TradeLord_may_not_trade_at_leaves_the_first_visit_ahead()
+        {
+            Assert.Null(Arrivals.FirstVisitAt(true, false, "castle_ES3"));
+            Assert.True(Arrivals.FirstVisitStillAhead(true, false));
+        }
+
+        [Fact]
+        public void The_next_arrival_anywhere_ends_the_first_visit()
+        {
+            Assert.Null(Arrivals.FirstVisitAt(false, true, "town_ES3"));
+            Assert.Null(Arrivals.FirstVisitAt(false, false, "castle_ES3"));
+            Assert.False(Arrivals.FirstVisitStillAhead(false, true));
+            Assert.False(Arrivals.FirstVisitStillAhead(false, false));
+        }
+
+        [Fact]
+        public void Food_waits_for_the_next_market_only_while_the_first_visit_lasts()
+        {
+            Assert.True(Arrivals.FoodWaitsForTheNextMarket("town_ES3", "town_ES3"));
+            Assert.False(Arrivals.FoodWaitsForTheNextMarket("town_V8", "town_ES3"));
+            Assert.False(Arrivals.FoodWaitsForTheNextMarket("town_ES3", null));
+            Assert.False(Arrivals.FoodWaitsForTheNextMarket(null, null));
+        }
     }
 }

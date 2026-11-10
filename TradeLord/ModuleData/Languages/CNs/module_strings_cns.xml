@@ -247,7 +247,7 @@
 		<string id="TL414" text="时"/>
 		<string id="TL415" text="天"/>
 		<string id="TL416" text="剩余"/>
-		<string id="TL417" text=" | 剩余 = 从现在起那个货架还能保有这个数量多久；提前空掉的货架会降低把握"/>
+		<string id="TL417" text=" | 剩余 = 从现在起那个货架还能保有这个数量多久 | 提前空掉的货架会降低把握，你所在的市场除外"/>
 		<string id="TL418" text="近期交易（最近 {COUNT} 笔）"/>
 		<string id="TL419" text="近期交易：本次战役还没有交易过"/>
 		<string id="TL420" text="{DAYS} 天前"/>

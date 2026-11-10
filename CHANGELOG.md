@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.25
+
+- TradeLord no longer buys food for your party on your first visit to a market in a new campaign, so your starting gold goes to trade goods
+- Fixed What this means in the TradeLord ledger saying a shelf that empties first lowers Conf in the market you are in
+- Count what is on its way to a market no longer checks every party entering a settlement for a villagers' ride, only villagers
+
 ## 2.9.24
 
 - Fixed caravans heading for the market you are in lowering Conf there with Live world prices or Count what is on its way to a market off

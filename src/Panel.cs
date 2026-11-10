@@ -565,7 +565,7 @@ namespace TradeLord
                               ? Tongue.Text("{=TL394} | prices and stock count what caravans, villagers, workshops and the town add and take before you arrive").ToString()
                               : Tongue.Text("{=TL447} | stock counts what caravans, villagers, workshops and the town add and take before you arrive | prices need Bulk price simulation to count it").ToString())
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
-                          + Tongue.Text("{=TL417} | Left = how long from now that shelf still holds this Qty, and a shelf that empties first lowers Conf").ToString()
+                          + Tongue.Text("{=TL417} | Left = how long from now that shelf still holds this Qty | a shelf that empties first lowers Conf, except in the market you are in").ToString()
                         : ""))
                 + (anyAsScanned ? Tongue.Text("{=TL516} | Days? = as scanned, while the road from where you stand is still being measured").ToString() : "")
                 + (measuring && !empty ? " | " + roadsComing : "")

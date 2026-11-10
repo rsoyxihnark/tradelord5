@@ -132,6 +132,15 @@ namespace TradeLord
 
         internal static string AfterTheRoad(bool tradedOnTheRoad, string lastTradedAt) =>
             tradedOnTheRoad ? null : lastTradedAt;
+
+        internal static string FirstVisitAt(bool firstVisitAhead, bool tradeAllowedHere, string here) =>
+            firstVisitAhead && tradeAllowedHere ? here : null;
+
+        internal static bool FirstVisitStillAhead(bool firstVisitAhead, bool tradeAllowedHere) =>
+            firstVisitAhead && !tradeAllowedHere;
+
+        internal static bool FoodWaitsForTheNextMarket(string here, string firstVisitAt) =>
+            here != null && here == firstVisitAt;
     }
 
     internal static class Marks
