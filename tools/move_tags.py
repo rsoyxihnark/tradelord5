@@ -17,6 +17,21 @@ def tags():
     return found
 
 
+OLD_MAIN = ('1.104.14', '1.106.0')
+
+
+def order(version):
+    return tuple(int(part) for part in version.split('.'))
+
+
+def from_the_old_main(name):
+    version = name[1:] if name.startswith('v') else name
+    try:
+        return order(OLD_MAIN[0]) <= order(version) <= order(OLD_MAIN[1])
+    except ValueError:
+        return False
+
+
 def branch():
     name = os.environ.get('GITHUB_REF_NAME') or git('rev-parse', '--abbrev-ref', 'HEAD').strip()
     return name if name and name != 'HEAD' else 'main'
@@ -67,7 +82,7 @@ def main(argv):
     here = branch()
     live = heads()
     shas, trees, versions = main_line(here)
-    moves, stays, lost, elsewhere = [], 0, [], []
+    moves, stays, lost, elsewhere, old = [], 0, [], [], []
     for name, sha in sorted(tags().items()):
         if sha in shas:
             stays += 1
@@ -77,7 +92,9 @@ def main(argv):
             elsewhere.append((name, other))
             continue
         to, why = target(name, sha, trees, versions, here)
-        if to is None:
+        if to is None and from_the_old_main(name):
+            old.append(name)
+        elif to is None:
             lost.append(name)
         else:
             moves.append((name, sha, to, why))
@@ -85,10 +102,13 @@ def main(argv):
         print('  move    ' + name + ' from ' + sha[:7] + ' to ' + to[:7] + ', ' + why)
     for name, other in elsewhere:
         print('  KEPT    ' + name + ' is on ' + other + ', the branch it was published from, so it stays there')
+    for name in old:
+        print('  KEPT    ' + name + ' was shipped from the old main, which is gone, so it stays where it is')
     for name in lost:
         print('  LOST    ' + name + ' has no commit on ' + here + ' that ships its version, so it stays where it is')
     print(str(stays) + ' tag(s) already on ' + here + ', ' + str(len(moves)) + ' to move, ' + str(len(elsewhere)) +
-          ' on another kept branch, ' + str(len(lost)) + ' with nowhere to go')
+          ' on another kept branch, ' + str(len(old)) + ' shipped from the old main, ' + str(len(lost)) +
+          ' with nowhere to go')
     if not apply:
         print('dry run: nothing was moved')
         return 0
@@ -97,7 +117,7 @@ def main(argv):
         return 1
     for at in range(0, len(moves), 50):
         git('push', '--force', 'origin', *[to + ':refs/tags/' + name for name, sha, to, why in moves[at:at + 50]])
-    kept = set(name for name, other in elsewhere)
+    kept = set(name for name, other in elsewhere) | set(old)
     left = sorted(name for name, sha in tags().items() if sha not in shas and name not in kept)
     print('moved ' + str(len(moves)) + ' tag(s), and ' + str(len(left)) + ' tag(s) still point off ' + here)
     for name in left:
