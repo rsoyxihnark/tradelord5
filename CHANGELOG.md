@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.28
+
+- TradeLord.log's checks and trading on arrival no longer set a little memory aside every time any party enters or leaves a settlement
+
 ## 2.9.27
 
 - TradeLord no longer sets a little memory aside every time any party enters or leaves a settlement, only for villagers and your own party

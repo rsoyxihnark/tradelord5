@@ -6063,12 +6063,23 @@ chk("1.38.3", "the option waits for the game to finish writing its own lines, an
 def every_handler_the_game_calls_guards_its_own_work():
     settled = ("private void OnConversationEnded(IEnumerable<CharacterObject> spoke)"
                " => Meetings.ConversationEnded();")
+    handed_on = {'APartyEntered': ("if (party == MobileParty.MainParty) OnSettlementEntered(party, settlement, hero);",
+                                   "OnSettlementEntered("),
+                 'APartyLeft': ("if (party == MobileParty.MainParty) OnSettlementLeft(party, settlement);",
+                                "OnSettlementLeft(")}
     held = 0
     for f in ('Trading.cs', 'Ledger.cs'):
         for name in re.findall(r'AddNonSerializedListener\(this, (\w+)\)', S[f]):
             if name == 'OnConversationEnded':
                 continue
             body = method_body(S[f], "private void " + name)
+            if not body:
+                return False
+            if f == 'Trading.cs' and name in handed_on:
+                only, guarded = handed_on[name]
+                if body[body.index('{') + 1:body.rindex('}')].strip() != only:
+                    return False
+                body = method_body(S[f], "private void " + guarded)
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
@@ -25520,6 +25531,31 @@ def a_party_entering_or_leaving_a_settlement_sets_no_memory_aside():
 
 chk("2.9.27", "the ledger's two handlers for a party entering or leaving a settlement hand their arguments to the guard rather than capture them, so a party that is neither a villager party nor yours sets no memory aside",
     a_party_entering_or_leaving_a_settlement_sets_no_memory_aside())
+
+def no_listener_sets_memory_aside_for_a_party_that_is_not_its_business():
+    t = S['Trading.cs']
+    check = S['RideCheck.cs']
+    came = method_body(check, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+    went = method_body(check, "private void OnSettlementLeft(MobileParty party, Settlement settlement)")
+    entered = method_body(t, "private void APartyEntered(MobileParty party, Settlement settlement, Hero hero)")
+    left = method_body(t, "private void APartyLeft(MobileParty party, Settlement settlement)")
+    return (came and went and entered and left
+            and 'Guard.Run("RideCheck.Arrived", (party, settlement), at => RideCheck.Arrived(at.party, at.settlement));' in came
+            and 'Guard.Run("RideCheck.Left", (party, settlement), at => RideCheck.Left(at.party, at.settlement));' in went
+            and "() =>" not in came and "() =>" not in went
+            and "if (party == MobileParty.MainParty) OnSettlementEntered(party, settlement, hero);" in entered
+            and "if (party == MobileParty.MainParty) OnSettlementLeft(party, settlement);" in left
+            and "=>" not in entered and "=>" not in left
+            and "CampaignEvents.SettlementEntered.AddNonSerializedListener(this, APartyEntered);" in t
+            and "CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, APartyLeft);" in t
+            and "AddNonSerializedListener(this, OnSettlementEntered)" not in t
+            and "AddNonSerializedListener(this, OnSettlementLeft)" not in t
+            and "if (party != MobileParty.MainParty) return;" in method_body(t, "private void OnSettlementEntered(")
+            and "if (party != MobileParty.MainParty) return;" in method_body(t, "private void OnSettlementLeft("))
+
+
+chk("2.9.28", "TradeLord.log's checks hand a party entering or leaving a settlement to the guard without capturing it, and trading on arrival is reached only for your own party, so neither sets memory aside for a party that is not its business",
+    no_listener_sets_memory_aside_for_a_party_that_is_not_its_business())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

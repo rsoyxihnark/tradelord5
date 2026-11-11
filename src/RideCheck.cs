@@ -56,7 +56,7 @@ namespace TradeLord
         private void OnSettlementLeft(MobileParty party, Settlement settlement)
         {
             if (party == null || settlement == null) return;
-            Guard.Run("RideCheck.Left", () => RideCheck.Left(party, settlement));
+            Guard.Run("RideCheck.Left", (party, settlement), at => RideCheck.Left(at.party, at.settlement));
         }
 
         private void OnTick(float dt)
@@ -69,7 +69,7 @@ namespace TradeLord
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
         {
             if (party == null || settlement == null) return;
-            Guard.Run("RideCheck.Arrived", () => RideCheck.Arrived(party, settlement));
+            Guard.Run("RideCheck.Arrived", (party, settlement), at => RideCheck.Arrived(at.party, at.settlement));
         }
 
         private void OnDailyTick()

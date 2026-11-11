@@ -355,8 +355,8 @@ namespace TradeLord
         public override void RegisterEvents()
         {
             CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);
-            CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);
-            CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);
+            CampaignEvents.SettlementEntered.AddNonSerializedListener(this, APartyEntered);
+            CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, APartyLeft);
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
@@ -373,6 +373,16 @@ namespace TradeLord
                 Log.Write("a new campaign: TradeLord buys no food for your party on its first visit to a market, " +
                           "and restocks your food from the market after that");
             });
+        }
+
+        private void APartyEntered(MobileParty party, Settlement settlement, Hero hero)
+        {
+            if (party == MobileParty.MainParty) OnSettlementEntered(party, settlement, hero);
+        }
+
+        private void APartyLeft(MobileParty party, Settlement settlement)
+        {
+            if (party == MobileParty.MainParty) OnSettlementLeft(party, settlement);
         }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => Meetings.ConversationEnded();
