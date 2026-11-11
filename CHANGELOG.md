@@ -6,7 +6,7 @@
 
 ## 2.9.27
 
-- TradeLord no longer sets a little memory aside every time any party enters or leaves a settlement, only for villagers and your own party
+- Count what is on its way to a market no longer sets a little memory aside every time any party enters or leaves a settlement
 
 ## 2.9.26
 
