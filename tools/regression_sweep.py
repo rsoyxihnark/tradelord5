@@ -24985,7 +24985,7 @@ chk("2.9.0", "TradeLord.log describes the ride from the market you stand in alon
 
 def the_ledger_on_the_road_shows_days_and_score_from_where_you_stand():
     panel = S['Panel.cs']
-    stand = method_body(panel, "private static List<(TradeRoute route, float days, float key, bool asScanned)> FromWhereYouStand(")
+    stand = method_body(panel, "private static List<(TradeRoute route, float days, float key, float conf, bool asScanned)> FromWhereYouStand(")
     refresh = method_body(panel, "private void Refresh")
     return (stand and refresh
             and ordered(refresh, "bool onTheRoad = party != null && party.CurrentSettlement == null;",
@@ -24993,14 +24993,16 @@ def the_ledger_on_the_road_shows_days_and_score_from_where_you_stand():
                         "var shown = FromWhereYouStand(LedgerBehavior.Instance?.BestRoutes(int.MaxValue));",
                         "List<int> order = TradeMath.ByShownScore(keys, RoutesShown);",
                         "rows.Add(new RouteRowVM(one.route, i % 2 == 1, Ranks.Of(i, order.Count), _centerMap,",
-                        "one.days, one.key, one.asScanned));")
+                        "one.days, one.key, one.conf, one.asScanned));")
             and "private const int RoutesShown = 30;" in panel
             and ordered(stand, "float ride = Travel.EstimateDaysFromParty(r.From);",
-                        "if (TradeMath.OutOfReach(days)) shown.Add((r, r.TravelDays, r.Key, true));",
-                        "else shown.Add((r, days, TradeMath.KeyRetimed(r.Key, r.TravelDays, days), false));")
+                        "if (TradeMath.OutOfReach(days))",
+                        "shown.Add((r, r.TravelDays, r.Key, r.Confidence, true));",
+                        "float key = TradeMath.KeyRetimed(r.Key, r.TravelDays, days);",
+                        "shown.Add((r, days, atConf ? TradeMath.KeyAtAnotherConf(key, r.Confidence, conf) : key, conf, false));")
             and not re.search(r'\.(TravelDays|Key|KeyByDenar|KeyByProfit)\s*=[^=]', code_only(panel))
             and '[DataSourceProperty] public string Days => "~" + _days.ToString("0.#") + (_asScanned ? "?" : "");' in panel
-            and ": this(route, alternate, rank, centerMap, route.TravelDays, route.Key, false) { }" in panel
+            and ": this(route, alternate, rank, centerMap, route.TravelDays, route.Key, route.Confidence, false) { }" in panel
             and "{=TL516} | Days? = as scanned, while the road from where you stand is still being measured" in panel
             and said_in_every_language('TL516')
             and ordered(method_body(S['TradeMath.cs'], "public static float KeyRetimed("),
@@ -25470,6 +25472,32 @@ def only_villagers_are_looked_at_for_a_villagers_ride():
 
 chk("2.9.25", "a party entering a settlement is looked at for a villagers' ride only when it is villagers, as one leaving already is",
     only_villagers_are_looked_at_for_a_villagers_ride())
+
+def conf_follows_you_on_the_road_as_days_and_score_do():
+    panel = S['Panel.cs']
+    stand = method_body(panel, "private static List<(TradeRoute route, float days, float key, float conf, bool asScanned)> FromWhereYouStand(")
+    opened = method_body(panel, "private static string OpenedOnTheRoad(")
+    return (stand and opened
+            and ordered(method_body(S['Confidence.cs'], "public static float Retimed(float confidence, float scanDays, float days)"),
+                        "if (!(confidence > 0f) || float.IsNaN(scanDays) || float.IsNaN(days)) return confidence;",
+                        "float c = confidence * Haste(days) / Haste(scanDays);",
+                        "return c < Least ? Least : (c > 1f ? 1f : c);")
+            and ordered(method_body(S['TradeMath.cs'], "public static float KeyAtAnotherConf("),
+                        "if (!(key > 0f) || !(scanConf > 0f) || float.IsNaN(conf)) return key;",
+                        "return Finite((float)((double)key * conf / scanConf), key);")
+            and ordered(stand, "bool atConf = Options.Current.ConfidenceRanking;",
+                        "shown.Add((r, r.TravelDays, r.Key, r.Confidence, true));",
+                        "float conf = TradeLord.Confidence.Retimed(r.Confidence, r.TravelDays, days);",
+                        "float key = TradeMath.KeyRetimed(r.Key, r.TravelDays, days);",
+                        "shown.Add((r, days, atConf ? TradeMath.KeyAtAnotherConf(key, r.Confidence, conf) : key, conf, false));")
+            and '(int)Math.Round(_conf * 100f) + (_route.Simulated ? "%" : "%*");' in panel
+            and "_route.Confidence * 100f" not in panel
+            and '" and Conf " + Scoring.Share(first.conf) + " where it said " + Scoring.Share(r.Confidence) +' in opened
+            and "Conf_retimed_from_where_you_stand_moves_with_the_ride_and_the_score_moves_with_it" in MATHTESTS)
+
+
+chk("2.9.26", "opened on the road, the TradeLord ledger shows Conf from where your party stands as it does Days and Score, the Score moving with that Conf while routes are ranked by confidence, and a route left as scanned keeps the Conf it was scanned with",
+    conf_follows_you_on_the_road_as_days_and_score_do())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

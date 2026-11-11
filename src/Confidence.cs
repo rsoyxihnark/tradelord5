@@ -89,6 +89,13 @@ namespace TradeLord
 
         private static float Haste(float travelDays) => 1f / (1f + Math.Max(travelDays, 0f) / 3f);
 
+        public static float Retimed(float confidence, float scanDays, float days)
+        {
+            if (!(confidence > 0f) || float.IsNaN(scanDays) || float.IsNaN(days)) return confidence;
+            float c = confidence * Haste(days) / Haste(scanDays);
+            return c < Least ? Least : (c > 1f ? 1f : c);
+        }
+
         public static float MostItCanBe(float travelDays)
         {
             if (float.IsNaN(travelDays)) return 1f;

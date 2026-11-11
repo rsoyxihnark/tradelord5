@@ -5207,6 +5207,34 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Conf_retimed_from_where_you_stand_moves_with_the_ride_and_the_score_moves_with_it()
+        {
+            Assert.Equal(0.5f, Confidence.Retimed(0.5f, 2f, 2f), 5);
+            Assert.Equal(0.6f, Confidence.Retimed(0.3f, 3f, 0f), 5);
+            Assert.Equal(0.3f, Confidence.Retimed(0.6f, 0f, 3f), 5);
+            Assert.Equal(1f, Confidence.Retimed(0.9f, 6f, 0f), 5);
+            Assert.Equal(0.01f, Confidence.Retimed(0.01f, 0f, 9f), 5);
+            Assert.Equal(0.4f, Confidence.Retimed(0.4f, float.NaN, 1f), 5);
+            Assert.Equal(0f, Confidence.Retimed(0f, 1f, 2f), 5);
+            var rng = new Random(2925);
+            for (int round = 0; round < 5000; round++)
+            {
+                float was = (float)rng.NextDouble() * 9f, now = (float)rng.NextDouble() * 9f;
+                float scanned = Confidence.Of(true, 100, 100, rng.Next(0, 60), rng.Next(1, 40), was, 0, -1f,
+                                              rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 9f, 0.5f);
+                Assert.True(Confidence.Retimed(scanned, was, now) <= Confidence.MostItCanBe(now) + 1E-5f);
+            }
+            Assert.Equal(5f, TradeMath.KeyAtAnotherConf(10f, 0.5f, 0.25f), 4);
+            Assert.Equal(10f, TradeMath.KeyAtAnotherConf(10f, 0f, 0.25f), 4);
+            Assert.Equal(10f, TradeMath.KeyAtAnotherConf(10f, 0.5f, float.NaN), 4);
+            Assert.Equal(0f, TradeMath.KeyAtAnotherConf(0f, 0.5f, 0.25f), 4);
+            float scan = TradeMath.Key(1000L, 0.4f, 1f, true, 2f, 10, 3f);
+            float conf = Confidence.Retimed(0.4f, 3f, 1.5f);
+            Assert.Equal(TradeMath.Key(1000L, conf, 1f, true, 2f, 10, 1.5f),
+                         TradeMath.KeyAtAnotherConf(TradeMath.KeyRetimed(scan, 3f, 1.5f), 0.4f, conf), 3);
+        }
+
+        [Fact]
         public void A_ledger_score_retimed_from_where_you_stand_moves_with_the_ride_as_the_scan_counts_it()
         {
             Assert.Equal(10f, TradeMath.KeyRetimed(10f, 2f, 2f), 4);

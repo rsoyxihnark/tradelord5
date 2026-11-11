@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.26
+
+- Fixed the TradeLord ledger opened on the road showing Conf as last scanned while Days and Score counted from where you stand
+
 ## 2.9.25
 
 - TradeLord no longer buys food for your party on your first visit to a market in a new campaign, so your starting gold goes to trade goods

@@ -2793,6 +2793,12 @@ namespace TradeLord
             return Finite((float)((double)key * was / now), 0f);
         }
 
+        public static float KeyAtAnotherConf(float key, float scanConf, float conf)
+        {
+            if (!(key > 0f) || !(scanConf > 0f) || float.IsNaN(conf)) return key;
+            return Finite((float)((double)key * conf / scanConf), key);
+        }
+
         public static List<int> ByShownScore(IList<float> keys, int top)
         {
             var order = new List<int>(keys?.Count ?? 0);

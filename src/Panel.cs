@@ -24,19 +24,21 @@ namespace TradeLord
         private readonly float _rank;
         private readonly float _days;
         private readonly float _key;
+        private readonly float _conf;
         private readonly bool _asScanned;
 
         public RouteRowVM(TradeRoute route, bool alternate, float rank, Action<Settlement> centerMap)
-            : this(route, alternate, rank, centerMap, route.TravelDays, route.Key, false) { }
+            : this(route, alternate, rank, centerMap, route.TravelDays, route.Key, route.Confidence, false) { }
 
         internal RouteRowVM(TradeRoute route, bool alternate, float rank, Action<Settlement> centerMap, float days,
-                            float key, bool asScanned)
+                            float key, float conf, bool asScanned)
         {
             _route = route;
             _centerMap = centerMap;
             _rank = rank;
             _days = days;
             _key = key;
+            _conf = conf;
             _asScanned = asScanned;
             IsAlternateRow = alternate;
         }
@@ -77,7 +79,7 @@ namespace TradeLord
         [DataSourceProperty] public string Caravans => _route.Caravans.ToString();
 
         [DataSourceProperty] public string Confidence =>
-            (int)Math.Round(_route.Confidence * 100f) + (_route.Simulated ? "%" : "%*");
+            (int)Math.Round(_conf * 100f) + (_route.Simulated ? "%" : "%*");
 
         [DataSourceProperty] public string Score =>
             _key < 10f ? _key.ToString("0.#") : ((int)_key).ToString();
@@ -515,7 +517,7 @@ namespace TradeLord
                     var one = shown[order[i]];
                     if (one.asScanned) anyAsScanned = true;
                     rows.Add(new RouteRowVM(one.route, i % 2 == 1, Ranks.Of(i, order.Count), _centerMap,
-                                            one.days, one.key, one.asScanned));
+                                            one.days, one.key, one.conf, one.asScanned));
                 }
                 if (Options.Current.ExtendedDebugLogging) Log.Write(OpenedOnTheRoad(shown, order));
             }
@@ -633,28 +635,36 @@ namespace TradeLord
 
         private const int RoutesShown = 30;
 
-        private static List<(TradeRoute route, float days, float key, bool asScanned)> FromWhereYouStand(
+        private static List<(TradeRoute route, float days, float key, float conf, bool asScanned)> FromWhereYouStand(
             List<TradeRoute> routes)
         {
-            var shown = new List<(TradeRoute route, float days, float key, bool asScanned)>(routes?.Count ?? 0);
+            var shown = new List<(TradeRoute route, float days, float key, float conf, bool asScanned)>(routes?.Count ?? 0);
+            bool atConf = Options.Current.ConfidenceRanking;
             for (int i = 0; routes != null && i < routes.Count; i++)
             {
                 TradeRoute r = routes[i];
                 if (r == null) continue;
                 if (r.From == null || r.To == null)
                 {
-                    shown.Add((r, r.TravelDays, r.Key, false));
+                    shown.Add((r, r.TravelDays, r.Key, r.Confidence, false));
                     continue;
                 }
                 float ride = Travel.EstimateDaysFromParty(r.From);
                 float days = TradeMath.OutOfReach(ride) ? ride : ride + Travel.EstimateDaysBetween(r.From, r.To, ride);
-                if (TradeMath.OutOfReach(days)) shown.Add((r, r.TravelDays, r.Key, true));
-                else shown.Add((r, days, TradeMath.KeyRetimed(r.Key, r.TravelDays, days), false));
+                if (TradeMath.OutOfReach(days))
+                {
+                    shown.Add((r, r.TravelDays, r.Key, r.Confidence, true));
+                    continue;
+                }
+                float conf = TradeLord.Confidence.Retimed(r.Confidence, r.TravelDays, days);
+                float key = TradeMath.KeyRetimed(r.Key, r.TravelDays, days);
+                shown.Add((r, days, atConf ? TradeMath.KeyAtAnotherConf(key, r.Confidence, conf) : key, conf, false));
             }
             return shown;
         }
 
-        private static string OpenedOnTheRoad(List<(TradeRoute route, float days, float key, bool asScanned)> shown,
+        private static string OpenedOnTheRoad(
+            List<(TradeRoute route, float days, float key, float conf, bool asScanned)> shown,
                                               List<int> order)
         {
             int retimed = 0, asScanned = 0;
@@ -672,7 +682,8 @@ namespace TradeLord
                       " from " + (r.From == null ? "?" : Tongue.Named(r.From.Name, r.From.StringId)) +
                       " to " + (r.To == null ? "?" : Tongue.Named(r.To.Name, r.To.StringId)) +
                       ", Days " + Shown(first.days) + " where the route scan said " + Shown(r.TravelDays) +
-                      " and Score " + ScoreShown(first.key) + " where it said " + ScoreShown(r.Key) +
+                      ", Score " + ScoreShown(first.key) + " where it said " + ScoreShown(r.Key) +
+                      " and Conf " + Scoring.Share(first.conf) + " where it said " + Scoring.Share(r.Confidence) +
                       (first.asScanned ? ", as scanned" : "");
             }
             return "TradeLord ledger opened on the road: " + order.Count + " of " + shown.Count +

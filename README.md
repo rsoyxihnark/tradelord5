@@ -43,6 +43,7 @@
 - ✅ Trust a market by what it has paid turns that off
 - ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
 - ✅ Left is blank when the shelf holds that amount through everything TradeLord can see taking from it, up to 30 days after you arrive
+- ✅ Opened on the road, the panel shows Days, Score and Conf from where your party stands rather than as last scanned
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make, and the purses those caravans are bringing to spend
 - ✅ Caravans yet to choose that market are counted too, from what caravans sold and bought there after choosing it, over up to the last seven days since you loaded your save
 - ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
