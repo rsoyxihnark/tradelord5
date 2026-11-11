@@ -202,5 +202,21 @@ namespace TradeLord.Tests
             Assert.False(Arrivals.FoodWaitsForTheNextMarket("town_ES3", null));
             Assert.False(Arrivals.FoodWaitsForTheNextMarket(null, null));
         }
+
+        [Fact]
+        public void A_campaign_loaded_before_any_market_was_visited_still_has_its_first_visit_ahead()
+        {
+            Assert.True(Arrivals.FirstVisitAheadOnceLoaded(false, null, true));
+            Assert.True(Arrivals.FirstVisitAheadOnceLoaded(true, null, true));
+            Assert.True(Arrivals.FirstVisitAheadOnceLoaded(true, null, false));
+        }
+
+        [Fact]
+        public void A_campaign_loaded_after_a_market_was_visited_or_inside_its_first_one_gets_no_second_first_visit()
+        {
+            Assert.False(Arrivals.FirstVisitAheadOnceLoaded(false, null, false));
+            Assert.False(Arrivals.FirstVisitAheadOnceLoaded(false, "town_ES3", true));
+            Assert.False(Arrivals.FirstVisitAheadOnceLoaded(false, "town_ES3", false));
+        }
     }
 }

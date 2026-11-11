@@ -566,6 +566,24 @@ namespace TradeLord
                           "restocks your food as usual from here on");
         }
 
+        private static void TheFirstVisitAsTheGameRecordsIt()
+        {
+            bool ahead = Arrivals.FirstVisitAheadOnceLoaded(_firstVisitAhead, _firstVisitAt, NoMarketVisitedYet());
+            if (ahead && !_firstVisitAhead)
+                Log.Write("your party has visited no market in this campaign yet, by the game's own record, so TradeLord " +
+                          "buys no food for your party on its first visit to one");
+            _firstVisitAhead = ahead;
+        }
+
+        private static bool NoMarketVisitedYet()
+        {
+            MBReadOnlyList<Settlement> all = Settlement.All;
+            if (all == null || all.Count == 0) return false;
+            for (int i = 0; i < all.Count; i++)
+                if (HasAMarket(all[i]) && all[i].HasVisited) return false;
+            return true;
+        }
+
         private static bool FoodWaitsForTheNextMarket(Settlement settlement)
         {
             if (!Arrivals.FoodWaitsForTheNextMarket(settlement?.StringId, _firstVisitAt)) return false;
@@ -1096,6 +1114,7 @@ namespace TradeLord
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 if (inside != null) Marker.NoteALoadInside(inside);
                 if (inside != null) _lastArrivalAt = inside.StringId;
+                TheFirstVisitAsTheGameRecordsIt();
                 if (inside != null && _firstVisitAhead) NoteTheFirstVisit(inside);
                 if (inside != null) StillTheSameSitting(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));

@@ -141,6 +141,9 @@ namespace TradeLord
 
         internal static bool FoodWaitsForTheNextMarket(string here, string firstVisitAt) =>
             here != null && here == firstVisitAt;
+
+        internal static bool FirstVisitAheadOnceLoaded(bool firstVisitAhead, string firstVisitAt, bool noMarketVisitedYet) =>
+            firstVisitAhead || (firstVisitAt == null && noMarketVisitedYet);
     }
 
     internal static class Marks

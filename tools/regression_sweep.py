@@ -25557,5 +25557,29 @@ def no_listener_sets_memory_aside_for_a_party_that_is_not_its_business():
 chk("2.9.28", "TradeLord.log's checks hand a party entering or leaving a settlement to the guard without capturing it, and trading on arrival is reached only for your own party, so neither sets memory aside for a party that is not its business",
     no_listener_sets_memory_aside_for_a_party_that_is_not_its_business())
 
+def a_campaign_loaded_with_no_market_visited_still_has_its_first_visit_ahead():
+    t = S['Trading.cs']
+    launched = method_body(t, "private void OnSessionLaunched")
+    game = method_body(t, "private static void TheFirstVisitAsTheGameRecordsIt()")
+    none = method_body(t, "private static bool NoMarketVisitedYet()")
+    return (launched and game and none
+            and ordered(launched, "TheFirstVisitAsTheGameRecordsIt();",
+                        "if (inside != null && _firstVisitAhead) NoteTheFirstVisit(inside);")
+            and ordered(game, "bool ahead = Arrivals.FirstVisitAheadOnceLoaded(_firstVisitAhead, _firstVisitAt, NoMarketVisitedYet());",
+                        "if (ahead && !_firstVisitAhead)", "_firstVisitAhead = ahead;")
+            and ordered(none, "MBReadOnlyList<Settlement> all = Settlement.All;",
+                        "if (all == null || all.Count == 0) return false;",
+                        "if (HasAMarket(all[i]) && all[i].HasVisited) return false;", "return true;")
+            and ordered(S['Rules.cs'], "internal static bool FirstVisitAheadOnceLoaded(bool firstVisitAhead, string firstVisitAt, bool noMarketVisitedYet) =>",
+                        "firstVisitAhead || (firstVisitAt == null && noMarketVisitedYet);")
+            and t.count("HasVisited") == 1
+            and all(one in ARRIVALTESTS for one in
+                    ("A_campaign_loaded_before_any_market_was_visited_still_has_its_first_visit_ahead",
+                     "A_campaign_loaded_after_a_market_was_visited_or_inside_its_first_one_gets_no_second_first_visit")))
+
+
+chk("2.9.29", "a campaign loaded with no market visited yet, by the game's own record of where your party has been, still has its first visit ahead, so no food is bought for your party there, and one loaded after a market was visited gets no second first visit",
+    a_campaign_loaded_with_no_market_visited_still_has_its_first_visit_ahead())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

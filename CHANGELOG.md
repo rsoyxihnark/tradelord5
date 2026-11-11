@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.29
+
+- Fixed TradeLord buying food for your party on your first visit to a market in a campaign loaded from a save older than 2.9.25
+
 ## 2.9.28
 
 - TradeLord.log's checks and trading on arrival no longer set a little memory aside every time any party enters or leaves a settlement
