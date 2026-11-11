@@ -24849,10 +24849,11 @@ def the_forecast_steps_town_use_reprices_workshops_counts_gear_and_learns_villag
                         "Stock(town, kind, 1);")
             and "CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);" in
                 method_body(led, "public override void RegisterEvents")
-            and 'Guard.Run("Forecast.VillagersLeft", () => Forecast.VillagersLeft(party, settlement));' in
+            and 'Guard.Run("Forecast.VillagersLeft", (party, settlement), at => Forecast.VillagersLeft(at.party, at.settlement));' in
                 method_body(led, "private void OnSettlementLeft(MobileParty party, Settlement settlement)")
-            and 'Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));' in
-                method_body(led, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+            and ordered(method_body(led, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)"),
+                        'Guard.Run("Forecast.VillagersEntered", (party, settlement),',
+                        "at => Forecast.VillagersEntered(at.party, at.settlement));")
             and 'Guard.Run("Forecast.VillagersRiding", Forecast.WatchTheVillagersRide);' in
                 method_body(led, "private void OnHourlyTick()")
             and not any(one in left + entered + watch for one in ("ExtendedDebugLogging", "Writing", "Naming", " On "))
@@ -25462,10 +25463,11 @@ def only_villagers_are_looked_at_for_a_villagers_ride():
     left = method_body(S['Ledger.cs'], "private void OnSettlementLeft(")
     return (entered and left
             and ordered(entered, "if (party != null && party.IsVillager)",
-                        'Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));',
+                        'Guard.Run("Forecast.VillagersEntered", (party, settlement),',
+                        "at => Forecast.VillagersEntered(at.party, at.settlement));",
                         "if (party != MobileParty.MainParty) return;")
             and ordered(left, "if (party == null || !party.IsVillager) return;",
-                        'Guard.Run("Forecast.VillagersLeft", () => Forecast.VillagersLeft(party, settlement));')
+                        'Guard.Run("Forecast.VillagersLeft", (party, settlement), at => Forecast.VillagersLeft(at.party, at.settlement));')
             and "if (party == null || !party.IsVillager || party.StringId == null || entered?.StringId == null) return;"
                 in method_body(S['Forecast.cs'], "internal static void VillagersEntered("))
 
@@ -25498,6 +25500,26 @@ def conf_follows_you_on_the_road_as_days_and_score_do():
 
 chk("2.9.26", "opened on the road, the TradeLord ledger shows Conf from where your party stands as it does Days and Score, the Score moving with that Conf while routes are ranked by confidence, and a route left as scanned keeps the Conf it was scanned with",
     conf_follows_you_on_the_road_as_days_and_score_do())
+
+def a_party_entering_or_leaving_a_settlement_sets_no_memory_aside():
+    led = S['Ledger.cs']
+    entered = method_body(led, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+    left = method_body(led, "private void OnSettlementLeft(MobileParty party, Settlement settlement)")
+    guard = S['Support.cs']
+    return (entered and left
+            and "() =>" not in entered and "() =>" not in left
+            and entered.count("Guard.Run(") == 2 and left.count("Guard.Run(") == 1
+            and ordered(entered, 'Guard.Run("Forecast.VillagersEntered", (party, settlement),',
+                        "at => Forecast.VillagersEntered(at.party, at.settlement));",
+                        "if (party != MobileParty.MainParty) return;",
+                        'Guard.Run("Ledger.OnSettlementEntered", settlement, at => CaptureSettlement(at));')
+            and ordered(left, "if (party == null || !party.IsVillager) return;",
+                        'Guard.Run("Forecast.VillagersLeft", (party, settlement), at => Forecast.VillagersLeft(at.party, at.settlement));')
+            and "internal static void Run<T>(string context, T with, Action<T> action)" in guard)
+
+
+chk("2.9.27", "the ledger's two handlers for a party entering or leaving a settlement hand their arguments to the guard rather than capture them, so a party that is neither a villager party nor yours sets no memory aside",
+    a_party_entering_or_leaving_a_settlement_sets_no_memory_aside())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

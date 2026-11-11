@@ -683,15 +683,16 @@ namespace TradeLord
         private void OnSettlementLeft(MobileParty party, Settlement settlement)
         {
             if (party == null || !party.IsVillager) return;
-            Guard.Run("Forecast.VillagersLeft", () => Forecast.VillagersLeft(party, settlement));
+            Guard.Run("Forecast.VillagersLeft", (party, settlement), at => Forecast.VillagersLeft(at.party, at.settlement));
         }
 
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
         {
             if (party != null && party.IsVillager)
-                Guard.Run("Forecast.VillagersEntered", () => Forecast.VillagersEntered(party, settlement));
+                Guard.Run("Forecast.VillagersEntered", (party, settlement),
+                          at => Forecast.VillagersEntered(at.party, at.settlement));
             if (party != MobileParty.MainParty) return;
-            Guard.Run("Ledger.OnSettlementEntered", () => CaptureSettlement(settlement));
+            Guard.Run("Ledger.OnSettlementEntered", settlement, at => CaptureSettlement(at));
         }
 
         private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", () =>

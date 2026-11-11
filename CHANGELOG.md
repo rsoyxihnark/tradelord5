@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.27
+
+- TradeLord no longer sets a little memory aside every time any party enters or leaves a settlement, only for villagers and your own party
+
 ## 2.9.26
 
 - Fixed the TradeLord ledger opened on the road showing Conf as last scanned while Days and Score counted from where you stand
