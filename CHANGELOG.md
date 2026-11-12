@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.31
+
+- TradeLord now runs on game version 1.5.7.125802, and no longer on 1.5.6
+
 ## 2.9.30
 
 - Fixed Restock and keep food (days of supply) counting a party of fewer than 20 men as eating a whole unit of food a day
