@@ -19,7 +19,6 @@ namespace TradeLord.Tests
         {
             Assert.True(Marks.ShowsTheBuyTown(400f, 36f, false));
             Assert.True(Marks.ShowsTheBuyTown(400f, 36f, true));
-            Assert.Equal(36f, Marks.SellSideWithItsOwnRoute(36f, 93f, 0f, 0f));
         }
 
         [Fact]
@@ -62,7 +61,7 @@ namespace TradeLord.Tests
         [Fact]
         public void Routes_to_different_sell_at_markets_are_never_added_together()
         {
-            var best = Marks.BestBuyFrom(Rows(("town_b", "town_x", 600f, 3f), ("town_b", "town_y", 500f, 3f)), null);
+            var best = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 600f, 3f), ("town_b", "town_y", 500f, 3f)), null, null);
             Assert.Equal("town_b", best.from);
             Assert.Equal("town_x", best.to);
             Assert.Equal(600f, best.profit);
@@ -73,7 +72,7 @@ namespace TradeLord.Tests
         [Fact]
         public void Two_goods_from_one_buy_town_to_one_sell_at_add_up_over_the_longer_ride()
         {
-            var best = Marks.BestBuyFrom(Rows(("town_b", "town_x", 300f, 2f), ("town_b", "town_x", 200f, 2.5f)), null);
+            var best = Marks.BestPlaceToGo(Rows(("town_b", "town_x", 300f, 2f), ("town_b", "town_x", 200f, 2.5f)), null, null);
             Assert.Equal("town_b", best.from);
             Assert.Equal("town_x", best.to);
             Assert.Equal(500f, best.profit);
@@ -86,18 +85,18 @@ namespace TradeLord.Tests
         public void The_shown_buy_town_keeps_its_hold_and_reports_its_own_rate()
         {
             var rows = Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 330f, 3f));
-            Assert.Equal("town_b", Marks.BestBuyFrom(rows, null).from);
-            var held = Marks.BestBuyFrom(rows, "town_a");
+            Assert.Equal("town_b", Marks.BestPlaceToGo(rows, null, null).from);
+            var held = Marks.BestPlaceToGo(rows, null, "town_a");
             Assert.Equal("town_a", held.from);
             Assert.Equal(100f, held.rate);
-            var past = Marks.BestBuyFrom(Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 400f, 3f)), "town_a");
+            var past = Marks.BestPlaceToGo(Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 400f, 3f)), null, "town_a");
             Assert.Equal("town_b", past.from);
         }
 
         [Fact]
         public void A_tie_keeps_the_first_buy_town_seen()
         {
-            var best = Marks.BestBuyFrom(Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 300f, 3f)), null);
+            var best = Marks.BestPlaceToGo(Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 300f, 3f)), null, null);
             Assert.Equal("town_a", best.from);
         }
 
@@ -107,15 +106,15 @@ namespace TradeLord.Tests
             var rows = Rows((null, "town_x", 300f, 3f), ("town_a", null, 300f, 3f), ("town_a", "town_x", 0f, 3f),
                             ("town_a", "town_x", -50f, 3f), ("town_a", "town_x", float.NaN, 3f),
                             ("town_a", "town_x", 300f, float.NaN));
-            var best = Marks.BestBuyFrom(rows, "town_a");
+            var best = Marks.BestPlaceToGo(rows, null, "town_a");
             Assert.Null(best.from);
             Assert.Null(best.to);
             Assert.Equal(0f, best.profit);
             Assert.Equal(0f, best.days);
             Assert.Equal(0f, best.rate);
             Assert.Equal(0, best.rows);
-            Assert.Null(Marks.BestBuyFrom(null, null).from);
-            Assert.Null(Marks.BestBuyFrom(Rows(), null).from);
+            Assert.Null(Marks.BestPlaceToGo(null, null, null).from);
+            Assert.Null(Marks.BestPlaceToGo(Rows(), null, null).from);
         }
 
         [Fact]
@@ -338,21 +337,11 @@ namespace TradeLord.Tests
         public void With_nothing_sold_anywhere_towns_rank_by_their_routes_alone()
         {
             var rows = Rows(("town_a", "town_x", 300f, 3f), ("town_b", "town_y", 330f, 3f), ("town_b", "town_y", 30f, 2f));
-            var plain = Marks.BestBuyFrom(rows, "town_a");
+            var plain = Marks.BestPlaceToGo(rows, null, "town_a");
             var weighed = Marks.BestPlaceToGo(rows, Sold(), "town_a");
             Assert.Equal(plain.from, weighed.from);
             Assert.Equal(plain.rate, weighed.rate);
             Assert.Equal(0f, weighed.sold);
-        }
-
-        [Fact]
-        public void The_sell_mark_counts_its_own_route_only_when_that_earns_more_a_day()
-        {
-            Assert.Equal(1093f / 3f, Marks.SellSideWithItsOwnRoute(36f, 93f, 1000f, 3f));
-            Assert.Equal(500f, Marks.SellSideWithItsOwnRoute(500f, 1000f, 100f, 10f));
-            Assert.Equal(100f, Marks.SellSideWithItsOwnRoute(10f, -50f, 300f, 3f));
-            Assert.Equal(36f, Marks.SellSideWithItsOwnRoute(36f, 93f, float.NaN, 3f));
-            Assert.Equal(36f, Marks.SellSideWithItsOwnRoute(36f, 93f, -20f, 3f));
         }
 
         [Fact]

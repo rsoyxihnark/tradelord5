@@ -169,8 +169,6 @@ namespace TradeLord
 
         internal int Scored(int band) => _held[band].Count;
 
-        internal int LowConf(int band) => _lowConf[band].Count;
-
         internal List<float> Held(int band) => Sorted(_held[band]);
 
         internal List<float> HeldAtLowConf(int band) => Sorted(_lowConf[band]);

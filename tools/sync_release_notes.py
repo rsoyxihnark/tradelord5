@@ -33,7 +33,7 @@ def ask(url, tok, data=None, method=None):
 
 def releases(tok):
     found, page = [], 1
-    while page <= 20:
+    while page <= 100:
         batch = ask('https://api.github.com/repos/' + REPO +
                     '/releases?per_page=100&page=' + str(page), tok)
         if not batch:

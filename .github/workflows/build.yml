@@ -212,6 +212,31 @@ jobs:
           VERSION="${{ steps.ver.outputs.version }}"
           cd dist && 7z a -tzip "TradeLord-$VERSION.zip" Modules
 
+      - name: Stamp against the source
+        shell: pwsh
+        run: |
+          $version = '${{ steps.ver.outputs.version }}'
+          $number = $version.TrimStart('v')
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $xml = $null
+          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "dist/TradeLord-$version.zip").Path)
+          try {
+            $entry = $zip.Entries | Where-Object { ($_.FullName -replace '\\', '/') -eq 'Modules/TradeLord/SubModule.xml' } | Select-Object -First 1
+            if ($entry) {
+              $reader = New-Object IO.StreamReader($entry.Open())
+              $xml = $reader.ReadToEnd()
+              $reader.Close()
+            }
+          } finally { $zip.Dispose() }
+          if (-not $xml) { Write-Host "the zip carries no Modules/TradeLord/SubModule.xml"; exit 1 }
+          if ($xml -notmatch '<Version value="v([0-9.]+)"') { Write-Host "the zip's SubModule.xml carries no version"; exit 1 }
+          if ($Matches[1] -ne $number) { Write-Host "the zip's SubModule.xml says $($Matches[1]) and the source says $number"; exit 1 }
+          foreach ($dll in 'TradeLord.dll', 'TradeLord.MCM.dll') {
+            $stamp = (Get-Item "dist/Modules/TradeLord/bin/Win64_Shipping_Client/$dll").VersionInfo.FileVersion
+            if ($stamp -ne "$number.0") { Write-Host "$dll is stamped $stamp and the source says $number"; exit 1 }
+          }
+          Write-Host "the zip, both DLLs and the source all say $number"
+
       - name: Upload the built module
         uses: actions/upload-artifact@v7
         with:

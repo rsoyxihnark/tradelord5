@@ -311,13 +311,6 @@ namespace TradeLord
             return ageHours >= 0 && ageHours <= limit;
         }
 
-        internal static (string from, string to, float profit, float days, float rate, int rows) BestBuyFrom(
-            IList<(string from, string to, float profit, float days)> rows, string shownFrom)
-        {
-            var best = BestPlaceToGo(rows, null, shownFrom);
-            return (best.from, best.to, best.profit, best.days, best.rate, best.rows);
-        }
-
         internal static (string from, string to, float profit, float sold, float days, float rate, int rows) BestPlaceToGo(
             IList<(string from, string to, float profit, float days)> rows,
             IDictionary<string, (float rate, float earned)> soldThere, string shownFrom)
@@ -352,13 +345,6 @@ namespace TradeLord
                 best = (key.from, key.to, group.profit, sold.earned > 0f ? sold.earned : 0f, group.days, rate, group.rows);
             }
             return best;
-        }
-
-        internal static float SellSideWithItsOwnRoute(float sellRate, float sellEarned, float routeProfit, float routeDays)
-        {
-            if (!(routeProfit > 0f)) return sellRate;
-            float withRoute = TradeMath.PerDay((sellEarned > 0f ? sellEarned : 0f) + routeProfit, routeDays);
-            return sellRate > withRoute ? sellRate : withRoute;
         }
 
         internal static bool ShowsTheBuyTown(float buyRate, float sellRate, bool showingBuy)
@@ -500,8 +486,8 @@ namespace TradeLord
             return price > 0 && profit > 0d && profit * Math.Min(beyond, each) / weightToCarry >= price;
         }
 
-        internal static float LeastFilledFor(bool food, int foodHeld, int foodForADay) =>
-            food && foodHeld < foodForADay ? 0f : LeastAHaulAnimalIsFilled;
+        internal static float LeastFilledFor(bool lastDayOfFood) =>
+            lastDayOfFood ? 0f : LeastAHaulAnimalIsFilled;
 
         internal static bool PurseClearsTheFloor(int purse, int floor) => floor <= 0 || purse > floor;
 
@@ -710,7 +696,7 @@ namespace TradeLord
             var keep = new Dictionary<string, int>(StringComparer.Ordinal);
             int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;
             if (s.KeepFoodDays <= 0 || carried == null) return keep;
-            if (perDay < 1f) perDay = 1f;
+            if (!(perDay > 0f)) perDay = 1f;
             int reserve = (int)Math.Ceiling(perDay * s.KeepFoodDays);
 
             var food = new List<Ration>();

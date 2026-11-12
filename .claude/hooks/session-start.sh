@@ -51,11 +51,16 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 DOTNET_DIR="$HOME/.dotnet"
+FOUND=$(command -v dotnet 2>/dev/null || true)
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
-    echo "export DOTNET_ROOT=\"$DOTNET_DIR\""
-    echo "export PATH=\"$DOTNET_DIR:\$PATH\""
+    if [ -x "$DOTNET_DIR/dotnet" ] || [ -z "$FOUND" ]; then
+      echo "export DOTNET_ROOT=\"$DOTNET_DIR\""
+      echo "case \":\$PATH:\" in *\":$DOTNET_DIR:\"*) ;; *) export PATH=\"$DOTNET_DIR:\$PATH\" ;; esac"
+    else
+      echo "unset DOTNET_ROOT"
+    fi
     echo "export DOTNET_CLI_TELEMETRY_OPTOUT=1"
     echo "export DOTNET_NOLOGO=1"
   } >> "$CLAUDE_ENV_FILE"
@@ -63,7 +68,11 @@ fi
 
 if [ -x "$DOTNET_DIR/dotnet" ]; then
   echo "dotnet $("$DOTNET_DIR/dotnet" --version) ready - build both csproj before pushing"
+elif [ -n "$FOUND" ]; then
+  echo "dotnet $("$FOUND" --version) ready at $FOUND - build both csproj before pushing"
 else
   echo "no .NET here yet - both csproj must still build clean before any push, so install it when code work starts:"
   echo "  curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir \"\$HOME/.dotnet\" --no-path"
+  echo "or, where that host is refused:"
+  echo "  apt-get install -y dotnet-sdk-8.0"
 fi

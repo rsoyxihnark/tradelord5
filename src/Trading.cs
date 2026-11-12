@@ -2288,7 +2288,7 @@ namespace TradeLord
         {
             int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
             int shortfall = TradePolicy.FoodWanted() - own;
-            if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));
+            if (aDayFirst) shortfall = Math.Min(shortfall, TradePolicy.ShortOfADay(own));
             if (shortfall <= 0) return;
             int wanted = shortfall;
 
@@ -2301,7 +2301,7 @@ namespace TradeLord
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
                 TradeMath.ShortFoodTolerance);
-            bool hungry = TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;
+            bool hungry = TradePolicy.ShortOfADay(own) > 0;
             if (larder.Count == 0 && !hungry)
             {
                 string missed = _foodMissed;
@@ -2338,7 +2338,7 @@ namespace TradeLord
                             stopped = "its price is above both 1.5 times the cheapest TradeLord knows and twice its value";
                             break;
                         }
-                        bool aDayShort = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay()) > 0;
+                        bool aDayShort = TradePolicy.ShortOfADay(own + wanted - shortfall) > 0;
                         if (aDayShort && pass.WouldEmptyYourPurse(price))
                         {
                             stopped = "your purse cannot pay for it";
@@ -2392,7 +2392,7 @@ namespace TradeLord
                     }
                 }
 
-                int hunger = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay());
+                int hunger = TradePolicy.ShortOfADay(own + wanted - shortfall);
                 if (hunger <= 0 || pass.DirectionError) return;
                 int hungryUnits = 0, hungryGold = 0;
                 var lean = CheapestFirst(pass,
@@ -2918,7 +2918,7 @@ namespace TradeLord
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return false;
             int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
-            bool starving = unfitted.food && TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;
+            bool starving = unfitted.food && TradePolicy.ShortOfADay(own) > 0;
             if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;
 
             int herdRoom = Drove.RoomForLivestock(pass.Party);
@@ -2952,7 +2952,7 @@ namespace TradeLord
             int hauled = 0, simSpent = 0;
             bool enough = false, tooLittle = false, floored = false;
             int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0, priceAtTheFloor = 0;
-            float leastFilled = Herding.LeastFilledFor(unfitted.food, own, TradePolicy.FoodForADay());
+            float leastFilled = Herding.LeastFilledFor(starving);
             bool pastTheCap = false;
             bool pastTheFloor = false;
 

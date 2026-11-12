@@ -98,8 +98,12 @@ namespace TradeLord
 
         public const float ShortFoodTolerance = 1.5f;
 
-        public static int FoodShortOfADay(int held, int day) =>
-            day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held);
+        public static int FoodShortOfADay(int held, float perDay, int partEatenPercent)
+        {
+            if (!(perDay > 0f)) return 0;
+            float have = (held < 0 ? 0 : held) + (partEatenPercent > 0 ? partEatenPercent : 0) / 100f;
+            return have >= perDay ? 0 : (int)Math.Ceiling(perDay - have);
+        }
 
         public const float DriftWorthSaying = 0.05f;
 
@@ -1307,11 +1311,6 @@ namespace TradeLord
             return ShareThatLands(due, days);
         }
 
-        public static float DemandMovedToASubstitute(float supply, float demand, float substituteSupply,
-                                                     float substituteDemand, float factor) =>
-            Finite(DemandShiftedToASubstitute(supply, demand, substituteSupply, substituteDemand, factor).demand - demand,
-                   0f);
-
         public static float ShelfAtItsPrice(float inStoreValue, int price, int unitValue)
         {
             float shelf = Finite(inStoreValue, 0f);
@@ -1334,10 +1333,6 @@ namespace TradeLord
                                                                           demand[other], factor);
             }
         }
-
-        public static (float supply, float demand) TheGamesDailySupplyAndDemand(float inStore, float wanted,
-                                                                              float supply, float demand) =>
-            (Math.Max(0.1f, supply * 0.85f + inStore * 0.15f), demand * 0.85f + wanted * 0.15f);
 
         public static int WhatAWalkFetches(int units, Func<int, int> priceOfUnit)
         {
@@ -2458,8 +2453,6 @@ namespace TradeLord
             float moves = Finite(shallowSpeeds, 0f) * AShallowDraftMoves / ships;
             return coastal ? moves : -moves;
         }
-
-        public static bool Coastal(int water) => water == WaterCoast || water == WaterRiver;
 
         public const float WindAtLeast = 1f / 15f;
 

@@ -2388,12 +2388,12 @@ namespace TradeLord.Tests
         [Fact]
         public void Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price()
         {
-            Assert.Equal(7, TradeMath.FoodShortOfADay(3, 10));
-            Assert.Equal(10, TradeMath.FoodShortOfADay(0, 10));
-            Assert.Equal(10, TradeMath.FoodShortOfADay(-4, 10));
-            Assert.Equal(0, TradeMath.FoodShortOfADay(10, 10));
-            Assert.Equal(0, TradeMath.FoodShortOfADay(25, 10));
-            Assert.Equal(0, TradeMath.FoodShortOfADay(0, 0));
+            Assert.Equal(7, TradeMath.FoodShortOfADay(3, 10f, 0));
+            Assert.Equal(10, TradeMath.FoodShortOfADay(0, 10f, 0));
+            Assert.Equal(10, TradeMath.FoodShortOfADay(-4, 10f, 0));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(10, 10f, 0));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(25, 10f, 0));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(0, 0f, 0));
         }
 
         [Fact]
@@ -3236,15 +3236,15 @@ namespace TradeLord.Tests
             TradeMath.StepSupplyAndDemand(supply, demand, new[] { 1000, 100 }, new[] { 10f, 30f },
                                           new[] { (0, 1, 0.5f) },
                                           (g, shelf, want, was, wasWanted) =>
-                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+                                              GameModel.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
             Assert.Equal(1000f, supply[0], 3);
             Assert.Equal(100f, supply[1], 3);
             Assert.Equal(20f, demand[0], 3);
             Assert.Equal(20f, demand[1], 3);
-            var (s, d) = TradeMath.TheGamesDailySupplyAndDemand(5000f, 40f, 2000f, 20f);
+            var (s, d) = GameModel.TheGamesDailySupplyAndDemand(5000f, 40f, 2000f, 20f);
             Assert.Equal(2450f, s, 2);
             Assert.Equal(23f, d, 3);
-            Assert.Equal(0.1f, TradeMath.TheGamesDailySupplyAndDemand(0f, 0f, 0f, 0f).supply, 4);
+            Assert.Equal(0.1f, GameModel.TheGamesDailySupplyAndDemand(0f, 0f, 0f, 0f).supply, 4);
         }
 
         [Fact]
@@ -3344,8 +3344,8 @@ namespace TradeLord.Tests
         [Fact]
         public void A_substitute_moves_the_towns_budget_as_it_moves_demand_and_its_takings_count_the_shelf_at_its_price()
         {
-            Assert.Equal(9f, TradeMath.DemandMovedToASubstitute(20f, 10f, 5f, 20f, 0.9f), 3);
-            Assert.Equal(0f, TradeMath.DemandMovedToASubstitute(5f, 10f, 20f, 20f, 0.9f), 3);
+            Assert.Equal(9f, (TradeMath.DemandShiftedToASubstitute(20f, 10f, 5f, 20f, 0.9f).demand - 10f), 3);
+            Assert.Equal(0f, (TradeMath.DemandShiftedToASubstitute(5f, 10f, 20f, 20f, 0.9f).demand - 10f), 3);
             Assert.Equal(2000f, TradeMath.ShelfAtItsPrice(1000f, 40, 20), 3);
             Assert.Equal(1000f, TradeMath.ShelfAtItsPrice(1000f, 0, 20), 3);
             Assert.Equal(400, TradeMath.WhatATownTakesInForWhatItUses(400f, TradeMath.ShelfAtItsPrice(300f, 40, 20)));
@@ -3838,7 +3838,7 @@ namespace TradeLord.Tests
                 int flat = (sell - buy) * units;
                 int profit = flat - rng.Next(0, 3) * units;
                 if (profit <= 0) continue;
-                float conf = Confidence.Of(rng.Next(2) == 0, flat, profit, rng.Next(0, 300), units, days,
+                float conf = Confidence.Of(rng.Next(2) == 0, flat, rng.Next(0, 300), units, days,
                                            rng.Next(0, 9), rng.Next(3) == 0 ? -1f : (float)rng.NextDouble() * 9f,
                                            rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 20f,
                                            days - soonest > 0f ? (float)rng.NextDouble() * (days - soonest) : 0f);
@@ -3928,7 +3928,7 @@ namespace TradeLord.Tests
                 int flat = units * (openingSell - p.Buy);
                 int profit = flat - units * (units - 1) / 2;
                 if (profit <= 0) continue;
-                float conf = Confidence.Of(p.Simulated, flat, profit, p.Shelf, units, p.Days, p.Caravans, p.Age,
+                float conf = Confidence.Of(p.Simulated, flat, p.Shelf, units, p.Days, p.Caravans, p.Age,
                                            p.RunsOut, p.Days - p.Soonest);
                 float score = TradeMath.PerDay(profit, p.Days) * conf * p.Trust;
                 if (beaten && score <= bestKey) continue;
@@ -4580,9 +4580,6 @@ namespace TradeLord.Tests
             Assert.Equal(0.165f, TradeMath.ShallowDraft(10f, 4, true), 5);
             Assert.Equal(-0.165f, TradeMath.ShallowDraft(10f, 4, false), 5);
             Assert.Equal(0f, TradeMath.ShallowDraft(10f, 0, true));
-            Assert.True(TradeMath.Coastal(TradeMath.WaterCoast) && TradeMath.Coastal(TradeMath.WaterRiver));
-            Assert.False(TradeMath.Coastal(TradeMath.WaterOpen) || TradeMath.Coastal(TradeMath.WaterElse) ||
-                         TradeMath.Coastal(TradeMath.WaterUnread));
         }
 
         [Fact]
@@ -5220,7 +5217,7 @@ namespace TradeLord.Tests
             for (int round = 0; round < 5000; round++)
             {
                 float was = (float)rng.NextDouble() * 9f, now = (float)rng.NextDouble() * 9f;
-                float scanned = Confidence.Of(true, 100, 100, rng.Next(0, 60), rng.Next(1, 40), was, 0, -1f,
+                float scanned = Confidence.Of(true, 100, rng.Next(0, 60), rng.Next(1, 40), was, 0, -1f,
                                               rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 9f, 0.5f);
                 Assert.True(Confidence.Retimed(scanned, was, now) <= Confidence.MostItCanBe(now) + 1E-5f);
             }
@@ -5550,10 +5547,10 @@ namespace TradeLord.Tests
             var stepDemand = (float[])demand.Clone();
             TradeMath.StepSupplyAndDemand(stepSupply, stepDemand, new[] { 1000, 100, 10 }, new[] { 10f, 30f, 60f }, pairs,
                                           (g, shelf, want, was, wasWanted) =>
-                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+                                              GameModel.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
             TradeMath.StepSupplyAndDemand(supply, demand, new[] { 1000, 100, 10 }, new[] { 10f, 30f, 60f }, null,
                                           (g, shelf, want, was, wasWanted) =>
-                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+                                              GameModel.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
             var before = (float[])demand.Clone();
             float[] shifts = TradeMath.ShiftsInPairOrder(supply, demand, pairs);
             for (int g = 0; g < 3; g++) Assert.Equal(stepDemand[g], demand[g], 4);
@@ -5571,7 +5568,7 @@ namespace TradeLord.Tests
             Assert.Equal(21f, unstepped.demand, 3);
             TradeMath.StepSupplyAndDemand(supply, demand, new[] { 1000, 100 }, new[] { 10f, 30f }, null,
                                           (g, shelf, want, was, wasWanted) =>
-                                              TradeMath.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
+                                              GameModel.TheGamesDailySupplyAndDemand(shelf, want, was, wasWanted));
             float[] shifts = TradeMath.ShiftsInPairOrder(supply, demand, new[] { (0, 1, 0.9f) });
             Assert.True(shifts[0] > 0f);
         }
@@ -5730,4 +5727,25 @@ namespace TradeLord.Tests
             Assert.Equal(wait + 0.25f, two[0].Days, 3);
         }
 }
+
+    internal static class GameModel
+    {
+        internal static (float supply, float demand) TheGamesDailySupplyAndDemand(float inStore, float wanted,
+                                                                                float supply, float demand) =>
+            (System.Math.Max(0.1f, supply * 0.85f + inStore * 0.15f), demand * 0.85f + wanted * 0.15f);
+    }
+
+    public class PartEatenFoodTests
+    {
+        [Fact]
+        public void A_part_eaten_unit_counts_toward_the_last_day_of_food()
+        {
+            Assert.Equal(0, TradeMath.FoodShortOfADay(0, 0.05f, 80));
+            Assert.Equal(1, TradeMath.FoodShortOfADay(0, 0.05f, 3));
+            Assert.Equal(2, TradeMath.FoodShortOfADay(0, 2f, 80));
+            Assert.Equal(1, TradeMath.FoodShortOfADay(1, 2f, 80));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(2, 2f, 0));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(1, 1.2f, 50));
+        }
+    }
 }

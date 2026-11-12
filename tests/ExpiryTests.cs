@@ -64,12 +64,12 @@ namespace TradeLord.Tests
         public void A_route_whose_shelf_holds_is_no_longer_punished_for_the_caravans_going_there()
         {
             float withCaravansAndNoForecast =
-                Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f);
+                Confidence.Of(false, 0, 100, 10, 2f, 6, -1f);
             float withCaravansAndAShelfThatHolds =
-                Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f, Confidence.NotKnown, 1f);
+                Confidence.Of(false, 0, 100, 10, 2f, 6, -1f, Confidence.NotKnown, 1f);
             Assert.Equal(withCaravansAndNoForecast, withCaravansAndAShelfThatHolds);
 
-            float shelfHolds = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f, 400f, 1f);
+            float shelfHolds = Confidence.Of(false, 0, 100, 10, 2f, 6, -1f, 400f, 1f);
             Assert.True(shelfHolds > withCaravansAndNoForecast);
         }
 
@@ -78,9 +78,9 @@ namespace TradeLord.Tests
         {
             Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false, 1f));
             Assert.Equal(12f, Confidence.Lasts(12f, true, 1f));
-            float holds = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f,
+            float holds = Confidence.Of(false, 0, 100, 10, 2f, 6, -1f,
                                         Confidence.Lasts(Projection.NeverRunsOut, true, 1f), 1f);
-            float empties = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f, 12f, 1f);
+            float empties = Confidence.Of(false, 0, 100, 10, 2f, 6, -1f, 12f, 1f);
             Assert.True(holds > empties);
             Assert.Equal(1f, Confidence.Holds(Confidence.Lasts(Projection.NeverRunsOut, true, 1f), 1f));
         }
@@ -90,10 +90,10 @@ namespace TradeLord.Tests
         {
             float soon = Confidence.Lasts(0.1f, true, 0f);
             Assert.Equal(1f, Confidence.Holds(soon, 0f));
-            float whole = Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f,
+            float whole = Confidence.Of(true, 300, 22, 22, 0.6f, 4, 0f,
                                         Confidence.Lasts(Projection.NeverRunsOut, true, 0f), 0f);
-            Assert.Equal(whole, Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f, soon, 0f));
-            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 4, 0f, 0.1f, 0f) < whole);
+            Assert.Equal(whole, Confidence.Of(true, 300, 22, 22, 0.6f, 4, 0f, soon, 0f));
+            Assert.True(Confidence.Of(true, 300, 22, 22, 0.6f, 4, 0f, 0.1f, 0f) < whole);
         }
 
         [Fact]
@@ -101,18 +101,18 @@ namespace TradeLord.Tests
         {
             Assert.Equal(0.5f, Confidence.Lasts(0.5f, true, 0.3f));
             Assert.True(Confidence.Holds(Confidence.Lasts(0.5f, true, 0.3f), 0.3f) < 1f);
-            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.9f, 4, 0f, Confidence.Lasts(0.5f, true, 0.3f), 0.3f) <
-                        Confidence.Of(true, 300, 300, 22, 22, 0.9f, 4, 0f, Confidence.Lasts(9f, true, 0.3f), 0.3f));
+            Assert.True(Confidence.Of(true, 300, 22, 22, 0.9f, 4, 0f, Confidence.Lasts(0.5f, true, 0.3f), 0.3f) <
+                        Confidence.Of(true, 300, 22, 22, 0.9f, 4, 0f, Confidence.Lasts(9f, true, 0.3f), 0.3f));
         }
 
         [Fact]
         public void A_thin_shelf_in_the_market_you_stand_in_leaves_Conf_whole()
         {
             int here = Confidence.StockThatCanRunShort(22, 0f);
-            Assert.Equal(1f, Confidence.PartsOf(true, 300, 300, here, 22, 0.6f, 0, 0f).Depth);
-            Assert.Equal(Confidence.Of(true, 300, 300, 1000, 22, 0.6f, 0, 0f),
-                         Confidence.Of(true, 300, 300, here, 22, 0.6f, 0, 0f));
-            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 0, 0f) < Confidence.Of(true, 300, 300, here, 22, 0.6f, 0, 0f));
+            Assert.Equal(1f, Confidence.PartsOf(true, 300, here, 22, 0.6f, 0, 0f).Depth);
+            Assert.Equal(Confidence.Of(true, 300, 1000, 22, 0.6f, 0, 0f),
+                         Confidence.Of(true, 300, here, 22, 0.6f, 0, 0f));
+            Assert.True(Confidence.Of(true, 300, 22, 22, 0.6f, 0, 0f) < Confidence.Of(true, 300, here, 22, 0.6f, 0, 0f));
         }
 
         [Fact]
@@ -120,7 +120,7 @@ namespace TradeLord.Tests
         {
             int there = Confidence.StockThatCanRunShort(22, 0.3f);
             Assert.Equal(22, there);
-            Assert.Equal(22f / 33f, Confidence.PartsOf(true, 300, 300, there, 22, 0.9f, 0, 0f).Depth, 4);
+            Assert.Equal(22f / 33f, Confidence.PartsOf(true, 300, there, 22, 0.9f, 0, 0f).Depth, 4);
             Assert.Equal(0, Confidence.StockThatCanRunShort(22, -1f));
         }
 
@@ -128,17 +128,17 @@ namespace TradeLord.Tests
         public void A_sale_the_forecast_prices_is_not_marked_down_again_for_the_caravans_going_there()
         {
             Assert.Equal(0, Confidence.CaravansLeftToCount(6, true));
-            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, true), -1f).Quiet);
-            Assert.Equal(Confidence.Of(true, 1, 1, 0, 1, 1f, 0, -1f),
-                         Confidence.Of(true, 1, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, true), -1f));
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, true), -1f).Quiet);
+            Assert.Equal(Confidence.Of(true, 1, 0, 1, 1f, 0, -1f),
+                         Confidence.Of(true, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, true), -1f));
         }
 
         [Fact]
         public void With_the_forecast_off_a_sale_is_still_marked_down_for_the_caravans_going_there()
         {
             Assert.Equal(6, Confidence.CaravansLeftToCount(6, false));
-            Assert.True(Confidence.Of(true, 1, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, false), -1f) <
-                        Confidence.Of(true, 1, 1, 0, 1, 1f, 0, -1f));
+            Assert.True(Confidence.Of(true, 1, 0, 1, 1f, Confidence.CaravansLeftToCount(6, false), -1f) <
+                        Confidence.Of(true, 1, 0, 1, 1f, 0, -1f));
         }
 
         [Fact]
@@ -150,9 +150,9 @@ namespace TradeLord.Tests
             Assert.Equal(1, Confidence.CaravansThatCanBeatYou(4, 3, 0f));
             Assert.Equal(0, Confidence.CaravansThatCanBeatYou(2, 5, 0f));
             Assert.Equal(4, Confidence.CaravansThatCanBeatYou(4, -2, 0f));
-            float noneBound = Confidence.Of(true, 300, 300, 22, 22, 0.6f, Confidence.CaravansThatCanBeatYou(3, 3, 0f), 0f, off, 0f);
-            float oneBound = Confidence.Of(true, 300, 300, 22, 22, 0.6f, Confidence.CaravansThatCanBeatYou(4, 3, 0f), 0f, off, 0f);
-            Assert.Equal(Confidence.Of(true, 300, 300, 22, 22, 0.6f, 0, 0f, off, 0f), noneBound);
+            float noneBound = Confidence.Of(true, 300, 22, 22, 0.6f, Confidence.CaravansThatCanBeatYou(3, 3, 0f), 0f, off, 0f);
+            float oneBound = Confidence.Of(true, 300, 22, 22, 0.6f, Confidence.CaravansThatCanBeatYou(4, 3, 0f), 0f, off, 0f);
+            Assert.Equal(Confidence.Of(true, 300, 22, 22, 0.6f, 0, 0f, off, 0f), noneBound);
             Assert.True(oneBound < noneBound);
         }
 
@@ -161,23 +161,23 @@ namespace TradeLord.Tests
         {
             float off = Confidence.Lasts(Projection.NeverRunsOut, false, 0.4f);
             Assert.Equal(4, Confidence.CaravansThatCanBeatYou(4, 3, 0.4f));
-            Assert.True(Confidence.Of(true, 300, 300, 22, 22, 0.9f, Confidence.CaravansThatCanBeatYou(4, 3, 0.4f), 0f, off, 0.4f) <
-                        Confidence.Of(true, 300, 300, 22, 22, 0.9f, Confidence.CaravansThatCanBeatYou(1, 0, 0.4f), 0f, off, 0.4f));
+            Assert.True(Confidence.Of(true, 300, 22, 22, 0.9f, Confidence.CaravansThatCanBeatYou(4, 3, 0.4f), 0f, off, 0.4f) <
+                        Confidence.Of(true, 300, 22, 22, 0.9f, Confidence.CaravansThatCanBeatYou(1, 0, 0.4f), 0f, off, 0.4f));
         }
 
         [Fact]
         public void A_route_whose_shelf_empties_first_scores_below_one_that_lasts()
         {
-            float dies = Confidence.Of(false, 0, 0, 100, 10, 2f, 0, -1f, 1f, 3f);
-            float lasts = Confidence.Of(false, 0, 0, 100, 10, 2f, 0, -1f, 20f, 3f);
+            float dies = Confidence.Of(false, 0, 100, 10, 2f, 0, -1f, 1f, 3f);
+            float lasts = Confidence.Of(false, 0, 100, 10, 2f, 0, -1f, 20f, 3f);
             Assert.True(dies < lasts);
         }
 
         [Fact]
         public void The_caravan_count_still_decides_it_wherever_the_forecast_is_off()
         {
-            float few = Confidence.Of(false, 0, 0, 100, 10, 2f, 1, -1f);
-            float many = Confidence.Of(false, 0, 0, 100, 10, 2f, 9, -1f);
+            float few = Confidence.Of(false, 0, 100, 10, 2f, 1, -1f);
+            float many = Confidence.Of(false, 0, 100, 10, 2f, 9, -1f);
             Assert.True(many < few);
         }
     
@@ -192,11 +192,11 @@ namespace TradeLord.Tests
                                 foreach (float age in new[] { -1f, 3f })
                                     foreach (float runsOut in new[] { Confidence.NotKnown, 0.5f, 6f })
                                     {
-                                        Confidence.Parts p = Confidence.PartsOf(simulated, flat, 310, stock, 12, days,
+                                        Confidence.Parts p = Confidence.PartsOf(simulated, flat, stock, 12, days,
                                                                                 caravans, age, runsOut, 1f);
                                         float c = p.Resilience * p.Depth * p.Haste * p.Quiet * p.Fresh;
                                         float expected = c < 0.01f ? 0.01f : (c > 1f ? 1f : c);
-                                        Assert.Equal(expected, Confidence.Of(simulated, flat, 310, stock, 12, days,
+                                        Assert.Equal(expected, Confidence.Of(simulated, flat, stock, 12, days,
                                                                              caravans, age, runsOut, 1f));
                                     }
         }
@@ -204,23 +204,23 @@ namespace TradeLord.Tests
         [Fact]
         public void A_till_that_cannot_take_the_whole_cargo_counts_against_a_market()
         {
-            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 0, -1f).Depth);
-            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 40208, 2000, 0.5f, 0, -1f).Depth);
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 0, 1, 0.5f, 0, -1f).Depth);
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 40208, 2000, 0.5f, 0, -1f).Depth);
             Assert.Equal(999f / (2841f * 1.5f),
-                         Confidence.PartsOf(true, 1, 1, 999, 2841, 0.5f, 0, -1f).Depth, 4);
-            Assert.True(Confidence.PartsOf(true, 1, 1, 999, 2841, 0.5f, 0, -1f).Depth <
-                        Confidence.PartsOf(true, 1, 1, 40208, 2000, 0.5f, 0, -1f).Depth);
-            Assert.True(Confidence.Of(true, 1, 1, 999, 2841, 0.5f, 0, -1f) <
-                        Confidence.Of(true, 1, 1, 0, 1, 0.5f, 0, -1f));
+                         Confidence.PartsOf(true, 1, 999, 2841, 0.5f, 0, -1f).Depth, 4);
+            Assert.True(Confidence.PartsOf(true, 1, 999, 2841, 0.5f, 0, -1f).Depth <
+                        Confidence.PartsOf(true, 1, 40208, 2000, 0.5f, 0, -1f).Depth);
+            Assert.True(Confidence.Of(true, 1, 999, 2841, 0.5f, 0, -1f) <
+                        Confidence.Of(true, 1, 0, 1, 0.5f, 0, -1f));
         }
 
         [Fact]
         public void More_traffic_at_or_heading_for_a_market_counts_against_it()
         {
-            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 0, -1f).Quiet);
-            Assert.Equal(1f / 1.3f, Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 2, -1f).Quiet, 4);
-            Assert.True(Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 8, -1f).Quiet <
-                        Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 2, -1f).Quiet);
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 0, 1, 0.5f, 0, -1f).Quiet);
+            Assert.Equal(1f / 1.3f, Confidence.PartsOf(true, 1, 0, 1, 0.5f, 2, -1f).Quiet, 4);
+            Assert.True(Confidence.PartsOf(true, 1, 0, 1, 0.5f, 8, -1f).Quiet <
+                        Confidence.PartsOf(true, 1, 0, 1, 0.5f, 2, -1f).Quiet);
         }
 
         [Fact]

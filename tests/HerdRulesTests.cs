@@ -140,11 +140,11 @@ namespace TradeLord.Tests
         [Fact]
         public void Food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_once_the_party_is_down_to_its_last_day()
         {
-            Assert.Equal(0f, Herding.LeastFilledFor(true, 5, 10), 3);
-            Assert.Equal(0f, Herding.LeastFilledFor(true, 0, 1), 3);
-            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(true, 10, 10), 3);
-            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(true, 25, 10), 3);
-            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false, 0, 10), 3);
+            Assert.Equal(0f, Herding.LeastFilledFor(true), 3);
+            Assert.Equal(0f, Herding.LeastFilledFor(true), 3);
+            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false), 3);
+            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false), 3);
+            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false), 3);
         }
 
         [Fact]

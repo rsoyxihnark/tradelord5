@@ -489,7 +489,7 @@ namespace TradeLord.Tests
                     continue;
                 }
                 if (s.KeepEveryFoodKind) continue;
-                int wanted = (int)Math.Ceiling(Math.Max(perDay, 1f) * s.KeepFoodDays);
+                int wanted = (int)Math.Ceiling((perDay > 0f ? perDay : 1f) * s.KeepFoodDays);
                 Assert.True(fedByKeep >= Math.Min(wanted, fedByAll),
                             "round " + round + ": what is kept feeds " + fedByKeep +
                             ", the reserve asked for " + wanted +
@@ -598,5 +598,14 @@ namespace TradeLord.Tests
             var swaps = Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (4, 3, 4), (2, 2, 0), (6, 6, 0) });
             Assert.Equal(new List<(int back, int take)> { (0, 2) }, swaps);
         }
-}
+
+        [Fact]
+        public void A_party_that_eats_less_than_a_unit_a_day_keeps_only_what_its_days_need()
+        {
+            var s = new Options { KeepFoodDays = 3, KeepEveryFoodKind = false };
+            var carried = new List<TradeRules.Ration> { Food("grain", 5, 10) };
+            Assert.Equal(1, Keep(carried, s, perDay: 0.25f)["grain"]);
+            Assert.Equal(2, Keep(carried, s, perDay: 0.5f)["grain"]);
+        }
+    }
 }

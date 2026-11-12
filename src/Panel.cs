@@ -656,7 +656,13 @@ namespace TradeLord
                     shown.Add((r, r.TravelDays, r.Key, r.Confidence, true));
                     continue;
                 }
-                float conf = TradeLord.Confidence.Retimed(r.Confidence, r.TravelDays, days);
+                Leg leg = r.Leg;
+                float conf = leg == null
+                    ? TradeLord.Confidence.Retimed(r.Confidence, r.TravelDays, days)
+                    : TradeLord.Confidence.Of(r.Simulated, r.Parts.Resilience >= 1f ? 1 : 0,
+                          TradeLord.Confidence.StockThatCanRunShort(leg.Shelf, ride), r.Quantity, days,
+                          TradeLord.Confidence.CaravansThatCanBeatYou(leg.Caravans, leg.TakersAtBuy, ride), leg.Age,
+                          TradeLord.Confidence.Lasts(r.RunsOutInDays, Forecast.On, ride), ride);
                 float key = TradeMath.KeyRetimed(r.Key, r.TravelDays, days);
                 shown.Add((r, days, atConf ? TradeMath.KeyAtAnotherConf(key, r.Confidence, conf) : key, conf, false));
             }

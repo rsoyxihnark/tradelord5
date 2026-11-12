@@ -35,20 +35,27 @@ def byGh():
 
 def byApi():
     found, page = [], 1
-    while page <= 10:
+    while page <= 100:
         ask = urllib.request.Request(
             'https://api.github.com/repos/' + REPO + '/releases?per_page=100&page=' + str(page),
             headers={'User-Agent': 'tradelord-released'})
         try:
             batch = json.load(urllib.request.urlopen(ask, timeout=30))
         except Exception as unreachable:
-            return None, str(unreachable)
+            if page == 1:
+                return None, str(unreachable)
+            print('  note     page ' + str(page) + ' of the releases could not be read, so only the first ' +
+                  str(len(found)) + ' are held against the changelog')
+            break
         if not batch:
             break
         for one in batch:
             found.append({'tag': one['tag_name'], 'draft': one['draft'],
                           'body': one.get('body') or '', 'files': len(one.get('assets') or [])})
         page += 1
+    else:
+        print('  note     the releases run past 100 pages, so only the first ' + str(len(found)) +
+              ' are held against the changelog')
     return found, None
 
 

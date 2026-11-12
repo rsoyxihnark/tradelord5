@@ -62,7 +62,7 @@ namespace TradeLord
                 : RecordAtAMarket.TakesNothingOff;
         }
 
-        public static float Of(bool simulated, int flatProfit, int simulatedProfit,
+        public static float Of(bool simulated, int flatProfit,
                                  int stock, int units, float travelDays,
                                  int caravans, float dataAgeDays,
                                  float runsOutInDays = NotKnown, float daysToTheBuyTown = 0f)
@@ -112,7 +112,7 @@ namespace TradeLord
             public float Fresh;
         }
 
-        public static Parts PartsOf(bool simulated, int flatProfit, int simulatedProfit,
+        public static Parts PartsOf(bool simulated, int flatProfit,
                                     int stock, int units, float travelDays,
                                     int caravans, float dataAgeDays,
                                     float runsOutInDays = NotKnown, float daysToTheBuyTown = 0f)

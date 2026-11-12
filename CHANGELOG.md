@@ -1,12 +1,19 @@
 # Changelog
 
+## 2.9.30
+
+- Fixed Restock and keep food (days of supply) counting a party of fewer than 20 men as eating a whole unit of food a day
+- Fixed TradeLord treating a party as down to less than a day of its own food while it still had part of a unit to eat
+- Fixed the TradeLord ledger opened on the road counting how soon a shelf empties from where it last scanned, not where you stand
+- Fixed the Turkish What this means in the TradeLord ledger spelling the Qty column unlike the panel's heading
+
 ## 2.9.29
 
 - Fixed TradeLord buying food for your party on your first visit to a market in a campaign loaded from a save older than 2.9.25
 
 ## 2.9.28
 
-- TradeLord.log's checks and trading on arrival no longer set a little memory aside every time any party enters or leaves a settlement
+- TradeLord.log's checks and trading on arrival no longer set memory aside for a party before checking whose party it is
 
 ## 2.9.27
 

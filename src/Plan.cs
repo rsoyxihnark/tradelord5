@@ -409,7 +409,7 @@ namespace TradeLord
             float lasts = Confidence.Lasts(runsOut, Forecast.On, leg.ToBuy);
             int deep = Confidence.StockThatCanRunShort(leg.Shelf, leg.ToBuy);
             int rivals = Confidence.CaravansThatCanBeatYou(leg.Caravans, leg.TakersAtBuy, leg.ToBuy);
-            float confidence = Confidence.Of(q.Simulated, flat, profit, deep, q.Units, leg.Days,
+            float confidence = Confidence.Of(q.Simulated, flat, deep, q.Units, leg.Days,
                                              rivals, leg.Age, lasts, leg.ToBuy);
             float perDay = TradeMath.PerDay(profit, leg.Days);
             bool sized = fits < leg.Units;
@@ -422,7 +422,7 @@ namespace TradeLord
                 TravelDays = leg.Days, TotalProfit = profit, ProfitPerDay = perDay,
                 Confidence = confidence, Score = perDay * confidence * leg.Trust, Trust = leg.Trust,
                 Simulated = q.Simulated, Caravans = leg.Caravans,
-                Parts = Confidence.PartsOf(q.Simulated, flat, profit, deep, q.Units, leg.Days, rivals,
+                Parts = Confidence.PartsOf(q.Simulated, flat, deep, q.Units, leg.Days, rivals,
                                            leg.Age, lasts, leg.ToBuy),
                 StillComing = TradeMath.StillComing(q.Units, leg.OnTheShelfNow),
                 RunsOutInDays = runsOut,
@@ -530,8 +530,8 @@ namespace TradeLord
                 : ledger.ObservationAgeDays(item, to);
             int wanted = worthThere > int.MaxValue ? int.MaxValue : (int)worthThere;
             int counted = Confidence.CaravansLeftToCount(caravans, Forecast.On);
-            parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, counted, age);
-            float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, counted, age);
+            parts = Confidence.PartsOf(simulated, 1, till, wanted, days, counted, age);
+            float conf = Confidence.Of(simulated, 1, till, wanted, days, counted, age);
             if (Options.Current.TrustWhatAMarketPaid && ledger != null &&
                 ledger.PromiseScoreAt(to.StringId, out int arrivals, out float held))
                 trust = Confidence.AsPromisesHaveHeld(1f, arrivals, held);
@@ -546,7 +546,7 @@ namespace TradeLord
             float age = s.Omniscient || ledger == null ? -1f : ledger.ObservationAgeDays(item, to);
             int whole = profit >= int.MaxValue ? int.MaxValue : (int)Math.Max(0L, profit);
             int level = flat >= int.MaxValue ? int.MaxValue : (int)Math.Max(0L, flat);
-            confidence = Confidence.Of(simulated, level, whole, stock, units, days,
+            confidence = Confidence.Of(simulated, level, stock, units, days,
                                        Confidence.CaravansLeftToCount(caravans, Forecast.On), age);
             trust = 1f;
             if (s.TrustWhatAMarketPaid && ledger != null && to != null &&

@@ -269,7 +269,7 @@ namespace TradeLord.Tests
             units.Add(28, 0.28f, 0.98f);
             Assert.Equal(4, units.Scored(0));
             Assert.Equal(new[] { 0.56f, 1.01f, 1.16f, 1.25f }, units.Held(0).ToArray());
-            Assert.Equal(2, units.LowConf(0));
+            Assert.Equal(2, units.HeldAtLowConf(0).Count);
             Assert.Equal(new[] { 1.16f, 1.25f }, units.HeldAtLowConf(0).ToArray());
             Assert.Equal(1, units.Short(0));
             Assert.Equal(1, units.Scored(3));

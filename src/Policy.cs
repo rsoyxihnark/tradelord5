@@ -224,7 +224,7 @@ namespace TradeLord
         {
             MobileParty party = MobileParty.MainParty;
             float perDay = party == null ? 0f : -party.FoodChange;
-            return perDay < 1f ? 1f : perDay;
+            return perDay > 0f ? perDay : 1f;
         }
 
         private static List<TradeRules.Ration> Carried(ItemRoster roster, Books books, bool sim,
@@ -329,7 +329,8 @@ namespace TradeLord
         internal static int OwnFoodHeld(ItemRoster roster, Books books, bool sim) =>
             FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);
 
-        internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());
+        internal static int ShortOfADay(int own) =>
+            TradeMath.FoodShortOfADay(own, AppetitePerDay(), MobileParty.MainParty?.Party.RemainingFoodPercentage ?? 0);
 
         internal static int FoodWanted()
         {

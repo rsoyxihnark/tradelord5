@@ -335,7 +335,7 @@
 		<string id="TL507" text="Yükünüze sığan kârlı rota yok"/>
 		<string id="TL508" text="Her kârlı rota, alış pazarında sattıktan sonra bile sizde olmayacak bir yük yeri istiyor. | Biraz yük satın ya da bir yük hayvanıyla yer açın."/>
 		<string id="TL509" text=" | Adet = aynı pazardan üstteki rotalardan sonra yükünüzden ve harcayabileceğinizden ona kalan"/>
-		<string id="TL510" text=" | Adedi kısan: yük {CARGO}, kese {PURSE}, orada harcayabileceğiniz {LIMIT}"/>
+		<string id="TL510" text=" | Adet'i kısan: yük {CARGO}, kese {PURSE}, orada harcayabileceğiniz {LIMIT}"/>
 		<string id="TL511" text="Kesenize ve harcayabileceğinize uyan kârlı rota yok"/>
 		<string id="TL512" text=" | {MARKET} çıkışlı {COUNT} rota bir kenara kondu: varışta ticaret, oraya ilk dönüşünüzde orayı rahat bırakır"/>
 		<string id="TL513" text="TradeLord hâlâ {COUNT} yol ölçüyor"/>

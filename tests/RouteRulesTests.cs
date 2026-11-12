@@ -69,7 +69,7 @@ namespace TradeLord.Tests
     public class ConfidenceTests
     {
         private static float Ideal() => Confidence.Of(
-            simulated: true, flatProfit: 100, simulatedProfit: 100,
+            simulated: true, flatProfit: 100,
             stock: 100, units: 1, travelDays: 0f, caravans: 0, dataAgeDays: -1f);
 
         [Fact]
@@ -90,7 +90,7 @@ namespace TradeLord.Tests
                                     foreach (int caravans in new[] { -3, 0, 9 })
                                         foreach (float age in new[] { -1f, 0f, 45f })
                                         {
-                                            float c = Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age);
+                                            float c = Confidence.Of(sim, flat, stock, units, days, caravans, age);
                                             Assert.InRange(c, 0.01f, 1f);
                                         }
         }
@@ -98,25 +98,25 @@ namespace TradeLord.Tests
         [Fact]
         public void A_longer_haul_is_never_more_confident_than_a_shorter_one()
         {
-            float near = Confidence.Of(true, 100, 100, 100, 1, 1f, 0, -1f);
-            float far = Confidence.Of(true, 100, 100, 100, 1, 12f, 0, -1f);
+            float near = Confidence.Of(true, 100, 100, 1, 1f, 0, -1f);
+            float far = Confidence.Of(true, 100, 100, 1, 12f, 0, -1f);
             Assert.True(far < near);
         }
 
         [Fact]
         public void More_caravans_on_the_route_never_raise_confidence()
         {
-            float quiet = Confidence.Of(true, 100, 100, 100, 1, 2f, 0, -1f);
-            float busy = Confidence.Of(true, 100, 100, 100, 1, 2f, 6, -1f);
+            float quiet = Confidence.Of(true, 100, 100, 1, 2f, 0, -1f);
+            float busy = Confidence.Of(true, 100, 100, 1, 2f, 6, -1f);
             Assert.True(busy < quiet);
         }
 
         [Fact]
         public void Older_prices_are_trusted_less_and_live_prices_most()
         {
-            float live = Confidence.Of(true, 100, 100, 100, 1, 2f, 0, -1f);
-            float fresh = Confidence.Of(true, 100, 100, 100, 1, 2f, 0, 0f);
-            float stale = Confidence.Of(true, 100, 100, 100, 1, 2f, 0, 40f);
+            float live = Confidence.Of(true, 100, 100, 1, 2f, 0, -1f);
+            float fresh = Confidence.Of(true, 100, 100, 1, 2f, 0, 0f);
+            float stale = Confidence.Of(true, 100, 100, 1, 2f, 0, 40f);
             Assert.Equal(live, fresh, 3);
             Assert.True(stale < live);
         }
@@ -124,26 +124,26 @@ namespace TradeLord.Tests
         [Fact]
         public void A_thin_shelf_is_trusted_less_than_a_deep_one()
         {
-            float deep = Confidence.Of(true, 100, 100, 90, 10, 1f, 0, -1f);
-            float thin = Confidence.Of(true, 100, 100, 3, 10, 1f, 0, -1f);
+            float deep = Confidence.Of(true, 100, 90, 10, 1f, 0, -1f);
+            float thin = Confidence.Of(true, 100, 3, 10, 1f, 0, -1f);
             Assert.True(thin < deep);
         }
 
         [Fact]
         public void A_price_walk_already_taken_off_the_profit_does_not_lower_Conf_again()
         {
-            float holds = Confidence.Of(true, 100, 95, 100, 1, 1f, 0, -1f);
-            float slides = Confidence.Of(true, 100, 20, 100, 1, 1f, 0, -1f);
+            float holds = Confidence.Of(true, 100, 100, 1, 1f, 0, -1f);
+            float slides = Confidence.Of(true, 100, 100, 1, 1f, 0, -1f);
             Assert.Equal(holds, slides);
-            Assert.Equal(Confidence.Of(true, 100, 100, 100, 1, 1f, 0, -1f), slides);
-            Assert.Equal(1f, Confidence.PartsOf(true, 100, 20, 100, 1, 1f, 0, -1f).Resilience);
-            Assert.True(Confidence.Of(false, 100, 100, 100, 1, 1f, 0, -1f) < slides);
+            Assert.Equal(Confidence.Of(true, 100, 100, 1, 1f, 0, -1f), slides);
+            Assert.Equal(1f, Confidence.PartsOf(true, 100, 100, 1, 1f, 0, -1f).Resilience);
+            Assert.True(Confidence.Of(false, 100, 100, 1, 1f, 0, -1f) < slides);
         }
 
         [Fact]
         public void An_unwalkable_route_is_marked_down_but_not_written_off()
         {
-            float unsimulated = Confidence.Of(false, 100, 100, 100, 1, 0f, 0, -1f);
+            float unsimulated = Confidence.Of(false, 100, 100, 1, 0f, 0, -1f);
             Assert.True(unsimulated < 1f && unsimulated > 0.5f);
         }
 
@@ -164,7 +164,7 @@ namespace TradeLord.Tests
                 float runsOut = rng.Next(3) == 0 ? Confidence.NotKnown : (float)rng.NextDouble() * 20f;
                 float toBuy = (float)rng.NextDouble() * 5f;
                 float most = Confidence.MostItCanBe(days);
-                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age, runsOut, toBuy) <= most);
+                Assert.True(Confidence.Of(sim, flat, stock, units, days, caravans, age, runsOut, toBuy) <= most);
                 Assert.True(Confidence.MostItCanBe(days + 0.5f) <= most);
             }
         }
@@ -172,7 +172,7 @@ namespace TradeLord.Tests
         [Fact]
         public void The_most_a_ride_allows_is_its_haste()
         {
-            Assert.Equal(Confidence.Of(true, 100, 100, 0, 0, 3f, 0, -1f), Confidence.MostItCanBe(3f), 6);
+            Assert.Equal(Confidence.Of(true, 100, 0, 0, 3f, 0, -1f), Confidence.MostItCanBe(3f), 6);
             Assert.Equal(0.5f, Confidence.MostItCanBe(3f), 6);
             Assert.Equal(1f, Confidence.MostItCanBe(0f), 6);
             Assert.Equal(1f, Confidence.MostItCanBe(-4f), 6);
@@ -439,11 +439,11 @@ namespace TradeLord.Tests
                 int caravans = rng.Next(0, 20);
                 float age = (float)rng.NextDouble() * 60f;
 
-                float asIs = Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age);
-                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age + 5f) <= asIs);
-                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days + 5f, caravans, age) <= asIs);
-                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days, caravans + 5, age) <= asIs);
-                Assert.True(Confidence.Of(sim, flat, simProfit, stock / 2, units, days, caravans, age) <= asIs);
+                float asIs = Confidence.Of(sim, flat, stock, units, days, caravans, age);
+                Assert.True(Confidence.Of(sim, flat, stock, units, days, caravans, age + 5f) <= asIs);
+                Assert.True(Confidence.Of(sim, flat, stock, units, days + 5f, caravans, age) <= asIs);
+                Assert.True(Confidence.Of(sim, flat, stock, units, days, caravans + 5, age) <= asIs);
+                Assert.True(Confidence.Of(sim, flat, stock / 2, units, days, caravans, age) <= asIs);
             }
         }
     }
