@@ -1261,20 +1261,14 @@
 
 - Buy haul animals no longer buys an animal that would leave your purse at or below Gold before it buys a haul animal
 - The hint under Gold before it buys a haul animal now says your purse has to stay above it once the animal is paid for
-- Buy haul animals now buys an animal for a few light goods when those goods would make more than the animal costs
-- Buy haul animals now buys an animal for food only when the food would fill half of it or your party is down to its last day of food
 - Fixed Simulation mode (dry run) keeping the cargo room of the haul animals and spare mounts it would sell
 - TradeLord.log now says when the next haul animal would have taken your purse down to Gold before it buys a haul animal
-- TradeLord.log now says when the goods your full cargo left behind would make less than a haul animal costs
-- TradeLord.log now says when the food your full cargo left behind was too little for a haul animal while your party still had a day of food
 
 ## 1.93.7
 
 - Fixed Buy haul animals buying more animals after they had taken your purse down to Gold before it buys a haul animal
-- Fixed Buy haul animals buying an animal for goods that would fill less than half of it
 - Fixed Simulation mode (dry run) leaving out the goods and food the haul animals it would buy could carry
 - TradeLord.log now says when Gold before it buys a haul animal stopped Buy haul animals partway through
-- TradeLord.log now says when the goods your full cargo left behind would fill less than half a haul animal
 
 ## 1.93.6
 
