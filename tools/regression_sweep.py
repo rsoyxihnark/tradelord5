@@ -25771,7 +25771,7 @@ def the_test_autopilot_flies_the_test_and_stands_apart_from_tradelord():
             and "private const float WaitInside = 1f;" in pilot
             and ordered(start, 'Pilot.Reset("a campaign was started or loaded");', "starter.AddBehavior(new PilotClock());")
             and "CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, Pilot.OnTheHour);" in pilot
-            and ordered(hour, "if (!On || DayNow() < StopsOnDay) return;", "Stop(")
+            and ordered(hour, "if (!On) return;", "if (DayNow() >= _stopsOnDay)", "Stop(")
             and "Campaign.Current.TimeControlMode = CampaignTimeControlMode.Stop;" in pilot
             and ordered(inside, "if (now - _insideSince < WaitInside && now >= _insideSince) return;",
                         "PlayerEncounter.LeaveSettlement();", "PlayerEncounter.Finish(true);")
@@ -25798,6 +25798,39 @@ def the_test_autopilot_flies_the_test_and_stands_apart_from_tradelord():
 
 chk("2.11.0", "the Test Autopilot goes to Poros, leaves every market a second after TradeLord trades, follows the map marker at the fastest speed, asks bandits for free passage and stops at day 21 00:00",
     the_test_autopilot_flies_the_test_and_stands_apart_from_tradelord())
+
+def the_test_autopilot_answers_events_recruits_and_spends_a_focus_point_on_trade():
+    pilot = PILOT['Autopilot.cs']
+    toggle = method_body(pilot, "internal static void Toggle()")
+    fly = method_body(pilot, "private static void Fly()")
+    answer = method_body(pilot, "private static void Answer(MapScreen map, float now)")
+    weight = method_body(pilot, "internal static int Weight(List<string> said, bool chance, string nothing)")
+    fill = method_body(pilot, "internal static void Fill(Settlement here)")
+    focus = method_body(pilot, "internal static void OnTradeIfAtTheLimit()")
+    inside = method_body(pilot, "private static void Inside(Settlement here, float now)")
+    warns = re.search(r'public const int LearningLimitWarnsThisClose = (\d+);', S['TradeMath.cs'])
+    return (toggle and fly and answer and weight and fill and focus and inside and warns
+            and "_stopsOnDay = DayNow() < StopsOnDay ? StopsOnDay : int.MaxValue;" in toggle
+            and "has already begun" not in toggle
+            and ordered(fly, "if (DayNow() >= _stopsOnDay)", "if (map.IsMapIncidentActive)", "Answer(map,",
+                        "InformationManager.IsAnyInquiryActive()")
+            and ordered(answer, 'new TextObject("{=lobJVVWT}Nothing happens").ToString()', "Events.Weight(said, chance, nothing)",
+                        "if (weight > best) continue;", "shown.Options[pick].ExecuteSelect();", "shown.ExecuteConfirm();")
+            and ordered(weight, "if (onlyNothing && !chance) return 0;", "return (chance ? 1000 : 0) + (trade ? 100 : 0) + 10 + effects;")
+            and ordered(fill, "int room = me.Party.PartySizeLimit - me.MemberRoster.TotalManCount;",
+                        "volunteers.MaximumIndexHeroCanRecruitFromHero(you, notable, -101)",
+                        "x.troop.Tier != y.troop.Tier ? x.troop.Tier.CompareTo(y.troop.Tier) : x.cost.CompareTo(y.cost)",
+                        "me.MemberRoster.AddToCounts(one.troop, 1);",
+                        "CampaignEventDispatcher.Instance.OnTroopRecruited(you, here, one.from, one.troop, 1);")
+            and "internal const int WarnsThisClose = " + warns.group(1) + ";" in pilot
+            and ordered(focus, "if (skill < limit - WarnsThisClose) return;", "growing.AddFocus(trade, 1, true);")
+            and "AddAttribute" not in pilot and "DistributeUnspentFocusPoints" not in pilot
+            and ordered(inside, "if (_leaveTries == 1)", "Recruits.Fill(here);", "Focus.OnTradeIfAtTheLimit();",
+                        "PlayerEncounter.LeaveSettlement();"))
+
+
+chk("2.12.0", "the Test Autopilot answers the game's events with the option that changes the least, fills the party with the cheapest lowest tier recruits, puts one focus point on Trade where TradeLord warns of the limit, and pauses at day 21 once",
+    the_test_autopilot_answers_events_recruits_and_spends_a_focus_point_on_trade())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

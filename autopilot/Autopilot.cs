@@ -1,8 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using SandBox.View.Map;
+using SandBox.ViewModelCollection.Map.Incidents;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
+using TaleWorlds.CampaignSystem.Incidents;
 using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.GameMenus;
@@ -10,6 +16,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+using TaleWorlds.Localization;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.ScreenSystem;
 
@@ -72,6 +79,10 @@ namespace TradeLord.TestAutopilot
 
         internal static bool On { get; private set; }
 
+        private static int _stopsOnDay = StopsOnDay;
+        private static float _eventSince = -1f;
+        private static int _eventTries;
+
         private static bool _firstMarketDone;
         private static Settlement _inside;
         private static float _insideSince;
@@ -114,20 +125,23 @@ namespace TradeLord.TestAutopilot
                 return;
             }
             if (Campaign.Current == null || MobileParty.MainParty == null) return;
-            if (DayNow() >= StopsOnDay)
-            {
-                Say("Autopilot stays off: day " + StopsOnDay + " has already begun");
-                return;
-            }
             Forget();
+            _stopsOnDay = DayNow() < StopsOnDay ? StopsOnDay : int.MaxValue;
             On = true;
-            Trail.Write("Autopilot on" + (_firstMarketDone ? ", following the map marker" : ", heading for " + FirstMarket + " first"));
+            Trail.Write("Autopilot on" + (_firstMarketDone ? ", following the map marker" : ", heading for " + FirstMarket + " first") +
+                        (_stopsOnDay == StopsOnDay ? ", pausing as day " + StopsOnDay + " begins" : ", with no day to pause on"));
         }
 
         internal static void OnTheHour()
         {
-            if (!On || DayNow() < StopsOnDay) return;
-            Stop("day " + StopsOnDay + " 00:00, the game is paused and waits for you", true);
+            if (!On) return;
+            if (DayNow() >= _stopsOnDay)
+            {
+                Stop("day " + StopsOnDay + " 00:00, the game is paused and waits for you", true);
+                return;
+            }
+            try { Focus.OnTradeIfAtTheLimit(); }
+            catch (Exception e) { Trail.Error(e, "a focus point on Trade"); }
         }
 
         internal static void Tick()
@@ -146,12 +160,19 @@ namespace TradeLord.TestAutopilot
             Campaign campaign = Campaign.Current;
             MobileParty me = MobileParty.MainParty;
             if (campaign == null || me == null) return;
-            if (DayNow() >= StopsOnDay)
+            if (DayNow() >= _stopsOnDay)
             {
                 Stop("day " + StopsOnDay + " 00:00, the game is paused and waits for you", true);
                 return;
             }
-            if (!(ScreenManager.TopScreen is MapScreen)) return;
+            if (!(ScreenManager.TopScreen is MapScreen map)) return;
+            if (map.IsMapIncidentActive)
+            {
+                Answer(map, TaleWorlds.Engine.Time.ApplicationTime);
+                return;
+            }
+            _eventSince = -1f;
+            _eventTries = 0;
             if (InformationManager.IsAnyInquiryActive())
             {
                 Stop("a window the game opened is waiting for your answer", true);
@@ -232,12 +253,78 @@ namespace TradeLord.TestAutopilot
                 return;
             }
             if (!_firstMarketDone && IsTheFirstMarket(here)) _firstMarketDone = true;
+            if (_leaveTries == 1)
+            {
+                try { Recruits.Fill(here); }
+                catch (Exception e) { Trail.Error(e, "recruiting at " + here.Name); }
+                try { Focus.OnTradeIfAtTheLimit(); }
+                catch (Exception e) { Trail.Error(e, "a focus point on Trade"); }
+            }
             Trail.Write("leaving " + here.Name);
             _insideSince = now;
             PlayerEncounter.LeaveSettlement();
             PlayerEncounter.Finish(true);
             if (Campaign.Current.CurrentMenuContext != null) GameMenu.ExitToLast();
             _markerMissingSince = -1f;
+        }
+
+        private static void Answer(MapScreen map, float now)
+        {
+            if (_eventSince < 0f || now < _eventSince) _eventSince = now;
+            if (now - _eventSince < BetweenLines) return;
+            MapIncidentView view = map.GetMapView<MapIncidentView>();
+            Incident incident = view?.Incident;
+            MapIncidentVM shown = view == null ? null : Shown(view);
+            if (incident == null || shown?.Options == null || shown.Options.Count == 0)
+            {
+                if (now - _eventSince >= WaitOutOfAnEncounter) Stop("an event the game opened could not be read", true);
+                return;
+            }
+            if (++_eventTries > LeaveTries)
+            {
+                Stop("the event " + incident.Title + " would not close", true);
+                return;
+            }
+            _eventSince = now;
+            string nothing = new TextObject("{=lobJVVWT}Nothing happens").ToString();
+            int pick = -1, best = int.MaxValue;
+            var told = new List<string>();
+            for (int i = 0; i < shown.Options.Count; i++)
+            {
+                MapIncidentOptionVM option = shown.Options[i];
+                var said = new List<string>();
+                bool chance = false;
+                Read(incident.GetOptionHint(option.Index), said, ref chance);
+                int weight = Events.Weight(said, chance, nothing);
+                told.Add("\"" + option.Description + "\" (" + string.Join(", ", said.ToArray()) + (chance ? ", by chance" : "") +
+                         ", weight " + weight + ")");
+                if (weight > best) continue;
+                best = weight;
+                pick = i;
+            }
+            Trail.Write("event " + incident.Title + ": " + string.Join("; ", told.ToArray()) + "; chose \"" +
+                        shown.Options[pick].Description + "\"");
+            shown.Options[pick].ExecuteSelect();
+            shown.ExecuteConfirm();
+        }
+
+        private static MapIncidentVM Shown(MapIncidentView view)
+        {
+            for (Type type = view.GetType(); type != null; type = type.BaseType)
+                foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+                    if (typeof(MapIncidentVM).IsAssignableFrom(field.FieldType)) return field.GetValue(view) as MapIncidentVM;
+            return null;
+        }
+
+        private static void Read(IncidentHint hint, List<string> said, ref bool chance)
+        {
+            if (hint == null) return;
+            if (hint.Chance > 0f && hint.Chance < 1f) chance = true;
+            if (hint.Type == IncidentHintType.Select || hint.Type == IncidentHintType.SelectBranch) chance = true;
+            string text = hint.Text?.ToString();
+            if (!string.IsNullOrEmpty(text)) said.Add(text);
+            IncidentHint[] children = hint.Children;
+            for (int i = 0; children != null && i < children.Length; i++) Read(children[i], said, ref chance);
         }
 
         private static void Encounter(float now)
@@ -348,6 +435,113 @@ namespace TradeLord.TestAutopilot
             CampaignTimeModel model = Campaign.Current?.Models?.CampaignTimeModel;
             if (model == null) return 0;
             return (int)Math.Floor(CampaignTime.Now.ToDays) - (int)Math.Floor(model.CampaignStartTime.ToDays);
+        }
+    }
+
+    internal static class Events
+    {
+        private static readonly string[] TouchesTrade =
+        {
+            "gold", "denar", "price", "trade", "goods", "item", "food", "workshop", "caravan", "merchant", "market"
+        };
+
+        internal static int Weight(List<string> said, bool chance, string nothing)
+        {
+            bool onlyNothing = true;
+            int effects = 0;
+            bool trade = false;
+            foreach (string one in said)
+            {
+                if (string.IsNullOrEmpty(one) || one == nothing) continue;
+                onlyNothing = false;
+                effects++;
+                string lower = one.ToLowerInvariant();
+                foreach (string word in TouchesTrade)
+                    if (lower.Contains(word)) trade = true;
+            }
+            if (onlyNothing && !chance) return 0;
+            return (chance ? 1000 : 0) + (trade ? 100 : 0) + 10 + effects;
+        }
+    }
+
+    internal static class Recruits
+    {
+        internal static void Fill(Settlement here)
+        {
+            MobileParty me = MobileParty.MainParty;
+            Hero you = Hero.MainHero;
+            VolunteerModel volunteers = Campaign.Current?.Models?.VolunteerModel;
+            PartyWageModel wages = Campaign.Current?.Models?.PartyWageModel;
+            if (me == null || you == null || volunteers == null || wages == null || here?.Notables == null) return;
+            int room = me.Party.PartySizeLimit - me.MemberRoster.TotalManCount;
+            if (room <= 0) return;
+            var offered = new List<(Hero from, int at, CharacterObject troop, int cost)>();
+            foreach (Hero notable in here.Notables)
+            {
+                if (notable == null || !notable.IsAlive || notable.VolunteerTypes == null) continue;
+                int reach = volunteers.MaximumIndexHeroCanRecruitFromHero(you, notable, -101);
+                for (int i = 0; i < notable.VolunteerTypes.Length && i < reach; i++)
+                {
+                    CharacterObject troop = notable.VolunteerTypes[i];
+                    if (troop == null) continue;
+                    int cost = (int)wages.GetTroopRecruitmentCost(troop, you, false).ResultNumber;
+                    offered.Add((notable, i, troop, cost));
+                }
+            }
+            offered.Sort((x, y) => x.troop.Tier != y.troop.Tier ? x.troop.Tier.CompareTo(y.troop.Tier) : x.cost.CompareTo(y.cost));
+            var took = new List<string>();
+            int paid = 0;
+            foreach (var one in offered)
+            {
+                if (room <= 0) break;
+                if (one.cost > you.Gold) continue;
+                one.from.VolunteerTypes[one.at] = null;
+                me.MemberRoster.AddToCounts(one.troop, 1);
+                GiveGoldAction.ApplyBetweenCharacters(you, null, one.cost, true);
+                CampaignEventDispatcher.Instance.OnUnitRecruited(one.troop, 1);
+                CampaignEventDispatcher.Instance.OnTroopRecruited(you, here, one.from, one.troop, 1);
+                room--;
+                paid += one.cost;
+                took.Add(one.troop.Name + " (tier " + one.troop.Tier + ", " + one.cost + " gold, from " + one.from.Name + ")");
+            }
+            if (took.Count == 0)
+            {
+                Trail.Write("room for " + room + " more in the party, and nobody at " + here.Name + " could be recruited");
+                return;
+            }
+            Trail.Write("recruited at " + here.Name + " for " + paid + " gold: " + string.Join(", ", took.ToArray()));
+        }
+    }
+
+    internal static class Focus
+    {
+        internal const int WarnsThisClose = 1;
+
+        private static (int skill, int limit, int unspent) _toldStuck = (-1, -1, -1);
+
+        internal static void OnTradeIfAtTheLimit()
+        {
+            Hero you = Hero.MainHero;
+            CharacterDevelopmentModel model = Campaign.Current?.Models?.CharacterDevelopmentModel;
+            SkillObject trade = DefaultSkills.Trade;
+            HeroDeveloper growing = you?.HeroDeveloper;
+            if (model == null || growing == null || trade == null) return;
+            int focus = growing.GetFocus(trade);
+            int skill = you.GetSkillValue(trade);
+            int limit = MathF.Round(model.CalculateLearningLimit(you.CharacterAttributes, focus, trade).ResultNumber);
+            if (skill < limit - WarnsThisClose) return;
+            if (!growing.CanAddFocusToSkill(trade) || growing.UnspentFocusPoints < growing.GetRequiredFocusPointsToAddFocus(trade))
+            {
+                var now = (skill, limit, growing.UnspentFocusPoints);
+                if (now == _toldStuck) return;
+                _toldStuck = now;
+                Trail.Write("Trade " + skill + " is at its learning limit of " + limit + ", and no focus point can go on Trade (" +
+                            growing.UnspentFocusPoints + " unspent, " + focus + " on Trade)");
+                return;
+            }
+            growing.AddFocus(trade, 1, true);
+            Trail.Write("Trade " + skill + " reached its learning limit of " + limit + ": one focus point went on Trade, now " +
+                        growing.GetFocus(trade) + ", " + growing.UnspentFocusPoints + " left unspent");
         }
     }
 

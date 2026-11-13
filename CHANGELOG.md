@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.12.0
+
+- Test Autopilot answers the game's events, such as Market Manipulation, with the option that changes the least, Nothing happens first
+- Test Autopilot writes every event it answers, with each option and the one it chose, to TradeLordTestAutopilot.log
+- Test Autopilot fills any room in your party with the cheapest lowest tier recruits at the next town or village it enters
+- Test Autopilot puts one focus point on Trade when TradeLord warns that Trade is at its learning limit
+- Test Autopilot pauses at day 21 00:00 only once, and keeps flying if you turn it back on
+
 ## 2.11.0
 
 - TradeLord Test Autopilot is a new optional download beside TradeLord that flies a test run for you
