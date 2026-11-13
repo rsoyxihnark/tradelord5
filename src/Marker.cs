@@ -345,6 +345,7 @@ namespace TradeLord
             _tracked = null;
             _picked = null;
             _buyMark = null;
+            _buyTo = null;
             _buyMarkRestored = false;
             _owedAFairLook.Clear();
             _beatenOnTheRoad.Clear();
