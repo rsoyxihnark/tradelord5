@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.11.0
+
+- TradeLord Test Autopilot is a new optional download beside TradeLord that flies a test run for you
+- With Test Autopilot on, your party goes to Poros first, then wherever the map marker points, at the fastest speed
+- Test Autopilot leaves each market a second after TradeLord trades there
+- Test Autopilot asks bandits for free passage with TradeLord's line, then carries on at the fastest speed
+- Test Autopilot pauses the game as day 21 begins, and stops to wait for you whenever the game asks you something
+- Test Autopilot has its own green and red button beside Net worth, and is off whenever you load a save
+- Test Autopilot also works beside earlier versions of TradeLord, and writes what it did to TradeLordTestAutopilot.log
+
 ## 2.10.1
 
 - Fixed the game's news from the road showing below the Sold and Bought lines in a town, with Enable extended debug logging on

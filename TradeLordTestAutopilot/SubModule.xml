@@ -1,0 +1,27 @@
+<Module>
+	<Name value="TradeLord Test Autopilot"/>
+	<Id value="TradeLordTestAutopilot"/>
+	<Version value="v0.0.0"/>
+	<Official value="false"/>
+	<DefaultModule value="false"/>
+	<SingleplayerModule value="true"/>
+	<MultiplayerModule value="false"/>
+	<DependedModules>
+	</DependedModules>
+	<DependedModuleMetadatas>
+		<DependedModuleMetadata id="Native" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="SandBoxCore" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="Sandbox" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="StoryMode" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="NavalDLC" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="TradeLord" order="LoadBeforeThis" optional="true"/>
+	</DependedModuleMetadatas>
+	<SubModules>
+		<SubModule>
+			<Name value="TradeLordTestAutopilot"/>
+			<DLLName value="TradeLord.TestAutopilot.dll"/>
+			<SubModuleClassType value="TradeLord.TestAutopilot.SubModule"/>
+			<Tags><Tag key="DedicatedServerType" value="none"/><Tag key="IsNoRenderModeElement" value="false"/></Tags>
+		</SubModule>
+	</SubModules>
+</Module>

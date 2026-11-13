@@ -204,6 +204,7 @@ namespace TradeLord.Compat
         {
             "src/bin/Release/net472/TradeLord.dll",
             "mcm/bin/Release/net472/TradeLord.MCM.dll",
+            "autopilot/bin/Release/net472/TradeLord.TestAutopilot.dll",
         };
 
         private static string _repo;
@@ -237,7 +238,7 @@ namespace TradeLord.Compat
             foreach (string dll in ModAssemblies)
                 if (!File.Exists(Path.Combine(_repo, dll)))
                 {
-                    Console.Error.WriteLine("missing " + dll + " - build both projects in Release first");
+                    Console.Error.WriteLine("missing " + dll + " - build every project in Release first");
                     return 2;
                 }
 

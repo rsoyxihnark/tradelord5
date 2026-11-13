@@ -1,0 +1,29 @@
+<Prefab>
+  <Window>
+    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+            DoNotAcceptEvents="true">
+      <Children>
+        <ButtonWidget Id="TradeLordTestAutopilotButton"
+                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                      SuggestedWidth="120" SuggestedHeight="30"
+                      HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                      MarginRight="130" MarginBottom="86"
+                      DoNotPassEventsToChildren="true"
+                      Command.Click="ExecuteToggle">
+          <Children>
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                    Sprite="BlankWhiteSquare_9" Color="#2E8B3ACC"
+                    IsVisible="@IsOn" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                    Sprite="BlankWhiteSquare_9" Color="#A3392FCC"
+                    IsHidden="@IsOn" DoNotAcceptEvents="true" />
+            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                        Brush="Popup.Button.Text" Brush.FontSize="16"
+                        DoNotAcceptEvents="true"
+                        Text="@Label" />
+          </Children>
+        </ButtonWidget>
+      </Children>
+    </Widget>
+  </Window>
+</Prefab>

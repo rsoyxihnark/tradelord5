@@ -81,7 +81,10 @@ TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
-        ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
+        ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj', 'autopilot/TradeLord.TestAutopilot.csproj']]
+PILOT = {f: io.open('autopilot/' + f, encoding='utf-8').read() for f in ['Autopilot.cs', 'Button.cs']}
+PILOTMODULE = io.open('TradeLordTestAutopilot/SubModule.xml', encoding='utf-8').read()
+PILOTPREFAB = io.open('TradeLordTestAutopilot/GUI/Prefabs/TradeLordTestAutopilot.xml', encoding='utf-8').read()
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
@@ -241,7 +244,7 @@ def pinned_reference_assemblies():
                           "\n".join(PROJ)))
 
 def projects_pin_one_reference_assembly():
-    return len(PROJ) == 2 and len(pinned_reference_assemblies()) == 1
+    return len(PROJ) == 3 and len(pinned_reference_assemblies()) == 1
 
 def the_readme_names_the_one_game_version_the_mod_is_built_on():
     used = pinned_reference_assemblies()
@@ -1039,7 +1042,9 @@ def shipped_text_is_ascii():
              'TradeLord/GUI/Prefabs/TradeLordPanel.xml',
              'TradeLord/GUI/Brushes/TradeLordBrushes.xml',
              'TradeLord/SubModule.xml',
-             'mcm/Settings.cs'] + ['src/' + f for f in S]
+             'mcm/Settings.cs',
+             'TradeLordTestAutopilot/SubModule.xml',
+             'TradeLordTestAutopilot/GUI/Prefabs/TradeLordTestAutopilot.xml'] + ['src/' + f for f in S] + ['autopilot/' + f for f in PILOT]
     return all(ord(c) < 128
                for f in files
                for c in io.open(f, encoding='utf-8').read())
@@ -25749,6 +25754,50 @@ def the_games_news_comes_first_and_waits_only_while_the_clock_runs():
 
 chk("2.10.1", "with Enable extended debug logging on, the game's held messages show before TradeLord's own lines, wait only while the game clock runs, and one party named with 's or a bare apostrophe groups with another",
     the_games_news_comes_first_and_waits_only_while_the_clock_runs())
+
+def the_test_autopilot_flies_the_test_and_stands_apart_from_tradelord():
+    pilot = PILOT['Autopilot.cs']
+    button = PILOT['Button.cs']
+    road = method_body(pilot, "private static void Road(Campaign campaign, MobileParty me, float now)")
+    inside = method_body(pilot, "private static void Inside(Settlement here, float now)")
+    talk = method_body(pilot, "private static void Talk(ConversationManager talk, float now)")
+    hour = method_body(pilot, "internal static void OnTheHour()")
+    start = method_body(pilot, "protected override void OnGameStart(Game game, IGameStarter gameStarterObject)")
+    passage = re.search(r'starter\.AddPlayerLine\(\s*"(\w+)", Parley\.OwnState', S['Encounters.cs'])
+    return (road and inside and talk and hour and start and passage
+            and 'internal const string FreePassage = "' + passage.group(1) + '";' in pilot
+            and 'internal const string FirstMarket = "Poros";' in pilot
+            and "internal const int StopsOnDay = 21;" in pilot
+            and "private const float WaitInside = 1f;" in pilot
+            and ordered(start, 'Pilot.Reset("a campaign was started or loaded");', "starter.AddBehavior(new PilotClock());")
+            and "CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, Pilot.OnTheHour);" in pilot
+            and ordered(hour, "if (!On || DayNow() < StopsOnDay) return;", "Stop(")
+            and "Campaign.Current.TimeControlMode = CampaignTimeControlMode.Stop;" in pilot
+            and ordered(inside, "if (now - _insideSince < WaitInside && now >= _insideSince) return;",
+                        "PlayerEncounter.LeaveSettlement();", "PlayerEncounter.Finish(true);")
+            and ordered(talk, "if (them == null || !them.IsBandit)", "if (options[i].Id != FreePassage) continue;",
+                        "talk.DoOption(i);")
+            and ordered(road, "Settlement to = _firstMarketDone ? Marked(campaign) : TheFirstMarket();",
+                        "AskTheWay(me, to, now);",
+                        "campaign.TimeControlMode = CampaignTimeControlMode.StoppableFastForward;")
+            and "TradeLord." not in "\n".join(l for l in pilot.splitlines() if l.startswith("using "))
+            and "ProjectReference" not in PROJ[2]
+            and '<Version value="v0.0.0"/>' in PILOTMODULE
+            and '<DependedModuleMetadata id="TradeLord" order="LoadBeforeThis" optional="true"/>' in PILOTMODULE
+            and 'Command.Click="ExecuteToggle"' in PILOTPREFAB
+            and 'IsVisible="@IsOn"' in PILOTPREFAB and 'IsHidden="@IsOn"' in PILOTPREFAB
+            and "public void ExecuteToggle() => Pilot.Toggle();" in button
+            and '"autopilot/bin/Release/net472/TradeLord.TestAutopilot.dll",' in COMPAT
+            and ordered(WORKFLOW, "dotnet build autopilot/TradeLord.TestAutopilot.csproj -c Release -p:Version=",
+                        "- name: Game version fit",
+                        "TradeLordTestAutopilot/SubModule.xml > \"$PILOT/SubModule.xml\"",
+                        '7z a -tzip "../TradeLordTestAutopilot-$VERSION.zip" Modules',
+                        "TradeLord.TestAutopilot.dll is stamped",
+                        '"dist/TradeLord-$VERSION.zip" "dist/TradeLordTestAutopilot-$VERSION.zip"'))
+
+
+chk("2.11.0", "the Test Autopilot goes to Poros, leaves every market a second after TradeLord trades, follows the map marker at the fastest speed, asks bandits for free passage and stops at day 21 00:00",
+    the_test_autopilot_flies_the_test_and_stands_apart_from_tradelord())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
