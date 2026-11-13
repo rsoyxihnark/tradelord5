@@ -24,9 +24,13 @@ else
 fi
 
 LATEST=""
-if git fetch --quiet origin main >/dev/null 2>&1; then
-  LATEST=$(git rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || true)
-fi
+for WAIT in 0 2 4; do
+  sleep "$WAIT"
+  if git fetch --quiet origin main >/dev/null 2>&1; then
+    LATEST=$(git rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || true)
+    break
+  fi
+done
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
 WAS=$(git rev-parse --short HEAD 2>/dev/null || true)
@@ -67,12 +71,12 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
 fi
 
 if [ -x "$DOTNET_DIR/dotnet" ]; then
-  echo "dotnet $("$DOTNET_DIR/dotnet" --version) ready - build both csproj before pushing"
+  echo "dotnet $("$DOTNET_DIR/dotnet" --version) ready - build all three csproj and run the tests before pushing"
 elif [ -n "$FOUND" ]; then
-  echo "dotnet $("$FOUND" --version) ready at $FOUND - build both csproj before pushing"
+  echo "dotnet $("$FOUND" --version) ready at $FOUND - build all three csproj and run the tests before pushing"
 else
-  echo "no .NET here yet - both csproj must still build clean before any push, so install it when code work starts:"
+  echo "no .NET here yet - all three csproj must still build clean before any push, so install it when code work starts:"
   echo "  curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir \"\$HOME/.dotnet\" --no-path"
   echo "or, where that host is refused:"
-  echo "  apt-get install -y dotnet-sdk-8.0"
+  echo "  apt-get update && apt-get install -y dotnet-sdk-8.0"
 fi
