@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.10.0
+
+- Net worth, your gold and what you carry at the game's own value of each good, now shows just above your gold on the campaign map
+- The TradeLord ledger now shows your Net worth beside its title
+- TradeLord.log now writes your Net worth after each trade
+- The Trade XP in the Sold line now shows in red
+- With Enable extended debug logging on, the game's repeated messages, such as You've learned about, now show as one line with a count
+- Fixed the campaign map pausing every hour on a long ride while the map marker weighs your cargo
+
 ## 2.9.31
 
 - TradeLord now runs on game version 1.5.7.125802, and no longer on 1.5.6

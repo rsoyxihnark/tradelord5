@@ -38,6 +38,21 @@
           </Children>
         </ListPanel>
 
+        <Widget Id="TradeLordNetWorth"
+                WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                SuggestedWidth="230" SuggestedHeight="30"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                MarginRight="255" MarginBottom="86"
+                Sprite="BlankWhiteSquare_9" Color="#000000AA"
+                DoNotAcceptEvents="true">
+          <Children>
+            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                        Brush="Popup.Button.Text" Brush.FontSize="18" Brush.FontColor="#FFD700FF"
+                        DoNotAcceptEvents="true"
+                        Text="@NetWorthText" />
+          </Children>
+        </Widget>
+
         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                 IsVisible="@IsVisible" DoNotAcceptEvents="true">
       <Children>
@@ -70,6 +85,11 @@
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                     Brush="Recruitment.Popup.Title.Text" Brush.FontSize="26"
                                     Text="@TitleLabel" />
+                        <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent"
+                                    SuggestedWidth="300" MarginRight="10"
+                                    Brush="Popup.Button.Text" Brush.FontSize="20"
+                                    Brush.FontColor="#FFD700FF"
+                                    Text="@NetWorthText" />
                         <ButtonWidget DoNotPassEventsToChildren="true"
                                       WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                                       SuggestedWidth="40" SuggestedHeight="36"

@@ -1268,7 +1268,7 @@ def the_trade_skill_gain_is_reported_in_one_line():
             and 'Notices.Say' not in body
             and '{=TL500}' in said and '{=TL499}' in said
             and 'if (gained.Level > 0) said.SetTextVariable("LEVEL", gained.Level);' in said
-            and 'sold.SetTextVariable("XP", line.Sim || told ? "" : XpSaid(gained));' in moved
+            and 'sold.SetTextVariable("XP", line.Sim || told ? "" : Notices.TradeXp(XpSaid(gained)));' in moved
             and 'if (!line.Sim) told = true;' in moved
             and 'if (told || gained.Xp <= 0) return;' in moved
             and 'SkillLevelingManager' not in
@@ -11285,11 +11285,12 @@ def the_ultralog_counts_what_the_marker_left_out_and_why():
                  "{ how.NoTill++; continue; }", "{ how.PastCeiling++; continue; }",
                  "{ how.NoRoad++; continue; }", "how.Told++;"))
             and scan.count("how.PastCeiling++") == 2
-            and "how.Left = reachable.Count - how.Told - roadless;" in scan
+            and "how.Left = reachable.Count - how.Told - roadless - how.RefusedUnpriced;" in scan
             and scan.count("how.NoRoad++") == 2
             and "{ how.NoRoad++; roadless++; continue; }" in scan
             and ordered(ultra, '" market(s) weighed, "', '" priced, "',
-                        '" would pay too little for anything you carry, "',
+                        '" would pay too little for anything you carry" +',
+                        '" of them left unpriced, as not even the most a "',
                         '" left unpriced once no price they could pay would beat "',
                         '"  ultralog: left out before pricing, "', '" with nothing in the till, "',
                         '" past your travel ceilings, "', '" with no road it could find, "',
@@ -18269,7 +18270,7 @@ def your_own_food_is_eaten_first_and_food_bought_to_trade_last():
                         "if (j != i && own[j] > 0 && (take < 0 || own[j] > own[take])) take = j;",
                         "if (take < 0) return swaps;")
             and "Patcher.TryPatch(harmony, typeof(Patch_YourOwnFoodIsEatenFirst));" in S['SubModule.cs']
-            and S['SubModule.cs'].count("Patcher.TryPatch(harmony, typeof(") == 16
+            and S['SubModule.cs'].count("Patcher.TryPatch(harmony, typeof(") == 17
             and all(one in FOODTESTS for one in (
                 "A_unit_of_trade_food_eaten_is_swapped_for_one_of_your_own_while_any_is_left",
                 "Your_own_units_of_a_food_are_counted_eaten_before_its_units_bought_to_trade",
@@ -21694,7 +21695,8 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
                         "                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;\n"
                         "                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;\n"
-                        "                    could = MostThisCargoCouldFetch(s, market, party, cargo);\n"
+                        "                    could = MostThisCargoCouldFetch(s, market, party, cargo, still);\n"
+                        "                    if (could <= 0L) { how.Refused++; how.RefusedUnpriced++; continue; }\n"
                         "                    float fetches = TradeMath.PerDay(could, ride);\n"
                         "                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;\n"
                         "                }\n"
@@ -21712,7 +21714,7 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "                if (gold <= 0) { how.NoTill++; continue; }\n"
                         "                how.Told++;",
                         "Takings took = WhatItWouldSell(s, market, party, ride, cargo, gold, null);",
-                        "how.Left = reachable.Count - how.Told - roadless;"))
+                        "how.Left = reachable.Count - how.Told - roadless - how.RefusedUnpriced;"))
 
 
 chk("2.2.5", "the map marker walks the road to a market only once its purse over the shortest road can still beat the best it has found, so a market under no travel ceiling is reached for without its road being measured first",
@@ -21726,7 +21728,8 @@ def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
     return (most and best
             and ordered(most, "long most = 0L;",
                         "int quoted = Options.Current.Omniscient",
-                        "if (quoted <= 0) continue;",
+                        "if (!Marks.SomeUnitCouldClear(quoted,",
+                        "continue;",
                         "most += (long)TradeMath.MostAForecastCanReach(quoted) * cargo[at].amount;",
                         "return most;")
             and best.count("MostThisCargoCouldFetch(") == 1
@@ -21735,7 +21738,8 @@ def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
                 "                    if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
                 "                    float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;\n"
                 "                    if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;\n"
-                "                    could = MostThisCargoCouldFetch(s, market, party, cargo);\n"
+                "                    could = MostThisCargoCouldFetch(s, market, party, cargo, still);\n"
+                "                    if (could <= 0L) { how.Refused++; how.RefusedUnpriced++; continue; }\n"
                 "                    float fetches = TradeMath.PerDay(could, ride);\n"
                 "                    if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;\n"
                 "                }" in best
@@ -25611,6 +25615,112 @@ chk("2.9.30", "the build refuses to publish a zip whose SubModule.xml or DLL sta
 
 chk("2.9.30", "no function ships in the mod that only the tests call, and Conf takes no profit figure it never reads",
     not re.search(r'\b(BestBuyFrom|SellSideWithItsOwnRoute|LowConf|DemandMovedToASubstitute|TheGamesDailySupplyAndDemand|Coastal)\(|\bsimulatedProfit\b', ALL))
+
+def a_market_that_could_clear_no_margin_is_never_priced_on_the_road():
+    marker = S['Marker.cs']
+    most = method_body(marker, "private static long MostThisCargoCouldFetch(")
+    still = method_body(marker, "private static (int unbought, int worth)[] StillUnbought(")
+    best = method_body(marker, "private static Settlement BestSellTownForCargo")
+    clear = method_body(S['Rules.cs'], "internal static bool SomeUnitCouldClear(")
+    fetch = method_body(marker, "private static Takings WhatItWouldFetch(")
+    return (most and still and best and clear and fetch
+            and ordered(clear, "if (quoted <= 0) return false;",
+                        "int top = TradeMath.MostAForecastCanReach(quoted);",
+                        "if (unbought > 0 && TradeMath.ProfitAcceptable(unboughtWorth, top, margin)) return true;",
+                        "return paidFor > 0 && floors.WithoutTheUnknown().Clears(top, margin);")
+            and "int unbought = System.Math.Max(0, cargo[at].amount - (held - cargo[at].floors.Unknown));" in still
+            and "unbought[at] = System.Math.Max(0, cargo[at].amount - (held - cargo[at].floors.Unknown));" in fetch
+            and "TradePolicy.WorthToBeatUnbought(cargo[at].item)" in still
+            and "int loose = TradePolicy.WorthToBeatUnbought(cargo[at].item);" in fetch
+            and "if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;" in fetch
+            and "TradeMath.DearFirst walk = floors.WithoutTheUnknown();" in fetch
+            and "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;" in fetch
+            and "cargo[at].amount - still[at].unbought, cargo[at].floors, margin))" in most
+            and ordered(best, "var still = StillUnbought(party, cargo);",
+                        "could = MostThisCargoCouldFetch(s, market, party, cargo, still);",
+                        "if (could <= 0L) { how.Refused++; how.RefusedUnpriced++; continue; }",
+                        "{ how.NoRoad++; roadless++; continue; }",
+                        "Takings took = WhatItWouldSell(s, market, party, ride, cargo, gold, null);")
+            and "A_market_ruled_out_before_pricing_is_one_whose_every_price_up_to_the_forecast_ceiling_clears_nothing" in MATHTESTS)
+
+
+chk("2.10.0", "on the road the map marker leaves unpriced, and never walks the road to, a market where not even the most a forecast lets it pay clears your margin on any good you carry",
+    a_market_that_could_clear_no_margin_is_never_priced_on_the_road())
+
+def the_trade_xp_in_the_sold_line_turns_red():
+    n = S['Notices.cs']
+    mark = between(S['Rules.cs'], "internal static class ProfitMark", "internal static class GameNews")
+    show = method_body(n, "internal static void LetTheTradeXpShow")
+    return (show and mark
+            and 'internal const string XpStyle = "TradeLord.TradeXp";' in mark
+            and ordered(show, "if (brush == null || brush.GetStyle(ProfitMark.XpStyle) != null) return;",
+                        "DefaultStyle = brush.DefaultStyle", "style.FontColor = Alert;", "brush.AddStyle(style);",
+                        "if (_xpStyled) return;", "_xpStyled = true;", "Log.Write(")
+            and 'Guard.Run("ChatLine.TradeXp", __0, Notices.LetTheTradeXpShow);' in n
+            and "internal static string TradeXp(string said) => ProfitMark.XpShown(said, _xpStyled);" in n
+            and 'sold.SetTextVariable("XP", line.Sim || told ? "" : Notices.TradeXp(XpSaid(gained)));' in
+                method_body(S['Trading.cs'], "private static void SayWhatMoved")
+            and "The_trade_xp_turns_red_once_the_chat_line_can_show_it_and_keeps_the_space_before_it" in ONELINETESTS)
+
+
+chk("2.10.0", "the Trade XP in the Sold line shows in red once the chat line has the TradeLord style, and the rest of the line keeps its colour",
+    the_trade_xp_in_the_sold_line_turns_red())
+
+
+def net_worth_shows_on_the_map_and_in_the_ledger_and_is_written_after_trading():
+    panel = S['Panel.cs']
+    worth = method_body(S['Trading.cs'], "internal static long Worth(MobileParty party)")
+    shown = method_body(panel, "internal void ShowTheNetWorth()")
+    tick = method_body(panel, "private static void TickCore()")
+    end = method_body(S['Trading.cs'], "private static void EndTheRound()")
+    return (worth and shown and tick and end
+            and "if (el.EquipmentElement.Item == null || el.EquipmentElement.IsQuestItem) continue;" in worth
+            and "worth += Holdings.WorthOfAStack(el.EquipmentElement.ItemValue, el.Amount);" in worth
+            and ordered(shown, "if (now == _worthShownFor) return;", '"{=TL517}Net worth: {AMOUNT}"',
+                        "Holdings.NetWorth(hero.Gold, Carry.Worth(party))")
+            and ordered(tick, "if (_layer == null || _vm == null || map == null) return;",
+                        'Guard.Run("Panel.NetWorth", _vm.ShowTheNetWorth);')
+            and PREFAB.count('Text="@NetWorthText"') == 2
+            and ordered(between(PREFAB, 'Id="TradeLordNetWorth"', 'IsVisible="@IsVisible"'),
+                        'HorizontalAlignment="Right" VerticalAlignment="Bottom"',
+                        'DoNotAcceptEvents="true"', 'Text="@NetWorthText"')
+            and ordered(between(PREFAB, 'Text="@TitleLabel"', 'Command.Click="ExecuteOpenLegend"'),
+                        'Brush.FontColor="#FFD700FF"', 'Text="@NetWorthText"')
+            and ordered(end, "if (WhatYouHoldNow() == _roundOpenedWith) return;", "SayTheNetWorth(")
+            and "_roundOpenedWith = WhatYouHoldNow();" in method_body(S['Trading.cs'], "private static void BeginTheRound()")
+            and 'SayTheNetWorth("after the deal TradeLord laid out closed")' in
+                method_body(S['Trading.cs'], "internal static void WatchTheTradeScreen()")
+            and all('{AMOUNT}' in spoken(p)['TL517'] for p in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "Net_worth_is_your_gold_and_every_stack_you_carry_at_its_value" in ONELINETESTS)
+
+
+chk("2.10.0", "Net worth, your gold and what you carry at the game's own value of each good, shows above the gold on the map and in the TradeLord ledger, and TradeLord.log writes it after trading",
+    net_worth_shows_on_the_map_and_in_the_ledger_and_is_written_after_trading())
+
+
+def the_games_own_news_is_grouped_only_while_extended_debug_logging_is_on():
+    n = S['Notices.cs']
+    hold = method_body(n, "internal static bool Hold(InformationMessage message)")
+    release = method_body(n, "internal static void Release()")
+    patch = method_body(n, "internal static class Patch_GroupTheGamesNews")
+    return (hold and release and patch
+            and "if (_releasing || Notices.Speaking || message == null || !Options.Current.ExtendedDebugLogging) return false;" in hold
+            and ordered(patch, "if (!__runOriginal || TradeActionBehavior.InGameTransaction) return __runOriginal;",
+                        'return !Guard.Read("News.Hold", __0, News.Hold, false);')
+            and "bool all = !Options.Current.ExtendedDebugLogging || Campaign.Current == null;" in release
+            and "Show(_pending[i]);" in method_body(n, "internal static void Drain()")
+            and "InformationManager.DisplayMessage" not in S['Panel.cs']
+            and S['Trading.cs'].count("InformationManager.DisplayMessage") == 0
+            and 'Guard.Run("Tick.News", News.Release);' in S['SubModule.cs']
+            and 'Guard.Run("GameEnd.News", News.Forget);' in S['SubModule.cs']
+            and "Patcher.TryPatch(harmony, typeof(Patch_GroupTheGamesNews));" in S['SubModule.cs']
+            and all('{COUNT}' in spoken(p)['TL518'] for p in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "Game_messages_of_one_kind_share_a_shape_once_names_links_and_numbers_are_taken_out" in ONELINETESTS
+            and "A_grouped_game_message_says_how_many_more_before_its_full_stop" in ONELINETESTS)
+
+
+chk("2.10.0", "with Extended debug logging on, a burst of the game's own messages of one kind shows as one line with how many more, and TradeLord's own lines are never grouped",
+    the_games_own_news_is_grouped_only_while_extended_debug_logging_is_on())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

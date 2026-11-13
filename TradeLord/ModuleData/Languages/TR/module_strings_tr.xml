@@ -342,5 +342,7 @@
 		<string id="TL514" text="Yollar ölçüldükçe defter dolar, her karede biraz, böylece harita hiç durmaz"/>
 		<string id="TL515" text="buradan alınacak en iyi malın günlük kazancının onda birini bile getirmez"/>
 		<string id="TL516" text=" | Gün? = tarandığı gibi, bulunduğunuz yerden yol hâlâ ölçülürken"/>
+		<string id="TL517" text="Net değer: {AMOUNT}"/>
+		<string id="TL518" text=" (+{COUNT} tane daha)"/>
 	</strings>
 </base>

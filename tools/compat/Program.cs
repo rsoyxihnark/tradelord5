@@ -24,6 +24,7 @@ namespace TradeLord.Compat
             (Inventory + "ItemMenuVM", "SetMerchandiseComponentTooltip", null),
             (Inventory + "SPItemVM", "UpdateProfitType", null),
             ("TaleWorlds.Library.InformationManager", "DisplayMessage", null),
+            ("TaleWorlds.Library.InformationManager", "DisplayMessage", null),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
                 "GetMaxWorkshopCountForClanTier", null),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",

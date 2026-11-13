@@ -342,5 +342,7 @@
 		<string id="TL514" text="账簿会随着道路被测量而陆续填满，每帧测一点，所以地图不会卡住"/>
 		<string id="TL515" text="它每天的收益不到此处最值得买的货物的十分之一"/>
 		<string id="TL516" text=" | 天数? = 按扫描时的数值，你所在之处出发的道路仍在测量"/>
+		<string id="TL517" text="净资产：{AMOUNT}"/>
+		<string id="TL518" text="（另有 {COUNT} 条）"/>
 	</strings>
 </base>

@@ -342,5 +342,7 @@
 		<string id="TL514" text="The ledger fills in as the roads are measured, a little each frame, so the map never stops"/>
 		<string id="TL515" text="it would earn under a tenth a day of the best good to buy here"/>
 		<string id="TL516" text=" | Days? = as scanned, while the road from where you stand is still being measured"/>
+		<string id="TL517" text="Net worth: {AMOUNT}"/>
+		<string id="TL518" text=" (+{COUNT} more)"/>
 	</strings>
 </base>

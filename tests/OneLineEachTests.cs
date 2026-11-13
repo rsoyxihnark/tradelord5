@@ -185,5 +185,62 @@ namespace TradeLord.Tests
             Assert.Equal("<span style=\"TradeLord.Profit\">2062</span>" + coin, ProfitMark.Shown(2062, true));
             Assert.Equal("<span style=\"TradeLord.Profit\">0</span>" + coin, ProfitMark.Shown(0, true));
         }
+
+        [Fact]
+        public void Game_messages_of_one_kind_share_a_shape_once_names_links_and_numbers_are_taken_out()
+        {
+            var names = new List<string> { "Sorgard the Tanner", "Melya the She-Wolf", "Dogface Yalyr", "Ortysia", "Jalmarys",
+                                            "Varys", "Ealdred", "Sorgard" };
+            names.Sort((x, y) => y.Length.CompareTo(x.Length));
+            string learned = GameNews.Shape("You've learned about Sorgard the Tanner.", names);
+            Assert.Equal(learned, GameNews.Shape("You've learned about Dogface Yalyr.", names));
+            Assert.Equal(learned, GameNews.Shape("You've learned about Melya the She-Wolf.", names));
+            string defended = GameNews.Shape("Lord Varys has defended Ortysia", names);
+            Assert.Equal(defended, GameNews.Shape("Lord Ealdred has defended Jalmarys", names));
+            Assert.NotEqual(defended, GameNews.Shape("Lord Varys has captured Ortysia", names));
+            Assert.NotEqual(learned, defended);
+            Assert.Equal(GameNews.Shape("<a style=\"Link.Hero\" href=\"event:Hero:a\"><b>Varys</b></a> has defended Ortysia", names),
+                         GameNews.Shape("<a style=\"Link.Hero\" href=\"event:Hero:b\"><b>Somebody</b></a> has defended Jalmarys", names));
+            Assert.Equal(GameNews.Shape("You received 112 gold.", names), GameNews.Shape("You received 1,096 gold.", names));
+            Assert.Equal("Varysville stands", GameNews.Shape("Varysville stands", names));
+            Assert.Equal("", GameNews.Shape(null, names));
+        }
+
+        [Fact]
+        public void A_grouped_game_message_says_how_many_more_before_its_full_stop()
+        {
+            Assert.Equal("You've learned about Sorgard the Tanner (+5 more).",
+                         GameNews.WithMore("You've learned about Sorgard the Tanner.", " (+5 more)"));
+            Assert.Equal("Lord Varys has defended Ortysia (+19 more)",
+                         GameNews.WithMore("Lord Varys has defended Ortysia", " (+19 more)"));
+            Assert.Equal("你了解了索尔加德（另有 5 条）。", GameNews.WithMore("你了解了索尔加德。", "（另有 5 条）"));
+            Assert.Equal("Peace!", GameNews.WithMore("Peace!", ""));
+            Assert.Equal("(+2 more)", GameNews.WithMore("", " (+2 more)"));
+        }
+
+        [Fact]
+        public void Net_worth_is_your_gold_and_every_stack_you_carry_at_its_value()
+        {
+            Assert.Equal(690L, Holdings.WorthOfAStack(230, 3));
+            Assert.Equal(0L, Holdings.WorthOfAStack(0, 3));
+            Assert.Equal(0L, Holdings.WorthOfAStack(230, 0));
+            Assert.Equal(4294967294L, Holdings.WorthOfAStack(int.MaxValue, 2));
+            Assert.Equal(8605L, Holdings.NetWorth(7915, 690));
+            Assert.Equal(7915L, Holdings.NetWorth(7915, -5));
+            Assert.Equal(-20L, Holdings.NetWorth(-20, 0));
+        }
+
+        [Fact]
+        public void The_trade_xp_turns_red_once_the_chat_line_can_show_it_and_keeps_the_space_before_it()
+        {
+            Assert.Equal(" (+70 Trade XP)", ProfitMark.XpShown(" (+70 Trade XP)", false));
+            Assert.Equal(" <span style=\"TradeLord.TradeXp\">(+70 Trade XP)</span>",
+                         ProfitMark.XpShown(" (+70 Trade XP)", true));
+            Assert.Equal("<span style=\"TradeLord.TradeXp\">（+70 点交易经验）</span>",
+                         ProfitMark.XpShown("（+70 点交易经验）", true));
+            Assert.Equal("", ProfitMark.XpShown("", true));
+            Assert.Equal("", ProfitMark.XpShown(null, true));
+            Assert.Equal("  ", ProfitMark.XpShown("  ", true));
+        }
     }
 }

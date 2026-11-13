@@ -194,9 +194,9 @@ namespace TradeLord
         private void Take()
         {
             if (Shops.Buy(_shop, out TextObject said) && said != null)
-                InformationManager.DisplayMessage(new InformationMessage(said.ToString(), Told));
+                Notices.Show(new InformationMessage(said.ToString(), Told));
             else if (said != null)
-                InformationManager.DisplayMessage(new InformationMessage(said.ToString(), Refused));
+                Notices.Show(new InformationMessage(said.ToString(), Refused));
             _bought?.Invoke();
         }
 
@@ -220,6 +220,7 @@ namespace TradeLord
         private string _lifetimeText = "";
         private string _tradeXpText = "";
         private string _statusText = "";
+        private string _netWorthText = "";
         private string _legendText = "";
         private string _workshopsHeader = "";
         private MBBindingList<RouteRowVM> _routes = new MBBindingList<RouteRowVM>();
@@ -331,6 +332,27 @@ namespace TradeLord
         {
             get => _statusText;
             set { if (value != _statusText) { _statusText = value; OnPropertyChangedWithValue(value, "StatusText"); } }
+        }
+
+        [DataSourceProperty]
+        public string NetWorthText
+        {
+            get => _netWorthText;
+            set { if (value != _netWorthText) { _netWorthText = value; OnPropertyChangedWithValue(value, "NetWorthText"); } }
+        }
+
+        private (int gold, int cargo, int language) _worthShownFor = (-1, -1, -1);
+
+        internal void ShowTheNetWorth()
+        {
+            Hero hero = Hero.MainHero;
+            MobileParty party = MobileParty.MainParty;
+            if (hero == null || party == null) return;
+            var now = (hero.Gold, party.ItemRoster.VersionNo, Options.Current.Language);
+            if (now == _worthShownFor) return;
+            _worthShownFor = now;
+            NetWorthText = Line("{=TL517}Net worth: {AMOUNT}", "AMOUNT",
+                                Holdings.NetWorth(hero.Gold, Carry.Worth(party)).ToString("N0"));
         }
 
         [DataSourceProperty]
@@ -854,6 +876,8 @@ namespace TradeLord
                 Cleanup();
 
             if (_layer == null || _vm == null || map == null) return;
+
+            Guard.Run("Panel.NetWorth", _vm.ShowTheNetWorth);
 
             if (_spokenFor != Options.Current.Language)
             {

@@ -3544,6 +3544,56 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_market_whose_highest_reachable_price_misses_the_margin_on_every_good_could_clear_nothing()
+        {
+            var paid = new TradeMath.DearFirst(Costs(100, 100), 115, 100);
+            Assert.False(Marks.SomeUnitCouldClear(76, 0, 0, 2, paid, 0.15f));
+            Assert.True(Marks.SomeUnitCouldClear(77, 0, 0, 2, paid, 0.15f));
+            Assert.False(Marks.SomeUnitCouldClear(0, 0, 0, 2, paid, 0.15f));
+            Assert.False(Marks.SomeUnitCouldClear(1000, 0, 0, 0, paid, 0.15f));
+            Assert.True(Marks.SomeUnitCouldClear(40, 1, 50, 2, paid, 0.15f));
+            Assert.False(Marks.SomeUnitCouldClear(40, 0, 50, 2, paid, 0.15f));
+            var aged = TradeMath.DearFirst.EachAtItsOwnCost(
+                new[] { new Batch { Unit = 100, Count = 1, Day = 1f } }, 100, 0, 0.15f, 20f, 10);
+            Assert.True(Marks.SomeUnitCouldClear(67, 0, 0, 1, aged, 0.15f));
+            Assert.False(Marks.SomeUnitCouldClear(66, 0, 0, 1, aged, 0.15f));
+        }
+
+        [Fact]
+        public void A_market_ruled_out_before_pricing_is_one_whose_every_price_up_to_the_forecast_ceiling_clears_nothing()
+        {
+            var rng = new Random(199);
+            float[] margins = { 0f, 0.05f, 0.15f, 0.4f };
+            for (int trial = 0; trial < 4000; trial++)
+            {
+                int many = rng.Next(0, 5);
+                var units = new int[many];
+                for (int i = 0; i < many; i++) units[i] = rng.Next(1, 400);
+                Array.Sort(units);
+                Batch[] costs = Costs(units);
+                for (int i = 0; costs != null && i < costs.Length; i++) costs[i].Day = rng.Next(0, 30);
+                float margin = margins[rng.Next(margins.Length)];
+                int worth = rng.Next(1, 400);
+                int unknown = rng.Next(0, 3);
+                bool ownCost = rng.Next(2) == 0;
+                TradeMath.DearFirst floors = ownCost
+                    ? TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, margin, 30f, rng.Next(0, 2) * 10)
+                    : new TradeMath.DearFirst(costs, TradeMath.WhatTheAverageCovers(worth, margin), worth, unknown);
+                int unbought = rng.Next(0, 3);
+                int paidFor = many;
+                int loose = rng.Next(0, 400);
+                int quoted = rng.Next(-5, 500);
+                bool could = Marks.SomeUnitCouldClear(quoted, unbought, loose, paidFor, floors, margin);
+                int top = quoted <= 0 ? 0 : TradeMath.MostAForecastCanReach(quoted);
+                bool any = false;
+                for (int price = 1; price <= top && !any; price++)
+                    any = unbought > 0 && TradeMath.ProfitAcceptable(loose, price, margin) ||
+                          paidFor > 0 && floors.WithoutTheUnknown().Clears(price, margin);
+                Assert.Equal(any, could);
+            }
+        }
+
+        [Fact]
         public void Villagers_take_three_fifths_of_each_good_and_set_out_about_seven_hours_after_the_warehouse_fills()
         {
             Assert.Equal(1f - 0.8f * 0.8f * 0.8f * 0.8f, TradeMath.ShareVillagersLoad(), 4);

@@ -53,6 +53,20 @@ namespace TradeLord
             return capacity ? party.InventoryCapacity : party.TotalWeightCarried;
         }
 
+        internal static long Worth(MobileParty party)
+        {
+            ItemRoster roster = party?.ItemRoster;
+            if (roster == null) return 0L;
+            long worth = 0L;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                ItemRosterElement el = roster.GetElementCopyAtIndex(i);
+                if (el.EquipmentElement.Item == null || el.EquipmentElement.IsQuestItem) continue;
+                worth += Holdings.WorthOfAStack(el.EquipmentElement.ItemValue, el.Amount);
+            }
+            return worth;
+        }
+
         internal static float Capacity(MobileParty party) => Read(party, capacity: true);
 
         internal static float Carried(MobileParty party) => Read(party, capacity: false);
@@ -1437,6 +1451,7 @@ namespace TradeLord
             TextObject closed = Counter.Watch();
             if (closed == null) return;
             Notices.Say(closed, Notices.Note);
+            Guard.Run("Action.NetWorthAfterTheDeal", () => SayTheNetWorth("after the deal TradeLord laid out closed"));
             Marker.ForgetWhatYouCarry();
             Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);
         }
@@ -1794,8 +1809,32 @@ namespace TradeLord
             catch { }
         }
 
+        private static (int gold, int cargo) _roundOpenedWith = (-1, -1);
+
+        private static long _netWorthSaid = -1L;
+
+        private static void SayTheNetWorth(string after)
+        {
+            Hero hero = Hero.MainHero;
+            MobileParty party = MobileParty.MainParty;
+            if (hero == null || party == null) return;
+            long cargo = Carry.Worth(party);
+            long worth = Holdings.NetWorth(hero.Gold, cargo);
+            long was = _netWorthSaid;
+            _netWorthSaid = worth;
+            Log.Write("net worth " + after + ": " + worth + ", your " + hero.Gold + " gold and " + cargo +
+                      " for what you carry, each good at the game's own value for it" +
+                      (was < 0L ? ""
+                       : worth >= was ? ", up " + (worth - was) + " since TradeLord last wrote it"
+                       : ", down " + (was - worth) + " since TradeLord last wrote it"));
+        }
+
+        private static (int gold, int cargo) WhatYouHoldNow() =>
+            (Hero.MainHero?.Gold ?? -1, MobileParty.MainParty?.ItemRoster.VersionNo ?? -1);
+
         private static void BeginTheRound()
         {
+            _roundOpenedWith = WhatYouHoldNow();
             CloseWhatMoved();
             Guard.Run("Ledger.CameWithoutAPurchase", () => LedgerBehavior.Instance?.NoteWhatCameWithoutAPurchase());
             _soldThisRound = default;
@@ -1811,6 +1850,10 @@ namespace TradeLord
                 Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold, sold.profit));
             CloseWhatMoved();
             ReportStalledPasses();
+            if (WhatYouHoldNow() == _roundOpenedWith) return;
+            Settlement here = MobileParty.MainParty?.CurrentSettlement;
+            Guard.Run("Action.NetWorth", () =>
+                SayTheNetWorth(here != null ? "after trading at " + here.Name : "after trading on the road"));
         }
 
         private static string XpSaid(XpGained gained)
@@ -1843,7 +1886,7 @@ namespace TradeLord
                         "{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} profit{XP}.",
                         line.Detail, line.Units, line.Gold);
                     sold.SetTextVariable("PROFIT", Notices.Profit(line.Profit));
-                    sold.SetTextVariable("XP", line.Sim || told ? "" : XpSaid(gained));
+                    sold.SetTextVariable("XP", line.Sim || told ? "" : Notices.TradeXp(XpSaid(gained)));
                     if (!line.Sim) told = true;
                     Notices.Say(sold, line.Profit > 0 ? Notices.Gain : Notices.Flat);
                 }

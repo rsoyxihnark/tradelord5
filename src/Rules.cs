@@ -157,6 +157,15 @@ namespace TradeLord
             return TradeMath.PerDay(most, ride) * mostConf <= toBeat;
         }
 
+        internal static bool SomeUnitCouldClear(int quoted, int unbought, int unboughtWorth, int paidFor,
+                                                TradeMath.DearFirst floors, float margin)
+        {
+            if (quoted <= 0) return false;
+            int top = TradeMath.MostAForecastCanReach(quoted);
+            if (unbought > 0 && TradeMath.ProfitAcceptable(unboughtWorth, top, margin)) return true;
+            return paidFor > 0 && floors.WithoutTheUnknown().Clears(top, margin);
+        }
+
         internal const int ABeatenMarkIsRememberedFor = 24;
         internal const float AComebackMustBeatTheMarkBy = 1.25f;
 
@@ -614,6 +623,77 @@ namespace TradeLord
 
         internal static string Shown(int profit, bool styled) =>
             (styled ? "<span style=\"" + Style + "\">" + profit + "</span>" : profit.ToString()) + Coin;
+
+        internal const string XpStyle = "TradeLord.TradeXp";
+
+        internal static string XpShown(string said, bool styled)
+        {
+            if (!styled || string.IsNullOrEmpty(said)) return said ?? "";
+            string words = said.TrimStart();
+            if (words.Length == 0) return said;
+            return said.Substring(0, said.Length - words.Length) + "<span style=\"" + XpStyle + "\">" + words + "</span>";
+        }
+    }
+
+    internal static class GameNews
+    {
+        internal const char Named = '\u0001';
+        internal const char Counted = '\u0002';
+        internal const int ShortestName = 3;
+
+        private static readonly System.Text.RegularExpressions.Regex Link =
+            new System.Text.RegularExpressions.Regex("<a\\b[^>]*>.*?</a>",
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        private static readonly System.Text.RegularExpressions.Regex Tag =
+            new System.Text.RegularExpressions.Regex("<[^>]+>");
+
+        private static readonly System.Text.RegularExpressions.Regex Number =
+            new System.Text.RegularExpressions.Regex("\\d+(?:[.,]\\d+)*");
+
+        private static readonly System.Text.RegularExpressions.Regex Spaces =
+            new System.Text.RegularExpressions.Regex("\\s+");
+
+        internal static string Shape(string said, IList<string> namesLongestFirst)
+        {
+            if (string.IsNullOrEmpty(said)) return "";
+            string shape = Link.Replace(said, Named.ToString());
+            shape = Tag.Replace(shape, "");
+            for (int i = 0; namesLongestFirst != null && i < namesLongestFirst.Count; i++)
+                shape = Unnamed(shape, namesLongestFirst[i]);
+            shape = Number.Replace(shape, Counted.ToString());
+            return Spaces.Replace(shape, " ").Trim();
+        }
+
+        private static string Unnamed(string text, string name)
+        {
+            if (string.IsNullOrEmpty(name) || name.Length < ShortestName) return text;
+            int at = text.IndexOf(name, StringComparison.Ordinal);
+            if (at < 0) return text;
+            var kept = new System.Text.StringBuilder(text.Length);
+            int from = 0;
+            while (at >= 0)
+            {
+                int end = at + name.Length;
+                bool whole = (at == 0 || !char.IsLetterOrDigit(text[at - 1])) &&
+                             (end == text.Length || !char.IsLetterOrDigit(text[end]));
+                kept.Append(text, from, at - from).Append(whole ? Named.ToString() : name);
+                from = end;
+                at = text.IndexOf(name, from, StringComparison.Ordinal);
+            }
+            return kept.Append(text, from, text.Length - from).ToString();
+        }
+
+        internal static string WithMore(string said, string more)
+        {
+            if (string.IsNullOrEmpty(more)) return said ?? "";
+            if (string.IsNullOrEmpty(said)) return more.Trim();
+            string trimmed = said.TrimEnd();
+            char last = trimmed.Length == 0 ? ' ' : trimmed[trimmed.Length - 1];
+            return last == '.' || last == '!' || last == '\u3002' || last == '\uff01'
+                ? trimmed.Substring(0, trimmed.Length - 1) + more + last
+                : trimmed + more;
+        }
     }
 
     internal static class Tallies
@@ -1209,6 +1289,11 @@ namespace TradeLord
             gameSays > MostWorkshopsYouMayAskFor ? gameSays : MostWorkshopsYouMayAskFor;
 
         public static bool RoomForOneMore(int owned, int mayOwn) => owned < mayOwn;
+
+        public static long WorthOfAStack(int valueEach, int amount) =>
+            valueEach > 0 && amount > 0 ? (long)valueEach * amount : 0L;
+
+        public static long NetWorth(long gold, long cargo) => gold + (cargo > 0L ? cargo : 0L);
 
         public static int StillOwedForTheWorkshop(int cost, int paid) =>
             cost <= 0 || paid > 0 ? 0 : cost;

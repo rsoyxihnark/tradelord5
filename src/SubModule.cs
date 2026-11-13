@@ -31,6 +31,7 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_SuppressVanillaTradeLines));
             Patcher.TryPatch(harmony, typeof(Patch_SPItemVM_UpdateProfitType));
             Patcher.TryPatch(harmony, typeof(Patch_SilenceChunkedTradeLines));
+            Patcher.TryPatch(harmony, typeof(Patch_GroupTheGamesNews));
             Patcher.TryPatch(harmony, typeof(Patch_WorkshopLimit));
             Patcher.TryPatch(harmony, typeof(Patch_WorkshopsYouMayHave));
             Patcher.TryPatch(harmony, typeof(Patch_WorkshopOwnerConversation));
@@ -76,6 +77,7 @@ namespace TradeLord
             base.OnApplicationTick(dt);
             Guard.Run("Tick.ReleaseMessageFilter", TradeActionBehavior.ReleaseMessageFilter);
             Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts);
+            Guard.Run("Tick.News", News.Release);
             Guard.Run("Tick.Mcm", McmLoader.TryHandover);
             Guard.Run("Tick.Settings", Config.Flush);
             Guard.Run("Tick.Encounter", Meetings.Watch);
@@ -106,6 +108,7 @@ namespace TradeLord
             Guard.Run("GameEnd.Counter", Counter.Forget);
             Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit);
             Guard.Run("GameEnd.Encounter", Meetings.ForgetEncounter);
+            Guard.Run("GameEnd.News", News.Forget);
             LedgerBehavior.Instance = null;
             Guard.Run("GameEnd.Settings", Config.Settle);
             Guard.Run("GameEnd.Log", Log.Forget);

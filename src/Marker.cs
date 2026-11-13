@@ -461,6 +461,7 @@ namespace TradeLord
             internal int Unseen;
             internal int PastCeiling;
             internal int LongerRoad;
+            internal int RefusedUnpriced;
             internal int NoRoad;
             internal int Shut;
             internal int AtWar;
@@ -1472,7 +1473,11 @@ namespace TradeLord
             if (how.Carried > 0)
             {
                 said.Add("  ultralog: " + how.Weighed + " market(s) weighed, " + how.Told +
-                         " priced, " + how.Refused + " would pay too little for anything you carry, " + how.TooPoor +
+                         " priced, " + how.Refused + " would pay too little for anything you carry" +
+                         (how.RefusedUnpriced > 0
+                             ? " (" + how.RefusedUnpriced + " of them left unpriced, as not even the most a " +
+                               "forecast lets them pay clears your margin)"
+                             : "") + ", " + how.TooPoor +
                          " have too little gold for one unit of anything that clears your margin, " +
                          how.Left + " left unpriced once no price they could pay would beat " +
                          how.Bar.ToString("0") +
@@ -1626,17 +1631,35 @@ namespace TradeLord
             return found;
         }
 
+        private static (int unbought, int worth)[] StillUnbought(
+            MobileParty party, List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
+        {
+            var still = new (int unbought, int worth)[cargo.Count];
+            for (int at = 0; at < cargo.Count; at++)
+            {
+                int stack = party.ItemRoster.FindIndexOfElement(cargo[at].item);
+                int held = stack >= 0 ? party.ItemRoster.GetElementNumber(stack) : cargo[at].amount;
+                int unbought = System.Math.Max(0, cargo[at].amount - (held - cargo[at].floors.Unknown));
+                still[at] = (unbought, unbought > 0 ? TradePolicy.WorthToBeatUnbought(cargo[at].item) : 0);
+            }
+            return still;
+        }
+
         private static long MostThisCargoCouldFetch(
             Settlement site, SettlementComponent market, MobileParty party,
-            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+            (int unbought, int worth)[] still)
         {
             long most = 0L;
+            float margin = Options.Current.MinProfitMargin;
             for (int at = 0; at < cargo.Count; at++)
             {
                 int quoted = Options.Current.Omniscient
                     ? Priced.At(market, cargo[at].item, party, true)
                     : LedgerBehavior.Instance?.SeenSellPrice(cargo[at].item, site) ?? 0;
-                if (quoted <= 0) continue;
+                if (!Marks.SomeUnitCouldClear(quoted, still[at].unbought, still[at].worth,
+                                              cargo[at].amount - still[at].unbought, cargo[at].floors, margin))
+                    continue;
                 most += (long)TradeMath.MostAForecastCanReach(quoted) * cargo[at].amount;
             }
             return most;
@@ -1935,6 +1958,7 @@ namespace TradeLord
             how.OneBasis = oneBasis;
             var pressure = oneBasis ? LedgerBehavior.CaravanPressure() : null;
             if (ultra) how.Board = new List<Weighing>();
+            var still = StillUnbought(party, cargo);
 
             float bar = 0f;
             int roadless = 0;
@@ -1947,7 +1971,8 @@ namespace TradeLord
                     if (TradeMath.PerDay(gold, ride) <= bar) break;
                     float most = oneBasis ? Confidence.MostItCanBe(ride) : 1f;
                     if (TradeMath.PerDay(gold, ride) * most <= how.RunnerUpJudged) continue;
-                    could = MostThisCargoCouldFetch(s, market, party, cargo);
+                    could = MostThisCargoCouldFetch(s, market, party, cargo, still);
+                    if (could <= 0L) { how.Refused++; how.RefusedUnpriced++; continue; }
                     float fetches = TradeMath.PerDay(could, ride);
                     if (fetches <= bar || fetches * most <= how.RunnerUpJudged) continue;
                 }
@@ -2067,7 +2092,7 @@ namespace TradeLord
             if (holder != null && !how.HolderPriced)
                 how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);
             how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;
-            how.Left = reachable.Count - how.Told - roadless;
+            how.Left = reachable.Count - how.Told - roadless - how.RefusedUnpriced;
             if (ultra && how.Best != null)
             {
                 how.Bill = new List<Share>();
