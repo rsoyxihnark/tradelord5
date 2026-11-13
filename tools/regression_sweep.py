@@ -25722,5 +25722,33 @@ def the_games_own_news_is_grouped_only_while_extended_debug_logging_is_on():
 chk("2.10.0", "with Extended debug logging on, a burst of the game's own messages of one kind shows as one line with how many more, and TradeLord's own lines are never grouped",
     the_games_own_news_is_grouped_only_while_extended_debug_logging_is_on())
 
+def the_games_news_comes_first_and_waits_only_while_the_clock_runs():
+    n = S['Notices.cs']
+    drain = method_body(n, "internal static void Drain()")
+    release = method_body(n, "internal static void Release()")
+    names = method_body(n, "private static List<string> Names(float now)")
+    shape = method_body(S['Rules.cs'], "internal static string Shape(string said, IList<string> namesLongestFirst)")
+    end = method_body(S['Trading.cs'], "private static void EndTheRound()")
+    left = method_body(S['Trading.cs'], "private void OnSettlementLeft(MobileParty party, Settlement settlement)")
+    return (drain and release and names and shape and end and left
+            and ordered(drain, "if (_pending.Count == 0) return;", 'Guard.Run("News.BeforeTradeLord", News.ReleaseAll);',
+                        "Show(_pending[i]);")
+            and "double clock = all ? 0d : CampaignTime.Now.ToHours;" in release
+            and "GameNews.StillHeld(one.Since, one.Last, now, clock != one.Clock)" in release
+            and "clockMoved && now >= since" in S['Rules.cs']
+            and "foreach (MobileParty party in MobileParty.All) Named(seen, party.Name);" in names
+            and ordered(shape, "shape = Unnamed(shape, namesLongestFirst[i]);", "shape = Owned.Replace(shape, Named.ToString());",
+                        "shape = Number.Replace(shape, Counted.ToString());")
+            and ordered(end, "ReportStalledPasses();", "LedgerPanel.NetWorthNow();", "if (WhatYouHoldNow() == _roundOpenedWith) return;")
+            and ordered(left, "ExecuteHerdRelief(settlement, quiet: true);", "LedgerPanel.NetWorthNow();", "Marker.Update")
+            and "LedgerPanel.NetWorthNow();" in method_body(S['Trading.cs'], "internal static void WatchTheTradeScreen()")
+            and all(one in ONELINETESTS for one in (
+                "A_party_named_with_s_or_a_bare_apostrophe_gives_one_shape",
+                "Game_messages_are_held_only_while_the_clock_runs_and_more_of_their_kind_keep_coming")))
+
+
+chk("2.10.1", "with Enable extended debug logging on, the game's held messages show before TradeLord's own lines, wait only while the game clock runs, and one party named with 's or a bare apostrophe groups with another",
+    the_games_news_comes_first_and_waits_only_while_the_clock_runs())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

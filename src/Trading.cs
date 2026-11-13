@@ -478,6 +478,7 @@ namespace TradeLord
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 CloseWhatMoved();
             });
+            LedgerPanel.NetWorthNow();
             Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
             if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);
             if (HasAMarket(settlement) && Options.Current.MarkBestSellTownOnMap &&
@@ -1452,6 +1453,7 @@ namespace TradeLord
             if (closed == null) return;
             Notices.Say(closed, Notices.Note);
             Guard.Run("Action.NetWorthAfterTheDeal", () => SayTheNetWorth("after the deal TradeLord laid out closed"));
+            LedgerPanel.NetWorthNow();
             Marker.ForgetWhatYouCarry();
             Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);
         }
@@ -1850,6 +1852,7 @@ namespace TradeLord
                 Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold, sold.profit));
             CloseWhatMoved();
             ReportStalledPasses();
+            LedgerPanel.NetWorthNow();
             if (WhatYouHoldNow() == _roundOpenedWith) return;
             Settlement here = MobileParty.MainParty?.CurrentSettlement;
             Guard.Run("Action.NetWorth", () =>

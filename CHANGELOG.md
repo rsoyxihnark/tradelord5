@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.10.1
+
+- Fixed the game's news from the road showing below the Sold and Bought lines in a town, with Enable extended debug logging on
+- Fixed the game's messages showing a moment late while the game is paused, with Enable extended debug logging on
+- Fixed the game's repeated messages, such as a castle being defended, still showing one per line with Enable extended debug logging on
+- Fixed Net worth on the campaign map changing a moment after your gold when TradeLord trades as you enter or leave a town
+
 ## 2.10.0
 
 - Net worth, your gold and what you carry at the game's own value of each good, now shows just above your gold on the campaign map

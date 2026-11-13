@@ -842,6 +842,12 @@ namespace TradeLord
 
         private static readonly HashSet<Settlement> _panelPins = new HashSet<Settlement>();
 
+        internal static void NetWorthNow()
+        {
+            if (_dead || _vm == null) return;
+            Guard.Run("Panel.NetWorthNow", _vm.ShowTheNetWorth);
+        }
+
         internal static void Tick()
         {
             if (_dead) return;

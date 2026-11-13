@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.GauntletUI;
 using TaleWorlds.GauntletUI.BaseTypes;
@@ -79,6 +80,7 @@ namespace TradeLord
         internal static void Drain()
         {
             if (_pending.Count == 0) return;
+            Guard.Run("News.BeforeTradeLord", News.ReleaseAll);
             try
             {
                 for (int i = 0; i < _pending.Count; i++)
@@ -97,9 +99,10 @@ namespace TradeLord
             internal string Shape;
             internal int More;
             internal float Since;
+            internal float Last;
+            internal double Clock;
         }
 
-        internal const float HeldFor = 1f;
         private const float NamesKeptFor = 60f;
 
         private static readonly List<Held> _held = new List<Held>();
@@ -119,9 +122,11 @@ namespace TradeLord
             {
                 if (_held[i].Shape != shape) continue;
                 _held[i].More++;
+                _held[i].Last = now;
+                _held[i].Clock = CampaignTime.Now.ToHours;
                 return true;
             }
-            _held.Add(new Held { First = message, Shape = shape, Since = now });
+            _held.Add(new Held { First = message, Shape = shape, Since = now, Last = now, Clock = CampaignTime.Now.ToHours });
             return true;
         }
 
@@ -130,11 +135,22 @@ namespace TradeLord
             if (_held.Count == 0) return;
             float now = TaleWorlds.Engine.Time.ApplicationTime;
             bool all = !Options.Current.ExtendedDebugLogging || Campaign.Current == null;
+            double clock = all ? 0d : CampaignTime.Now.ToHours;
             for (int i = 0; i < _held.Count; i++)
             {
                 Held one = _held[i];
-                if (!all && now - one.Since < HeldFor && now >= one.Since) continue;
+                if (!all && GameNews.StillHeld(one.Since, one.Last, now, clock != one.Clock)) continue;
                 _held.RemoveAt(i--);
+                Shown(one);
+            }
+        }
+
+        internal static void ReleaseAll()
+        {
+            while (_held.Count > 0)
+            {
+                Held one = _held[0];
+                _held.RemoveAt(0);
                 Shown(one);
             }
         }
@@ -166,6 +182,7 @@ namespace TradeLord
             foreach (Hero hero in Hero.DeadOrDisabledHeroes) Named(seen, hero);
             foreach (Settlement place in Settlement.All) Named(seen, place.Name);
             foreach (Clan clan in Clan.All) Named(seen, clan.Name);
+            foreach (MobileParty party in MobileParty.All) Named(seen, party.Name);
             foreach (Kingdom kingdom in Kingdom.All)
             {
                 Named(seen, kingdom.Name);

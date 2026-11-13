@@ -207,6 +207,33 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_party_named_with_s_or_a_bare_apostrophe_gives_one_shape()
+        {
+            var names = new List<string> { "Shibal Zumr Castle", "Yamina", "Talas" };
+            names.Sort((x, y) => y.Length.CompareTo(x.Length));
+            string yamina = GameNews.Shape("Shibal Zumr Castle is being defended by Yamina's Party.", names);
+            Assert.Equal(yamina, GameNews.Shape("Shibal Zumr Castle is being defended by Talas' Party.", names));
+            Assert.Equal(yamina, GameNews.Shape("Shibal Zumr Castle is being defended by Talas\u2019 Party.", names));
+            Assert.Equal(yamina, GameNews.Shape("Shibal Zumr Castle is being defended by Yamina\u2019s Party.", names));
+            var parties = new List<string> { "Shibal Zumr Castle", "Yamina's Party", "Talas' Party", "Yamina", "Talas" };
+            parties.Sort((x, y) => y.Length.CompareTo(x.Length));
+            Assert.Equal(GameNews.Shape("Shibal Zumr Castle is being defended by Yamina's Party.", parties),
+                         GameNews.Shape("Shibal Zumr Castle is being defended by Talas' Party.", parties));
+            Assert.NotEqual(GameNews.Shape("Talas's sword broke.", names), GameNews.Shape("Talas' sword broke.", new List<string>()));
+        }
+
+        [Fact]
+        public void Game_messages_are_held_only_while_the_clock_runs_and_more_of_their_kind_keep_coming()
+        {
+            Assert.True(GameNews.StillHeld(10f, 10f, 10.5f, true));
+            Assert.False(GameNews.StillHeld(10f, 10f, 10f + GameNews.QuietFor, true));
+            Assert.True(GameNews.StillHeld(10f, 11.2f, 12.5f, true));
+            Assert.False(GameNews.StillHeld(10f, 13.9f, 10f + GameNews.HeldAtMost, true));
+            Assert.False(GameNews.StillHeld(10f, 10f, 9f, true));
+            Assert.False(GameNews.StillHeld(10f, 10f, 10.01f, false));
+        }
+
+        [Fact]
         public void A_grouped_game_message_says_how_many_more_before_its_full_stop()
         {
             Assert.Equal("You've learned about Sorgard the Tanner (+5 more).",

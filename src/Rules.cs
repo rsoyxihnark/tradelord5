@@ -641,6 +641,13 @@ namespace TradeLord
         internal const char Counted = '\u0002';
         internal const int ShortestName = 3;
 
+        internal const float QuietFor = 1.5f;
+
+        internal const float HeldAtMost = 4f;
+
+        internal static bool StillHeld(float since, float last, float now, bool clockMoved) =>
+            clockMoved && now >= since && now >= last && now - last < QuietFor && now - since < HeldAtMost;
+
         private static readonly System.Text.RegularExpressions.Regex Link =
             new System.Text.RegularExpressions.Regex("<a\\b[^>]*>.*?</a>",
                 System.Text.RegularExpressions.RegexOptions.Singleline);
@@ -650,6 +657,9 @@ namespace TradeLord
 
         private static readonly System.Text.RegularExpressions.Regex Number =
             new System.Text.RegularExpressions.Regex("\\d+(?:[.,]\\d+)*");
+
+        private static readonly System.Text.RegularExpressions.Regex Owned =
+            new System.Text.RegularExpressions.Regex("\u0001(?:['\u2019]s|['\u2019])(?![\\p{L}\\p{N}])");
 
         private static readonly System.Text.RegularExpressions.Regex Spaces =
             new System.Text.RegularExpressions.Regex("\\s+");
@@ -661,6 +671,7 @@ namespace TradeLord
             shape = Tag.Replace(shape, "");
             for (int i = 0; namesLongestFirst != null && i < namesLongestFirst.Count; i++)
                 shape = Unnamed(shape, namesLongestFirst[i]);
+            shape = Owned.Replace(shape, Named.ToString());
             shape = Number.Replace(shape, Counted.ToString());
             return Spaces.Replace(shape, " ").Trim();
         }
