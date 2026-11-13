@@ -597,10 +597,10 @@ namespace TradeLord.TestAutopilot
             try
             {
                 if (Campaign.Current == null) return "no campaign".PadRight(12);
-                double hours = CampaignTime.Now.ToHours;
-                int minute = (int)Math.Floor((hours - Math.Floor(hours)) * 60d);
-                return ("day " + Pilot.DayNow() + " " + CampaignTime.Now.CurrentHourInDay.ToString("00") + ":" +
-                        minute.ToString("00")).PadRight(12);
+                float hour = CampaignTime.Now.CurrentHourInDay;
+                int minutes = hour <= 0f ? 0 : (int)Math.Min(hour * 60f, 24f * 60f - 1f);
+                return ("day " + Pilot.DayNow() + " " + (minutes / 60).ToString("00") + ":" +
+                        (minutes % 60).ToString("00")).PadRight(12);
             }
             catch { return "no clock".PadRight(12); }
         }

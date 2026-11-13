@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.3
+
+- Fixed TradeLordTestAutopilot.log showing the hour one too high for the second half of every hour
+
 ## 2.12.2
 
 - Fixed Test Autopilot choosing the first of two event options that change just as little, instead of the last

@@ -25847,5 +25847,19 @@ def the_test_autopilot_finds_poros_in_any_language_and_puts_nothing_happens_firs
 chk("2.12.1", "the Test Autopilot finds Poros by the name the game data gives it, whatever language the game shows, and of event options it weighs an option that says Nothing happens as changing less than one that says nothing at all",
     the_test_autopilot_finds_poros_in_any_language_and_puts_nothing_happens_first())
 
+def the_test_autopilot_log_tells_the_time_as_tradelord_log_does():
+    clock = method_body(PILOT['Autopilot.cs'], "private static string Clock()")
+    ours = method_body(S['TradeMath.cs'], "public static string GameClock(int day, float hourInDay, bool night)")
+    return (clock and ours
+            and "int minutes = hour <= 0f ? 0 : (int)Math.Min(hour * 60f, 24f * 60f - 1f);" in ours
+            and ordered(clock, "float hour = CampaignTime.Now.CurrentHourInDay;",
+                        "int minutes = hour <= 0f ? 0 : (int)Math.Min(hour * 60f, 24f * 60f - 1f);",
+                        '(minutes / 60).ToString("00") + ":" +', '(minutes % 60).ToString("00")')
+            and "CurrentHourInDay.ToString(" not in clock)
+
+
+chk("2.12.3", "TradeLordTestAutopilot.log tells the game's hour and minute the way TradeLord.log does, so the hour no longer reads one too high for the second half of every hour",
+    the_test_autopilot_log_tells_the_time_as_tradelord_log_does())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
