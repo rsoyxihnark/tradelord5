@@ -120,20 +120,18 @@ namespace TradeLord
             TradeMath.Pace pace = Travel.PaceNow();
             if (pace == null) return;
             Guard.Run("SpeedCheck.Seas", SayWhatTheSeasRead);
-            if (pace.Even)
-            {
-                Log.Write("ground step read: your party's pace could not be read from the game, because " +
-                          (Travel.PaceBecause() ?? "it was not read") + ", so every ride is timed at one pace");
-                return;
-            }
-            Log.Write("ground step read: your party's pace moves by " +
-                      Step(pace.OnGround[TradeMath.GroundForest]) + " in forest, " +
-                      Step(pace.OnGround[TradeMath.GroundWater]) + " on water and fords, " +
-                      Step(pace.OnGround[TradeMath.GroundDesert]) + " in desert, " +
-                      Step(pace.OnGround[TradeMath.GroundPlain]) + " on plains and " +
-                      Step(pace.Night) + " at night, with a snow step of " + Step(pace.Snow) +
-                      ", a wet ground step of " + Step(pace.Wet) +
-                      " and a Disorganized step of " + Step(pace.Slow));
+            string said = pace.Even
+                ? "ground step read: your party's pace could not be read from the game, because " +
+                  (Travel.PaceBecause() ?? "it was not read") + ", so every ride is timed at one pace"
+                : "ground step read: your party's pace moves by " +
+                  Step(pace.OnGround[TradeMath.GroundForest]) + " in forest, " +
+                  Step(pace.OnGround[TradeMath.GroundWater]) + " on water and fords, " +
+                  Step(pace.OnGround[TradeMath.GroundDesert]) + " in desert, " +
+                  Step(pace.OnGround[TradeMath.GroundPlain]) + " on plains and " +
+                  Step(pace.Night) + " at night, with a snow step of " + Step(pace.Snow) +
+                  ", a wet ground step of " + Step(pace.Wet) +
+                  " and a Disorganized step of " + Step(pace.Slow);
+            Log.Repeatable("ground step read", said, said);
         }
 
         private static void SayWhatTheSeasRead()

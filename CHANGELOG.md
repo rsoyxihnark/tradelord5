@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.4
+
+- TradeLord.log now writes the ground step read line only when what it reads changes, not every game hour
+
 ## 2.12.3
 
 - Fixed TradeLordTestAutopilot.log showing the hour one too high for the second half of every hour

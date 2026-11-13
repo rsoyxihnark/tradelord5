@@ -21869,7 +21869,7 @@ def the_log_checks_the_speeds_it_read_against_what_the_game_does():
             and ordered(read, '"ground step read: your party\'s pace moves by "',
                         "Step(pace.OnGround[TradeMath.GroundForest]) +", "Step(pace.OnGround[TradeMath.GroundWater]) +",
                         "Step(pace.OnGround[TradeMath.GroundDesert]) +", "Step(pace.OnGround[TradeMath.GroundPlain]) +",
-                        "Step(pace.Night) +", "Step(pace.Snow) +", "Step(pace.Wet) +", "Step(pace.Slow))")
+                        "Step(pace.Night) +", "Step(pace.Snow) +", "Step(pace.Wet) +", "Step(pace.Slow);")
             and 'PartyStep' not in check
             and 'ReadThePaceAgain' not in ALL
             and "The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn" in MATHTESTS)
@@ -25860,6 +25860,21 @@ def the_test_autopilot_log_tells_the_time_as_tradelord_log_does():
 
 chk("2.12.3", "TradeLordTestAutopilot.log tells the game's hour and minute the way TradeLord.log does, so the hour no longer reads one too high for the second half of every hour",
     the_test_autopilot_log_tells_the_time_as_tradelord_log_does())
+
+def the_ground_step_read_is_written_only_when_it_changes():
+    read = method_body(S['SpeedCheck.cs'], "private static void SayWhatWasRead()")
+    return (read
+            and ordered(read, "if (hour == _readHour) return;", "string said = pace.Even",
+                        '"ground step read: your party\'s pace could not be read from the game, because "',
+                        '"ground step read: your party\'s pace moves by "',
+                        'Log.Repeatable("ground step read", said, said);')
+            and 'Log.Write("ground step read' not in read
+            and "_repeats.Clear();" in method_body(S['Support.cs'], "internal static void Forget()")
+            and 'Guard.Run("GameEnd.Log", Log.Forget);' in S['SubModule.cs'])
+
+
+chk("2.12.4", "TradeLord.log writes the ground step read line once a campaign and again only when what it reads changes, rather than every game hour",
+    the_ground_step_read_is_written_only_when_it_changes())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
