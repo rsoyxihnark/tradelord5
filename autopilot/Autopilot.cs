@@ -298,7 +298,7 @@ namespace TradeLord.TestAutopilot
                 int weight = Events.Weight(said, chance, nothing);
                 told.Add("\"" + option.Description + "\" (" + string.Join(", ", said.ToArray()) + (chance ? ", by chance" : "") +
                          ", weight " + weight + ")");
-                if (weight > best) continue;
+                if (weight >= best) continue;
                 best = weight;
                 pick = i;
             }
@@ -403,7 +403,12 @@ namespace TradeLord.TestAutopilot
             return _marked;
         }
 
-        private static bool IsTheFirstMarket(Settlement place) => place?.Name?.ToString() == FirstMarket;
+        private static bool IsTheFirstMarket(Settlement place)
+        {
+            string written = place?.Name?.Value ?? "";
+            int id = written.StartsWith("{=", StringComparison.Ordinal) ? written.IndexOf('}') : -1;
+            return written.Substring(id + 1) == FirstMarket || place?.Name?.ToString() == FirstMarket;
+        }
 
         private static Settlement TheFirstMarket()
         {
@@ -459,7 +464,7 @@ namespace TradeLord.TestAutopilot
                 foreach (string word in TouchesTrade)
                     if (lower.Contains(word)) trade = true;
             }
-            if (onlyNothing && !chance) return 0;
+            if (onlyNothing && !chance) return said.Contains(nothing) ? 0 : 1;
             return (chance ? 1000 : 0) + (trade ? 100 : 0) + 10 + effects;
         }
     }
