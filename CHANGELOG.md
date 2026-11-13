@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.12.2
+
+- Fixed Test Autopilot choosing the first of two event options that change just as little, instead of the last
+
 ## 2.12.1
 
 - Fixed Test Autopilot not finding Poros when your game shows town names in a language that spells it differently
