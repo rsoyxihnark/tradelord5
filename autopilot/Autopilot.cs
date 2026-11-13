@@ -298,7 +298,7 @@ namespace TradeLord.TestAutopilot
                 int weight = Events.Weight(said, chance, nothing);
                 told.Add("\"" + option.Description + "\" (" + string.Join(", ", said.ToArray()) + (chance ? ", by chance" : "") +
                          ", weight " + weight + ")");
-                if (weight >= best) continue;
+                if (weight > best) continue;
                 best = weight;
                 pick = i;
             }

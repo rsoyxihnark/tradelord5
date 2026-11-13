@@ -25815,7 +25815,7 @@ def the_test_autopilot_answers_events_recruits_and_spends_a_focus_point_on_trade
             and ordered(fly, "if (DayNow() >= _stopsOnDay)", "if (map.IsMapIncidentActive)", "Answer(map,",
                         "InformationManager.IsAnyInquiryActive()")
             and ordered(answer, 'new TextObject("{=lobJVVWT}Nothing happens").ToString()', "Events.Weight(said, chance, nothing)",
-                        "if (weight >= best) continue;", "shown.Options[pick].ExecuteSelect();", "shown.ExecuteConfirm();")
+                        "if (weight > best) continue;", "shown.Options[pick].ExecuteSelect();", "shown.ExecuteConfirm();")
             and ordered(weight, "if (onlyNothing && !chance) return said.Contains(nothing) ? 0 : 1;", "return (chance ? 1000 : 0) + (trade ? 100 : 0) + 10 + effects;")
             and ordered(fill, "int room = me.Party.PartySizeLimit - me.MemberRoster.TotalManCount;",
                         "volunteers.MaximumIndexHeroCanRecruitFromHero(you, notable, -101)",
@@ -25832,22 +25832,20 @@ def the_test_autopilot_answers_events_recruits_and_spends_a_focus_point_on_trade
 chk("2.12.0", "the Test Autopilot answers the game's events with the option that changes the least, fills the party with the cheapest lowest tier recruits, puts one focus point on Trade where TradeLord warns of the limit, and pauses at day 21 once",
     the_test_autopilot_answers_events_recruits_and_spends_a_focus_point_on_trade())
 
-def the_test_autopilot_finds_poros_in_any_language_and_answers_events_with_nothing_happens_first():
+def the_test_autopilot_finds_poros_in_any_language_and_puts_nothing_happens_first():
     pilot = PILOT['Autopilot.cs']
     first = method_body(pilot, "private static bool IsTheFirstMarket(Settlement place)")
-    answer = method_body(pilot, "private static void Answer(MapScreen map, float now)")
     weight = method_body(pilot, "internal static int Weight(List<string> said, bool chance, string nothing)")
-    return (first and answer and weight
+    return (first and weight
             and ordered(first, 'string written = place?.Name?.Value ?? "";',
                         'written.StartsWith("{=", StringComparison.Ordinal) ? written.IndexOf(\'}\') : -1;',
                         "return written.Substring(id + 1) == FirstMarket || place?.Name?.ToString() == FirstMarket;")
-            and "if (weight >= best) continue;" in answer and "if (weight > best) continue;" not in answer
             and "if (onlyNothing && !chance) return said.Contains(nothing) ? 0 : 1;" in weight
             and "if (onlyNothing && !chance) return 0;" not in weight)
 
 
-chk("2.12.1", "the Test Autopilot finds Poros by the name the game data gives it, whatever language the game shows, and of event options that change just as little it takes the first, an option that says Nothing happens before one that says nothing at all",
-    the_test_autopilot_finds_poros_in_any_language_and_answers_events_with_nothing_happens_first())
+chk("2.12.1", "the Test Autopilot finds Poros by the name the game data gives it, whatever language the game shows, and of event options it weighs an option that says Nothing happens as changing less than one that says nothing at all",
+    the_test_autopilot_finds_poros_in_any_language_and_puts_nothing_happens_first())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -4,7 +4,6 @@
 
 - Fixed Test Autopilot not finding Poros when your game shows town names in a language that spells it differently
 - Fixed Test Autopilot choosing an event option that says nothing of what it does over one that says Nothing happens
-- Fixed Test Autopilot choosing the last of two event options that change just as little, instead of the first
 
 ## 2.12.0
 
