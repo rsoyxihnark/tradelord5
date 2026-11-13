@@ -2752,13 +2752,13 @@ namespace TradeLord.Tests
         [Fact]
         public void The_adaptive_spend_limit_adds_one_base_each_time_the_purse_doubles_past_that()
         {
-            Assert.Equal(2000, TradeMath.AdaptiveSpendCap(1000, 10000, true));
-            Assert.Equal(3000, TradeMath.AdaptiveSpendCap(1000, 20000, true));
-            Assert.Equal(4000, TradeMath.AdaptiveSpendCap(1000, 40000, true));
             Assert.Equal(1584, TradeMath.AdaptiveSpendCap(1000, 7500, true));
-            Assert.Equal(4380, TradeMath.AdaptiveSpendCap(1000, 52068, true));
-            Assert.Equal(4000, TradeMath.AdaptiveSpendCap(2000, 20000, true));
-            Assert.True(TradeMath.AdaptiveSpendCap(1000, 100000000L, true) < 20000);
+            Assert.Equal(1999, TradeMath.AdaptiveSpendCap(1000, 9999, true));
+            Assert.Equal(3000, TradeMath.AdaptiveSpendCap(1000, 10000, true));
+            Assert.Equal(5000, TradeMath.AdaptiveSpendCap(1000, 20000, true));
+            Assert.Equal(8000, TradeMath.AdaptiveSpendCap(1000, 40000, true));
+            Assert.Equal(9380, TradeMath.AdaptiveSpendCap(1000, 52068, true));
+            Assert.Equal(6000, TradeMath.AdaptiveSpendCap(2000, 20000, true));
             int before = 1000;
             for (long purse = 5000; purse <= 1000000; purse += 2500)
             {
@@ -2766,6 +2766,17 @@ namespace TradeLord.Tests
                 Assert.True(now >= before);
                 before = now;
             }
+        }
+
+        [Fact]
+        public void The_adaptive_spend_limit_adds_1000_for_every_10000_in_the_purse_whatever_the_base()
+        {
+            Assert.Equal(2000, TradeMath.AdaptiveSpendCap(2000, 9999, true));
+            Assert.Equal(3000, TradeMath.AdaptiveSpendCap(2000, 10000, true));
+            Assert.Equal(5000, TradeMath.AdaptiveSpendCap(5000, 9999, true));
+            Assert.Equal(6000, TradeMath.AdaptiveSpendCap(5000, 10000, true));
+            Assert.Equal(7000, TradeMath.AdaptiveSpendCap(5000, 20000, true));
+            Assert.Equal(500 + 4000 + 2000, TradeMath.AdaptiveSpendCap(500, 40000, true));
         }
 
         [Fact]

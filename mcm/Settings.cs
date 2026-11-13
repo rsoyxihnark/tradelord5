@@ -715,7 +715,7 @@ namespace TradeLord.Mcm
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL473}Adaptive spend limit", Order = 6, RequireRestart = false,
-            HintText = "{=TL474}Lets TradeLord spend more as your purse grows, on top of Max spend per visit: it holds until your purse is five times that, then grows by one more for every doubling. With 1000 set, 10000 allows 2000 and 20000 allows 3000. ON by default.")]
+            HintText = "{=TL474}Lets TradeLord spend more as your purse grows, on top of Max spend per visit: 1000 more for every 10000 in your purse, plus one Max spend per visit for every doubling past five times it. With 1000 set, 10000 allows 3000. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool AdaptiveSpendLimit { get => _o.AdaptiveSpendLimit; set { _o.AdaptiveSpendLimit = value; Options.Bump(); } }
 
@@ -760,7 +760,7 @@ namespace TradeLord.Mcm
         public int HaulAnimalGoldFloor { get => _o.HaulAnimalGoldFloor; set { _o.HaulAnimalGoldFloor = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL427}Most it will pay for a haul animal", 1f, 3f, "#0%", Order = 15, RequireRestart = false,
-            HintText = "{=TL428}How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest. The cheapest is sought within your travel ceilings.")]
+            HintText = "{=TL428}How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 150% by default, so it pays up to half more than the cheapest. The cheapest is sought within your travel ceilings.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float HaulAnimalPriceTolerance { get => _o.HaulAnimalPriceTolerance; set { _o.HaulAnimalPriceTolerance = value; Options.Bump(); } }
 

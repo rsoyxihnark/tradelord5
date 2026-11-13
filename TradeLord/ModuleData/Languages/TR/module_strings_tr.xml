@@ -258,7 +258,7 @@
 		<string id="TL425" text="Yük hayvanı almadan önce gereken altın (0 = kapalı)"/>
 		<string id="TL426" text="Yük hayvanını ancak parası ödendikten sonra keseniz bunun üzerinde kalıyorsa alır, ne kadar ucuz olsa da, böylece erken altın mala gider. Bölüğünüzün bir günden az kendi yiyeceği kaldıysa altına inebilir. 0 ile ilk dinardan alır. Varsayılan 2000."/>
 		<string id="TL427" text="Bir yük hayvanı için ödeyeceği en yüksek tutar"/>
-		<string id="TL428" text="O hayvan için bildiği en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca en ucuz fiyata demektir. Varsayılan %125, yani en ucuzun dörtte biri kadar üstüne kadar öder. En ucuz fiyat yol süresi sınırlarınız içinde aranır."/>
+		<string id="TL428" text="O hayvan için bildiği en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca en ucuz fiyata demektir. Varsayılan %150, yani en ucuzun yarısı kadar üstüne kadar öder. En ucuz fiyat yol süresi sınırlarınız içinde aranır."/>
 		<string id="TL429" text="Sahip olabileceğiniz en fazla atölye (0 = oyunun kendi sınırı)"/>
 		<string id="TL430" text="Oyunun kaç atölyeye sahip olabileceğinize koyduğu sınırı kaldırır. 200, hiç sınır yok demekle aynı kapıya çıkar. 0 kararı oyuna geri bırakır; oyun klan kademeniz yükseldikçe daha fazlasına izin verir. Varsayılan 200."/>
 		<string id="TL431" text="Atölyeleri uzaktan satın al"/>
@@ -302,7 +302,7 @@
 		<string id="TL471" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. Yeniden öğrenmesi için Ticaret'teki odağınızı ve {ATTRIBUTE} değerinizi birlikte yükseltin."/>
 		<string id="TL472" text="Karakter ekranında harcanmayı bekleyen {FOCUS} odak puanınız ve {POINTS} nitelik puanınız var."/>
 		<string id="TL473" text="Uyarlanan harcama sınırı"/>
-		<string id="TL474" text="Keseniz büyüdükçe TradeLord, Ziyaret başına en çok harcama'nın üstüne harcayabilir: keseniz bunun beş katına varana dek sınır aynı kalır, sonra her ikiye katlanışta bir sınır kadar daha büyür. 1000 ile 10000'de 2000, 20000'de 3000. Varsayılan AÇIK."/>
+		<string id="TL474" text="Keseniz büyüdükçe TradeLord, Ziyaret başına en çok harcama'nın üstüne harcayabilir: kesedeki her 10000 için 1000 daha, kese bunun beş katını geçince de her ikiye katlanışta bir sınır daha. 1000 ile 10000'de 3000. Varsayılan AÇIK."/>
 		<string id="TL475" text="TradeLord son ticaretini burada yaptı, bu yüzden buraya ilk dönüşünüzde bu pazara dokunmuyor. Şimdi burada ticaret yapmak için bu menüden {ENTRY} seçin."/>
 		<string id="TL476" text=" | Fiyat ilk parçanındır; Kâr her parçayı sırayla fiyatlar, bu yüzden fiyat x adetten azdır | Güven* = düz fiyat, parça parça hesaplanmadı"/>
 		<string id="TL477" text="{TOWN} sizinle savaştayken orada atölye sahibi olamazsınız."/>

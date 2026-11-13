@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.13.0
+
+- Adaptive spend limit now adds 1000 to what TradeLord may spend on a visit for every 10000 in your purse
+- Most it will pay for a haul animal now defaults to 150%, so TradeLord pays up to half more than the cheapest price it knows
+
 ## 2.12.4
 
 - TradeLord.log now writes the ground step read line only when what it reads changes, not every game hour

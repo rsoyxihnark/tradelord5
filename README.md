@@ -103,11 +103,10 @@
 - ✅ On your first visit to a market in a new campaign it buys no food for your party, so your starting gold goes to trade goods
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
-- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
+- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to half more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
 - ✅ It buys them only when your cargo is full and leaves behind goods worth buying or the food Restock and keep food (days of supply) asks for, only as many as the gold left after them can fill, and then buys what now fits
 - ✅ Haul animals are bought only once what you never bought and what you bought have sold, so none is bought for goods that would fit once those are gone
-- ✅ It buys no haul animal for goods that would fill less than half of one, unless those goods would make more than the animal costs
-- ✅ It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of its own food
+- ✅ It buys one however little of it the goods or food your full cargo left behind would fill, since the animal carries on every ride after
 - ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
 - ✅ It never buys one that would leave your purse at 2000 denars or less, which you can set too, so early gold goes on goods instead, unless your party is down to less than a day of its own food
 - ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
@@ -128,7 +127,7 @@
 - ✅ It leaves a good that would earn under a tenth a day of the best good to buy there, weighed at the Conf of selling there, so no crumbs ride days for a few denars
 - ✅ The TradeLord ledger counts what you already carry of a good in every route, so a market never refuses a good the ledger offered there
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
-- ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
+- ✅ Adaptive spend limit adds 1000 to your cap for every 10000 in your purse, and one more Max spend per visit for every doubling once your purse is past five times it, so 10000 in the purse allows 3000 and 20000 allows 5000
 - ✅ Where the TradeLord ledger expects more profit from a market's routes than that, it may spend up to that profit there
 - ✅ Pick where to sell on the whole load, on out of the box: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
 - ✅ The whole load is only what your caps, your gold, your cargo and your herd let it buy, and a market is weighed only on what its own purse can pay for

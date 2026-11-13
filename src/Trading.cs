@@ -165,7 +165,7 @@ namespace TradeLord
         internal static bool SoldHereThisVisit { get; private set; }
         private static int _limitThisVisit;
         private static bool _cargoWasFull;
-        private static (float weight, int cost, float profit, bool food) _unfitted;
+        private static (float weight, int cost, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
         private static (int units, int gold, int profit, Settlement at) _soldThisRound;
@@ -2554,7 +2554,7 @@ namespace TradeLord
                 var food = FoodTheHoldLeftBehind(pass, left.el, left.good, left.fed, left.ceiling, shortfall,
                                                  left.remaining, left.taken, left.held, shareCap,
                                                  pass.Village, hungry);
-                if (pass.Site != null) _unfitted = (food.weight, food.cost, 0f, true);
+                if (pass.Site != null) _unfitted = (food.weight, food.cost, true);
             }
             if (stocked <= 0)
             {
@@ -2996,9 +2996,8 @@ namespace TradeLord
             }
 
             int hauled = 0, simSpent = 0;
-            bool enough = false, tooLittle = false, floored = false;
+            bool enough = false, floored = false;
             int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0, priceAtTheFloor = 0;
-            float leastFilled = Herding.LeastFilledFor(starving);
             bool pastTheCap = false;
             bool pastTheFloor = false;
 
@@ -3043,15 +3042,9 @@ namespace TradeLord
                         if (settlement.IsVillage && remaining <= 1) break;
                         float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,
                                                                                    pass.SpendableToFeed(starving) - price);
-                        float profitToCarry = TradeMath.ProfitTheBudgetCanStillBuy(unfitted.profit, unfitted.cost,
-                                                                                    pass.SpendableToFeed(starving) - price);
                         if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
-                                                               roomLeft, stillToCarry, leastFilled,
-                                                               profitToCarry, price))
+                                                               roomLeft, stillToCarry))
                         {
-                            tooLittle = hauled == 0 &&
-                                        Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
-                                                                          roomLeft, stillToCarry);
                             enough = true;
                             break;
                         }
@@ -3093,13 +3086,6 @@ namespace TradeLord
                                    "haul animals are left alone at " + settlement.Name + ": the cheapest, at " +
                                    priceAtTheFloor + ", would leave your purse at " + (purseAtTheFloor - priceAtTheFloor) +
                                    ", not above the " + floor + " set in Gold before it buys a haul animal");
-                else if (tooLittle)
-                    Log.Repeatable("haul animal too little", settlement.StringId,
-                                   "haul animals are left alone at " + settlement.Name + (unfitted.food
-                                       ? ": the food your full cargo left behind would fill less than half of one, " +
-                                         "and your party still has a day of its own food or more"
-                                       : ": the goods your full cargo left behind that the gold left can buy would " +
-                                         "fill less than half of one and make less than it costs"));
                 return false;
             }
 
@@ -3172,7 +3158,7 @@ namespace TradeLord
             if (pass.Reports)
                 _unfitted = pass.DirectionError
                     ? default
-                    : (moved.Unfitted, moved.UnfittedCost, moved.UnfittedProfit, false);
+                    : (moved.Unfitted, moved.UnfittedCost, false);
 
             int spent = pass.Spent(moved.SimGold);
             if (bought > 0)

@@ -2729,9 +2729,6 @@ namespace TradeLord
             return budget >= cost ? weight : weight * ((float)budget / cost);
         }
 
-        public static float ProfitTheBudgetCanStillBuy(float profit, int cost, int budget) =>
-            WeightTheBudgetCanStillBuy(profit, cost, budget);
-
         public static int WorthOf(int units, int unitValue)
         {
             if (units <= 0 || unitValue <= 0) return 0;
@@ -2748,14 +2745,18 @@ namespace TradeLord
 
         public const int RichAtThisManyLimits = 5;
 
+        public const int PurseStepThatRaisesTheCap = 10000;
+
+        public const int CapRaisedForEachStep = 1000;
+
         public static int AdaptiveSpendCap(int baseCap, long purseBeforeBuying, bool adaptive)
         {
             if (!adaptive || baseCap <= 0) return baseCap;
+            double floor = baseCap + (double)CapRaisedForEachStep * Math.Max(0L, purseBeforeBuying / PurseStepThatRaisesTheCap);
             long rich = (long)baseCap * RichAtThisManyLimits;
-            if (purseBeforeBuying <= rich) return baseCap;
-            double more = baseCap * Math.Log((double)purseBeforeBuying / rich, 2d);
-            if (double.IsNaN(more) || more <= 0d) return baseCap;
-            double cap = baseCap + Math.Floor(more);
+            double more = purseBeforeBuying <= rich ? 0d : baseCap * Math.Log((double)purseBeforeBuying / rich, 2d);
+            if (double.IsNaN(more) || more <= 0d) more = 0d;
+            double cap = floor + Math.Floor(more);
             return cap >= int.MaxValue ? int.MaxValue : (int)cap;
         }
 

@@ -87,64 +87,15 @@ namespace TradeLord.Tests
             Assert.Equal(4, HaulAnimalsBought(5000, 150, 100f, 1f, -50f, 300f, 800));
         }
 
-        private static int HaulAnimalsBoughtForGoods(int budget, int price, float each, float share, float roomLeft,
-                                                     float weightLeft, int costLeft)
-        {
-            int hauled = 0;
-            while (price < budget &&
-                   Herding.AnotherHaulAnimalIsWanted(hauled, each, share, roomLeft,
-                       TradeMath.WeightTheBudgetCanStillBuy(weightLeft, costLeft, budget - price),
-                       Herding.LeastAHaulAnimalIsFilled))
-            {
-                hauled++;
-                budget -= price;
-            }
-            return hauled;
-        }
-
         [Fact]
-        public void No_haul_animal_is_bought_for_goods_that_would_fill_less_than_half_of_it()
+        public void A_haul_animal_is_bought_however_little_of_it_the_goods_left_behind_would_fill()
         {
-            Assert.Equal(0, HaulAnimalsBoughtForGoods(1000, 944, 100f, 1f, 2f, 100f, 1000));
-            Assert.Equal(0, HaulAnimalsBoughtForGoods(1000, 150, 100f, 1f, 2f, 5f, 50));
-            Assert.Equal(1, HaulAnimalsBoughtForGoods(1000, 150, 100f, 1f, 2f, 60f, 300));
-            Assert.Equal(1, HaulAnimalsBoughtForGoods(400, 150, 100f, 1f, 0f, 300f, 800));
-            Assert.Equal(2, HaulAnimalsBoughtForGoods(5000, 150, 100f, 1f, 0f, 240f, 800));
-            Assert.Equal(3, HaulAnimalsBoughtForGoods(5000, 150, 100f, 1f, 0f, 250f, 800));
-            Assert.Equal(2, HaulAnimalsBoughtForGoods(5000, 150, 100f, 0.5f, 0f, 120f, 800));
-        }
-
-        [Fact]
-        public void A_haul_animal_asked_to_be_filled_by_nothing_in_particular_is_bought_however_little_it_carries()
-        {
+            Assert.Equal(1, HaulAnimalsBought(1000, 150, 100f, 1f, 2f, 5f, 50));
             Assert.Equal(1, HaulAnimalsBought(1000, 150, 100f, 1f, 2f, 10f, 60));
-            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 10f));
-            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 10f, Herding.LeastAHaulAnimalIsFilled));
-            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 10f, float.NaN));
-        }
-
-        [Fact]
-        public void A_haul_animal_is_bought_for_light_goods_that_would_make_more_than_it_costs()
-        {
-            float half = Herding.LeastAHaulAnimalIsFilled;
-            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 2000f, 150));
-            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 100f, 150));
-            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 160f, 150));
-            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 2000f, 0));
-            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, float.NaN, 150));
-            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 47f, 47f, half, 2000f, 150));
-            Assert.False(Herding.AnotherHaulAnimalIsWanted(1, 100f, 1f, 2f, 130f, half, 600f, 150));
-            Assert.True(Herding.AnotherHaulAnimalIsWanted(1, 100f, 1f, 2f, 130f, half, 700f, 150));
-        }
-
-        [Fact]
-        public void Food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_once_the_party_is_down_to_its_last_day()
-        {
-            Assert.Equal(0f, Herding.LeastFilledFor(true), 3);
-            Assert.Equal(0f, Herding.LeastFilledFor(true), 3);
-            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false), 3);
-            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false), 3);
-            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false), 3);
+            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 3f));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 2f));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(1, 100f, 1f, 2f, 102f));
+            Assert.True(Herding.AnotherHaulAnimalIsWanted(1, 100f, 1f, 2f, 103f));
         }
 
         [Fact]

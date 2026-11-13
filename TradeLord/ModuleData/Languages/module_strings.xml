@@ -258,7 +258,7 @@
 		<string id="TL425" text="Gold before it buys a haul animal (0 = off)"/>
 		<string id="TL426" text="Buy a haul animal only while your purse stays above this once it is paid for, however cheap, so early gold goes on goods. A party down to less than a day of its own food may go below it. 0 lets it buy from the first denar. Default 2000."/>
 		<string id="TL427" text="Most it will pay for a haul animal"/>
-		<string id="TL428" text="How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest. The cheapest is sought within your travel ceilings."/>
+		<string id="TL428" text="How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 150% by default, so it pays up to half more than the cheapest. The cheapest is sought within your travel ceilings."/>
 		<string id="TL429" text="Most workshops you may own (0 = the game's own limit)"/>
 		<string id="TL430" text="Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200."/>
 		<string id="TL431" text="Buy Workshops Remotely"/>
@@ -302,7 +302,7 @@
 		<string id="TL471" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). Raise your focus in Trade and your {ATTRIBUTE} together to let it learn again."/>
 		<string id="TL472" text="You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen."/>
 		<string id="TL473" text="Adaptive spend limit"/>
-		<string id="TL474" text="Lets TradeLord spend more as your purse grows, on top of Max spend per visit: it holds until your purse is five times that, then grows by one more for every doubling. With 1000 set, 10000 allows 2000 and 20000 allows 3000. ON by default."/>
+		<string id="TL474" text="Lets TradeLord spend more as your purse grows, on top of Max spend per visit: 1000 more for every 10000 in your purse, plus one Max spend per visit for every doubling past five times it. With 1000 set, 10000 allows 3000. ON by default."/>
 		<string id="TL475" text="TradeLord made its last trade here, so it leaves this market alone the first time you come back. Choose {ENTRY} in this menu to trade here now."/>
 		<string id="TL476" text=" | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
 		<string id="TL477" text="You cannot own a workshop in {TOWN} while it is at war with you."/>

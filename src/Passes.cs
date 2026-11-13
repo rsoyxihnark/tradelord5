@@ -72,7 +72,6 @@ namespace TradeLord
         internal int Profit;
         internal float Unfitted;
         internal int UnfittedCost;
-        internal float UnfittedProfit;
     }
 
     internal struct Pick
@@ -416,7 +415,6 @@ namespace TradeLord
                                                           held, drawn, till, (countThis, spentThis), shareCap, s);
                         moved.Unfitted += left.units * good.Weight;
                         moved.UnfittedCost = TradeMath.AddedUp(moved.UnfittedCost, left.cost);
-                        moved.UnfittedProfit += left.profit;
                         break;
                     }
 
@@ -458,16 +456,15 @@ namespace TradeLord
             return moved;
         }
 
-        private static (int units, int cost, float profit) UnitsTheHoldLeftBehind(IBuyingMarket market, int at,
-                                                                                  in Good good, int remaining,
-                                                                                  int held, int drawn, int till,
-                                                                                  (int count, int spent) taken,
-                                                                                  float shareCap, Options s)
+        private static (int units, int cost) UnitsTheHoldLeftBehind(IBuyingMarket market, int at,
+                                                                    in Good good, int remaining,
+                                                                    int held, int drawn, int till,
+                                                                    (int count, int spent) taken,
+                                                                    float shareCap, Options s)
         {
             Func<int, int> ahead = market.PricesAhead(at);
             int budget = market.Spendable();
             int units = 0, cost = 0;
-            float profit = 0f;
             float safety = market.ResaleSafety();
             while (remaining > 0)
             {
@@ -475,8 +472,8 @@ namespace TradeLord
                 if (price <= 0) break;
                 int wouldDraw = market.ResaleUpTo(at, held + 1);
                 if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;
-                float realizable = TradeMath.Realizable(wouldDraw - drawn, safety);
-                if (!TradeMath.BuyAcceptable(price, realizable, s.MinProfitMargin)) break;
+                if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn, safety), s.MinProfitMargin))
+                    break;
                 if (TradeRules.WhatStopsBuying(good, price, budget, taken, held, shareCap, false, 0,
                                                market.Village && remaining <= 1, s) != Block.None) break;
                 units++;
@@ -485,10 +482,9 @@ namespace TradeLord
                 drawn = wouldDraw;
                 budget -= price;
                 cost = TradeMath.AddedUp(cost, price);
-                profit += realizable - price;
                 taken = (taken.count + 1, taken.spent + price);
             }
-            return (units, cost, profit);
+            return (units, cost);
         }
 
         internal static Block WhatStopsTheLot(IBuyingMarket market, Books books, bool sim, Options s,

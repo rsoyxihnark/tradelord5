@@ -478,25 +478,14 @@ namespace TradeLord
             return TradeMath.Finite(each, 0f) > 0f ? each : 0f;
         }
 
-        internal const float LeastAHaulAnimalIsFilled = 0.5f;
-
         internal static bool AnotherHaulAnimalIsWanted(int hauled, float eachAdds, float cargoShare, float roomLeft,
-                                                       float weightToCarry, float leastFilled = 0f,
-                                                       float profitToCarry = 0f, int price = 0)
+                                                       float weightToCarry)
         {
             float each = cargoShare > 0f && cargoShare < 1f ? eachAdds * cargoShare : eachAdds;
             if (TradeMath.Finite(each, 0f) <= 0f || TradeMath.Finite(weightToCarry, 0f) <= 0f) return false;
             double room = (double)Math.Max(0, hauled) * each + TradeMath.Finite(roomLeft, 0f);
-            if (weightToCarry <= room) return false;
-            double beyond = weightToCarry - room;
-            float least = TradeMath.Finite(leastFilled, 0f);
-            if (beyond >= (double)each * (least > 0f ? least : 0f)) return true;
-            double profit = TradeMath.Finite(profitToCarry, 0f);
-            return price > 0 && profit > 0d && profit * Math.Min(beyond, each) / weightToCarry >= price;
+            return weightToCarry > room;
         }
-
-        internal static float LeastFilledFor(bool lastDayOfFood) =>
-            lastDayOfFood ? 0f : LeastAHaulAnimalIsFilled;
 
         internal static bool PurseClearsTheFloor(int purse, int floor) => floor <= 0 || purse > floor;
 

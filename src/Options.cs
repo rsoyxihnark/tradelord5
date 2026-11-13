@@ -139,7 +139,7 @@ namespace TradeLord
 
         public int HaulAnimalGoldFloor = 2000;
 
-        public float HaulAnimalPriceTolerance = 1.25f;
+        public float HaulAnimalPriceTolerance = 1.5f;
 
         public float ResaleSafetyFactor = 0.85f;
 
