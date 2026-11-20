@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.13.1
+
+- Fixed Test Autopilot keeping part of a campaign you had left in memory after you load another save or go back to the main menu
+
 ## 2.13.0
 
 - Adaptive spend limit now adds 1000 to what TradeLord may spend on a visit for every 10000 in your purse

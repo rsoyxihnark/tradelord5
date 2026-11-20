@@ -544,7 +544,6 @@ namespace TradeLord
             LedgerBehavior ledger = LedgerBehavior.Instance;
             Options s = Options.Current;
             float age = s.Omniscient || ledger == null ? -1f : ledger.ObservationAgeDays(item, to);
-            int whole = profit >= int.MaxValue ? int.MaxValue : (int)Math.Max(0L, profit);
             int level = flat >= int.MaxValue ? int.MaxValue : (int)Math.Max(0L, flat);
             confidence = Confidence.Of(simulated, level, stock, units, days,
                                        Confidence.CaravansLeftToCount(caravans, Forecast.On), age);

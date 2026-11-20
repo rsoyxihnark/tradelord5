@@ -101,6 +101,8 @@ namespace TradeLord.TestAutopilot
             if (On) Trail.Write("Autopilot off: " + why);
             On = false;
             _firstMarketDone = false;
+            _tracked.Clear();
+            _marked = null;
             Forget();
         }
 

@@ -25830,5 +25830,16 @@ def the_adaptive_spend_limit_adds_1000_for_every_10000_in_the_purse():
 chk("2.13.0", "with Adaptive spend limit on, every 10000 in your purse adds 1000 to what TradeLord may spend on a visit, on top of the growth for every doubling, and with it off Max spend per visit stands alone",
     the_adaptive_spend_limit_adds_1000_for_every_10000_in_the_purse())
 
+def the_test_autopilot_lets_go_of_a_campaign_it_has_left():
+    reset = method_body(PILOT['Autopilot.cs'], "internal static void Reset(string why)")
+    forget = method_body(PILOT['Autopilot.cs'], "private static void Forget()")
+    return (reset and forget
+            and ordered(reset, "On = false;", "_tracked.Clear();", "_marked = null;", "Forget();")
+            and "_tracked" not in forget)
+
+
+chk("2.13.1", "the Test Autopilot lets go of the towns the map marker showed once a campaign ends or another one loads, and keeps them while you switch it off and on",
+    the_test_autopilot_lets_go_of_a_campaign_it_has_left())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
