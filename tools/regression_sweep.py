@@ -25841,5 +25841,16 @@ def the_test_autopilot_lets_go_of_a_campaign_it_has_left():
 chk("2.13.1", "the Test Autopilot lets go of the towns the map marker showed once a campaign ends or another one loads, and keeps them while you switch it off and on",
     the_test_autopilot_lets_go_of_a_campaign_it_has_left())
 
+def the_test_autopilot_tells_a_stuck_trade_skill_again_in_another_campaign():
+    reset = method_body(PILOT['Autopilot.cs'], "internal static void Reset(string why)")
+    forget = method_body(PILOT['Autopilot.cs'], "internal static void Forget() => _toldStuck")
+    return (reset and forget
+            and ordered(reset, "On = false;", "_marked = null;", "Focus.Forget();")
+            and "internal static void Forget() => _toldStuck = (-1, -1, -1);" in PILOT['Autopilot.cs'])
+
+
+chk("2.13.2", "the Test Autopilot writes that Trade is stuck at its learning limit again in a campaign it loads, even where the campaign it left had said the same",
+    the_test_autopilot_tells_a_stuck_trade_skill_again_in_another_campaign())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

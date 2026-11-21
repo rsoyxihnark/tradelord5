@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.13.2
+
+- Fixed TradeLordTestAutopilot.log leaving out that Trade is stuck at its learning limit when the save you had left already said the same
+
 ## 2.13.1
 
 - Fixed Test Autopilot keeping part of a campaign you had left in memory after you load another save or go back to the main menu

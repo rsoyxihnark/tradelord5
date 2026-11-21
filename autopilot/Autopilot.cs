@@ -103,6 +103,7 @@ namespace TradeLord.TestAutopilot
             _firstMarketDone = false;
             _tracked.Clear();
             _marked = null;
+            Focus.Forget();
             Forget();
         }
 
@@ -525,6 +526,8 @@ namespace TradeLord.TestAutopilot
         internal const int WarnsThisClose = 1;
 
         private static (int skill, int limit, int unspent) _toldStuck = (-1, -1, -1);
+
+        internal static void Forget() => _toldStuck = (-1, -1, -1);
 
         internal static void OnTradeIfAtTheLimit()
         {
