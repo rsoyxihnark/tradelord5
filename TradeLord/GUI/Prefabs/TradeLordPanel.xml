@@ -46,6 +46,12 @@
                 Sprite="BlankWhiteSquare_9" Color="#000000AA"
                 DoNotAcceptEvents="true">
           <Children>
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                    SuggestedHeight="1" VerticalAlignment="Top"
+                    Sprite="BlankWhiteSquare_9" Color="#FFD70077" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                    SuggestedHeight="1" VerticalAlignment="Bottom"
+                    Sprite="BlankWhiteSquare_9" Color="#FFD70077" DoNotAcceptEvents="true" />
             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                         Brush="Popup.Button.Text" Brush.FontSize="18" Brush.FontColor="#FFD700FF"
                         DoNotAcceptEvents="true"
@@ -62,6 +68,19 @@
         <ButtonWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                       DoNotPassEventsToChildren="true"
                       Command.Click="ExecuteCloseFromOutside" />
+
+        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                SuggestedWidth="984" SuggestedHeight="694"
+                HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                Sprite="BlankWhiteSquare_9" Color="#00000033" DoNotAcceptEvents="true" />
+        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                SuggestedWidth="972" SuggestedHeight="682"
+                HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                Sprite="BlankWhiteSquare_9" Color="#00000044" DoNotAcceptEvents="true" />
+        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                SuggestedWidth="966" SuggestedHeight="676"
+                HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                Sprite="BlankWhiteSquare_9" Color="#00000055" DoNotAcceptEvents="true" />
 
         <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                    SuggestedWidth="960" SuggestedHeight="670"
@@ -141,6 +160,7 @@
 
                     <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
                                SuggestedHeight="25"
+                               Sprite="BlankWhiteSquare_9" Color="#00000059"
                                StackLayout.LayoutMethod="HorizontalLeftToRight">
                       <Children>
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="150" HeightSizePolicy="StretchToParent"
@@ -170,8 +190,18 @@
                       </Children>
                     </ListPanel>
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                            SuggestedHeight="2" MarginBottom="4"
-                            Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+                            SuggestedHeight="2" MarginBottom="4" DoNotAcceptEvents="true">
+                      <Children>
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                Sprite="BlankWhiteSquare_9" Color="#FFD70033" DoNotAcceptEvents="true" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                MarginLeft="140" MarginRight="140"
+                                Sprite="BlankWhiteSquare_9" Color="#FFD70044" DoNotAcceptEvents="true" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                MarginLeft="300" MarginRight="300"
+                                Sprite="BlankWhiteSquare_9" Color="#FFD70066" DoNotAcceptEvents="true" />
+                      </Children>
+                    </Widget>
 
                     <ScrollablePanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
                                      SuggestedHeight="300"
@@ -198,6 +228,9 @@
                                       <Children>
                                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                                 IsVisible="@IsAlternateRow" Sprite="BlankWhiteSquare_9" Color="#FFFFFF0A" />
+                                        <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent"
+                                                     SuggestedWidth="3" HorizontalAlignment="Left"
+                                                     Brush="TradeLord.RowAccent" DoNotAcceptEvents="true" />
                                         <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                                    StackLayout.LayoutMethod="HorizontalLeftToRight">
                                           <Children>
@@ -209,6 +242,10 @@
                                                           DoNotPassEventsToChildren="true" Command.Click="ExecuteClickBuyTown"
                                                           UpdateChildrenStates="true">
                                               <Children>
+                                                <BrushWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                                             SuggestedHeight="2" VerticalAlignment="Bottom"
+                                                             MarginLeft="14" MarginRight="14" MarginBottom="3"
+                                                             Brush="TradeLord.TownLink" DoNotAcceptEvents="true" />
                                                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                                             Brush="Popup.Button.Text" Brush.FontSize="16"
                                                             Brush.FontColor="#FFD78CFF" Text="@BuyTownName" />
@@ -222,6 +259,10 @@
                                                           DoNotPassEventsToChildren="true" Command.Click="ExecuteClickSellTown"
                                                           UpdateChildrenStates="true">
                                               <Children>
+                                                <BrushWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                                             SuggestedHeight="2" VerticalAlignment="Bottom"
+                                                             MarginLeft="14" MarginRight="14" MarginBottom="3"
+                                                             Brush="TradeLord.TownLink" DoNotAcceptEvents="true" />
                                                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                                             Brush="Popup.Button.Text" Brush.FontSize="16"
                                                             Brush.FontColor="#FFD78CFF" Text="@SellTownName" />
@@ -414,6 +455,19 @@
                           DoNotPassEventsToChildren="true"
                           Command.Click="ExecuteCloseTradesFromOutside" />
 
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="924" SuggestedHeight="584"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000033" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="912" SuggestedHeight="572"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000044" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="906" SuggestedHeight="566"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000055" DoNotAcceptEvents="true" />
+
             <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                        SuggestedWidth="900" SuggestedHeight="560"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -433,8 +487,18 @@
                                     Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
                                     Text="@TradesHeader" />
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="2" MarginBottom="6"
-                                Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+                                SuggestedHeight="2" MarginBottom="6" DoNotAcceptEvents="true">
+                          <Children>
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70033" DoNotAcceptEvents="true" />
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    MarginLeft="140" MarginRight="140"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70044" DoNotAcceptEvents="true" />
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    MarginLeft="300" MarginRight="300"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70066" DoNotAcceptEvents="true" />
+                          </Children>
+                        </Widget>
 
                         <ScrollablePanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
                                          SuggestedHeight="390"
@@ -557,6 +621,19 @@
                           DoNotPassEventsToChildren="true"
                           Command.Click="ExecuteCloseLegend" />
 
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="924" SuggestedHeight="584"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000033" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="912" SuggestedHeight="572"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000044" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="906" SuggestedHeight="566"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000055" DoNotAcceptEvents="true" />
+
             <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                        SuggestedWidth="900" SuggestedHeight="560"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -575,8 +652,18 @@
                                     Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
                                     Text="@LegendLabel" />
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="2" MarginBottom="8"
-                                Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+                                SuggestedHeight="2" MarginBottom="8" DoNotAcceptEvents="true">
+                          <Children>
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70033" DoNotAcceptEvents="true" />
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    MarginLeft="140" MarginRight="140"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70044" DoNotAcceptEvents="true" />
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    MarginLeft="300" MarginRight="300"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70066" DoNotAcceptEvents="true" />
+                          </Children>
+                        </Widget>
 
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
                                     SuggestedHeight="390"
@@ -623,6 +710,19 @@
                           DoNotPassEventsToChildren="true"
                           Command.Click="ExecuteCloseShops" />
 
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="944" SuggestedHeight="624"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000033" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="932" SuggestedHeight="612"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000044" DoNotAcceptEvents="true" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                    SuggestedWidth="926" SuggestedHeight="606"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="10"
+                    Sprite="BlankWhiteSquare_9" Color="#00000055" DoNotAcceptEvents="true" />
+
             <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                        SuggestedWidth="920" SuggestedHeight="600"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -641,8 +741,18 @@
                                     Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
                                     Text="@ShopsHeader" />
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="2" MarginBottom="6"
-                                Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+                                SuggestedHeight="2" MarginBottom="6" DoNotAcceptEvents="true">
+                          <Children>
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70033" DoNotAcceptEvents="true" />
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    MarginLeft="140" MarginRight="140"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70044" DoNotAcceptEvents="true" />
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                    MarginLeft="300" MarginRight="300"
+                                    Sprite="BlankWhiteSquare_9" Color="#FFD70066" DoNotAcceptEvents="true" />
+                          </Children>
+                        </Widget>
 
                         <ScrollablePanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
                                          SuggestedHeight="430"

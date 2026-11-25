@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.14.0
+
+- The TradeLord ledger now lights the route you point at in gold, with a gold bar along its left edge, fading in and out
+- Town names in the TradeLord ledger now show a gold underline as you point at them, so you can tell a click pins a map marker there
+- The column headings in the TradeLord ledger now sit on a darker band
+- The gold line under the headings of every TradeLord window now glows brightest in the middle and fades toward its ends
+- The TradeLord ledger, Recent trades, What this means and Buy Workshops Remotely windows now cast a soft shadow on the map
+- Net worth on the campaign map now sits between two thin gold lines
+
 ## 2.13.3
 
 - Fixed TradeLord counting on more than 1000 in a village's purse when the village drops it back to 1000 before you arrive

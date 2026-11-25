@@ -17350,7 +17350,8 @@ def every_line_of_what_this_means_fits_its_window():
             else:
                 across += 1.0
         return across
-    window = re.search(r'IsVisible="@IsLegendVisible".*?SuggestedWidth="(\d+)".*?Brush.FontSize="(\d+)"\s+'
+    window = re.search(r'IsVisible="@IsLegendVisible".*?<ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"\s+'
+                       r'SuggestedWidth="(\d+)".*?Brush.FontSize="(\d+)"\s+'
                        r'Brush.FontColor="#E2E2E2FF"\s+Text="@LegendText"', PREFAB, re.S)
     return (ids == measured
             and "LegendText = OneClauseToALine(LegendText);" in refresh

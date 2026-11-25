@@ -1,13 +1,48 @@
 <Brushes>
-  <Brush Name="TradeLord.RowHover">
+  <Brush Name="TradeLord.RowHover" TransitionDuration="0.15">
     <Layers>
-      <BrushLayer Name="Default" Sprite="BlankWhiteSquare_9" Color="#FFFFFF10" />
+      <BrushLayer Name="Default" Sprite="BlankWhiteSquare_9" Color="#FFD7001C" />
     </Layers>
     <Styles>
       <Style Name="Default">
-        <BrushLayer Name="Default" ColorFactor="0.0" AlphaFactor="0.0" />
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="0.0" />
       </Style>
       <Style Name="Hovered">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="1.0" />
+      </Style>
+      <Style Name="Pressed">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="1.0" />
+      </Style>
+    </Styles>
+  </Brush>
+  <Brush Name="TradeLord.RowAccent" TransitionDuration="0.15">
+    <Layers>
+      <BrushLayer Name="Default" Sprite="BlankWhiteSquare_9" Color="#FFD700FF" />
+    </Layers>
+    <Styles>
+      <Style Name="Default">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="0.0" />
+      </Style>
+      <Style Name="Hovered">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="0.85" />
+      </Style>
+      <Style Name="Pressed">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="1.0" />
+      </Style>
+    </Styles>
+  </Brush>
+  <Brush Name="TradeLord.TownLink" TransitionDuration="0.12">
+    <Layers>
+      <BrushLayer Name="Default" Sprite="BlankWhiteSquare_9" Color="#FFD78CFF" />
+    </Layers>
+    <Styles>
+      <Style Name="Default">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="0.0" />
+      </Style>
+      <Style Name="Hovered">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="0.8" />
+      </Style>
+      <Style Name="Pressed">
         <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="1.0" />
       </Style>
     </Styles>
