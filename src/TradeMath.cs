@@ -1563,6 +1563,19 @@ namespace TradeLord
             return wouldHold > 0 ? held + (wouldHold - held) * ATownsPurseClosesItsGapADayBy : held;
         }
 
+        public const int AVillagesPurseIsCutBackTo = 1000;
+
+        public static int AVillagesPurseWhenYouArrive(int gold, float days, float nextTick)
+        {
+            int held = Math.Max(0, gold);
+            float until = Finite(days, 0f);
+            if (held <= AVillagesPurseIsCutBackTo || !(until > 0f)) return held;
+            float share = float.IsNaN(nextTick)
+                ? Math.Min(1f, until)
+                : ShareThatLands(Math.Max(0f, Finite(nextTick, LongerThanAnyRide)), until);
+            return (int)Math.Round(held - share * (double)(held - AVillagesPurseIsCutBackTo));
+        }
+
         public static int MostATillCanHold(int gold, int wouldHold, IList<(float days, int gold)> takenInOrder,
                                            int income = 0)
         {

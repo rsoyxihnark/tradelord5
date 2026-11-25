@@ -4822,6 +4822,41 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_villages_purse_is_cut_back_to_a_thousand_at_its_daily_tick_before_you_arrive()
+        {
+            Assert.Equal(1000, TradeMath.AVillagesPurseIsCutBackTo);
+            Assert.Equal(1000, TradeMath.AVillagesPurseWhenYouArrive(2500, 1f, 0.3f));
+            Assert.Equal(2500, TradeMath.AVillagesPurseWhenYouArrive(2500, 0.2f, 0.6f));
+            Assert.Equal(1750, TradeMath.AVillagesPurseWhenYouArrive(2500, 0.5f, 0.5f));
+            Assert.Equal(800, TradeMath.AVillagesPurseWhenYouArrive(800, 3f, 0.1f));
+            Assert.Equal(1000, TradeMath.AVillagesPurseWhenYouArrive(1000, 3f, 0.1f));
+            Assert.Equal(0, TradeMath.AVillagesPurseWhenYouArrive(-5, 1f, 0.1f));
+            Assert.Equal(2500, TradeMath.AVillagesPurseWhenYouArrive(2500, 0f, 0f));
+            Assert.Equal(2500, TradeMath.AVillagesPurseWhenYouArrive(2500, float.NaN, 0f));
+            Assert.Equal(1000, TradeMath.AVillagesPurseWhenYouArrive(2500, 3f, float.NaN));
+            Assert.Equal(2050, TradeMath.AVillagesPurseWhenYouArrive(2500, 0.3f, float.NaN));
+            Assert.Equal(2500, TradeMath.AVillagesPurseWhenYouArrive(2500, 0.3f, float.PositiveInfinity));
+        }
+
+        [Fact]
+        public void A_villages_purse_on_arrival_never_rises_and_never_falls_below_the_cut_back_or_with_a_shorter_ride()
+        {
+            int[] golds = { 0, 500, 1000, 1001, 1600, 25000 };
+            for (int g = 0; g < golds.Length; g++)
+                for (float tick = 0f; tick <= 2f; tick += 1f / 48f)
+                {
+                    int before = int.MaxValue;
+                    for (float days = 0f; days <= 3f; days += 1f / 96f)
+                    {
+                        int purse = TradeMath.AVillagesPurseWhenYouArrive(golds[g], days, tick);
+                        Assert.InRange(purse, Math.Min(golds[g], 1000), golds[g]);
+                        Assert.True(purse <= before, golds[g] + " at " + tick + " rose to " + purse + " over " + days);
+                        before = purse;
+                    }
+                }
+        }
+
+        [Fact]
         public void Sellers_on_the_road_draw_the_purse_in_the_order_they_arrive_and_it_refills_between_them()
         {
             double Closed(double till, double days) => 40000d - (40000d - till) * Math.Pow(0.75d, days);

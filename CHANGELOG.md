@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.13.3
+
+- Fixed TradeLord counting on more than 1000 in a village's purse when the village drops it back to 1000 before you arrive
+- With Enable extended debug logging on, TradeLord.log now checks each hour how close its forecast of every village's purse came
+- With Enable extended debug logging on, TradeLord.log now says what purse TradeLord expected a village to have on arrival and what it had
+
 ## 2.13.2
 
 - Fixed TradeLordTestAutopilot.log leaving out that Trade is stuck at its learning limit when the save you had left already said the same

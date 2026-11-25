@@ -23225,7 +23225,8 @@ def the_ride_check_says_what_purse_the_town_was_said_to_hold_and_what_it_held():
     rc = S['RideCheck.cs']
     off = method_body(rc, "private static void SetOff")
     reached = method_body(rc, "private static void Reached")
-    return (off and reached
+    town = between(reached, "else if (_ride.TillSaid && at.SettlementComponent != null)", '"  left out: "')
+    return (off and reached and town
             and "internal static bool Writing => Options.Current.ExtendedDebugLogging;" in rc
             and ordered(off, "_ride = new Open",
                         "if (Options.Current.Omniscient && Forecast.On && to.IsTown && to.SettlementComponent != null)",
@@ -23235,11 +23236,11 @@ def the_ride_check_says_what_purse_the_town_was_said_to_hold_and_what_it_held():
                         "_ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);",
                         "_riding = true;")
             and ordered(reached, "if (at != _ride.To || !Writing) return;",
-                        "if (_ride.TillSaid && at.SettlementComponent != null)",
-                        "int holds = at.SettlementComponent.Gold;",
-                        "int missed = holds - _ride.TillOnArrival;",
-                        '"  purse: it held "',
+                        "else if (_ride.TillSaid && at.SettlementComponent != null)",
                         '"  left out: "')
+            and ordered(town, "int holds = at.SettlementComponent.Gold;",
+                        "int missed = holds - _ride.TillOnArrival;",
+                        '"  purse: it held "', "the sellers ")
             and "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in S['Plan.cs'])
 
 
@@ -23918,11 +23919,14 @@ def every_towns_purse_forecast_is_checked_each_hour():
     check = S['RideCheck.cs']
     purses = method_body(check, "private static void CheckThePurses(double now)")
     weigh = method_body(check, "private static void WeighAPurse(PurseSaid one, Settlement site)")
-    return (purses and weigh
+    said = method_body(check, "private static void SayAPurse(Settlement site, int hour)")
+    return (purses and weigh and said
             and "private static readonly int[] PurseHoursAhead = { 3, 6, 12, 24 };" in check
             and "CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);" in check
             and ordered(purses, "if (!Options.Current.Omniscient || !Forecast.On)", "if (due.Key > hour) continue;",
                         "if (site?.SettlementComponent != null) WeighAPurse(one, site);",
+                        "SayAPurse(towns[i]?.Settlement, hour);")
+            and ordered(said, "foreach (int ahead in PurseHoursAhead)",
                         "due.Add(new PurseSaid { Town = site.StringId, Ahead = ahead, Said = Forecast.TillOnArrival(site, ahead / 24f) });")
             and "float off = TradeMath.PurseMissedBy(one.Said, held);" in weigh
             and "return (float)((held - (double)said) / scale);" in method_body(S['TradeMath.cs'], "public static float PurseMissedBy(")
@@ -25851,6 +25855,38 @@ def the_test_autopilot_tells_a_stuck_trade_skill_again_in_another_campaign():
 
 chk("2.13.2", "the Test Autopilot writes that Trade is stuck at its learning limit again in a campaign it loads, even where the campaign it left had said the same",
     the_test_autopilot_tells_a_stuck_trade_skill_again_in_another_campaign())
+
+def a_villages_purse_on_arrival_is_cut_back_to_1000_at_its_daily_tick():
+    arrive = method_body(S['TradeMath.cs'], "public static int AVillagesPurseWhenYouArrive")
+    till = method_body(S['Forecast.cs'], "internal static int TillOnArrival")
+    ticks = between(S['Forecast.cs'], "private static float TheVillageTicksIn(Settlement site) =>", ";")
+    weigh = method_body(S['RideCheck.cs'], "private static void WeighAPurse")
+    off = method_body(S['RideCheck.cs'], "private static void SetOff")
+    reached = method_body(S['RideCheck.cs'], "private static void Reached")
+    return (arrive and till and ticks and weigh and off and reached
+            and "public const int AVillagesPurseIsCutBackTo = 1000;" in S['TradeMath.cs']
+            and ordered(arrive, "if (held <= AVillagesPurseIsCutBackTo || !(until > 0f)) return held;",
+                        "? Math.Min(1f, until)", ": ShareThatLands(",
+                        "return (int)Math.Round(held - share * (double)(held - AVillagesPurseIsCutBackTo));")
+            and ordered(till, "int gold = market.Gold;",
+                        "if (On && site.IsVillage) return TradeMath.AVillagesPurseWhenYouArrive(gold, withinDays, TheVillageTicksIn(site));",
+                        "if (!On || !site.IsTown || site.Town == null) return gold;")
+            and "_villageMadeAt.TryGetValue(site.StringId, out double madeAt)" in ticks
+            and "TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)" in ticks
+            and "site.IsVillage ? _villagePurseOff : _purseOff" in weigh
+            and ordered(off, "else if (Options.Current.Omniscient && Forecast.On && to.IsVillage && to.SettlementComponent != null)",
+                        "_riding = true;")
+            and ordered(reached, "if (_ride.TillSaid && at.IsVillage && at.SettlementComponent != null)",
+                        '"  purse: it held "', "TradeMath.AVillagesPurseIsCutBackTo",
+                        "else if (_ride.TillSaid && at.SettlementComponent != null)")
+            and 'ThePurseLines(lines, _villagePurseOff, _villagePurseWorst, "a village\'s purse");' in S['RideCheck.cs']
+            and "SayAPurse(villages[i]?.Settlement, hour);" in method_body(S['RideCheck.cs'], "private static void CheckThePurses")
+            and "A_villages_purse_is_cut_back_to_a_thousand_at_its_daily_tick_before_you_arrive" in MATHTESTS
+            and "A_villages_purse_on_arrival_never_rises_and_never_falls_below_the_cut_back_or_with_a_shorter_ride" in MATHTESTS)
+
+
+chk("2.13.3", "a village's purse on your arrival is cut back to 1000 when the village's daily tick lands before you get there, as the game does, and TradeLord.log checks it",
+    a_villages_purse_on_arrival_is_cut_back_to_1000_at_its_daily_tick())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

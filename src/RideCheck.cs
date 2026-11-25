@@ -208,6 +208,9 @@ namespace TradeLord
         private static readonly Dictionary<int, List<float>> _purseOff = new Dictionary<int, List<float>>();
         private static readonly Dictionary<int, (int over, float worst, string at)> _purseWorst =
             new Dictionary<int, (int, float, string)>();
+        private static readonly Dictionary<int, List<float>> _villagePurseOff = new Dictionary<int, List<float>>();
+        private static readonly Dictionary<int, (int over, float worst, string at)> _villagePurseWorst =
+            new Dictionary<int, (int, float, string)>();
         private static readonly Dictionary<string, Visit> _visits = new Dictionary<string, Visit>(StringComparer.Ordinal);
         private static int _visitsDay;
         private static long _foodGold, _foodUnits, _horsesInGold, _horsesInUnits, _horsesOutGold, _horsesOutUnits,
@@ -365,6 +368,12 @@ namespace TradeLord
                 _ride.TillWho = Forecast.WhoDrawsTheTill(to, said.Days);
                 _ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);
                 CountTheCaravans(to, said.Days, now);
+            }
+            else if (Options.Current.Omniscient && Forecast.On && to.IsVillage && to.SettlementComponent != null)
+            {
+                _ride.TillSaid = true;
+                _ride.TillThen = to.SettlementComponent.Gold;
+                _ride.TillOnArrival = Forecast.TillOnArrival(to, said.Days);
             }
             _riding = true;
             Log.Write("ride check: set off for " + Tongue.Named(to.Name, to.StringId) + "; TradeLord says " +
@@ -1028,19 +1037,22 @@ namespace TradeLord
             }
             for (int i = 0; i < stale.Count; i++) _purseDue.Remove(stale[i]);
             var towns = Town.AllTowns;
-            for (int i = 0; towns != null && i < towns.Count; i++)
+            for (int i = 0; towns != null && i < towns.Count; i++) SayAPurse(towns[i]?.Settlement, hour);
+            var villages = Village.All;
+            for (int i = 0; villages != null && i < villages.Count; i++) SayAPurse(villages[i]?.Settlement, hour);
+        }
+
+        private static void SayAPurse(Settlement site, int hour)
+        {
+            if (site?.StringId == null || site.SettlementComponent == null) return;
+            foreach (int ahead in PurseHoursAhead)
             {
-                Settlement site = towns[i]?.Settlement;
-                if (site?.StringId == null || site.SettlementComponent == null) continue;
-                foreach (int ahead in PurseHoursAhead)
+                if (!_purseDue.TryGetValue(hour + ahead, out List<PurseSaid> due))
                 {
-                    if (!_purseDue.TryGetValue(hour + ahead, out List<PurseSaid> due))
-                    {
-                        due = new List<PurseSaid>();
-                        _purseDue[hour + ahead] = due;
-                    }
-                    due.Add(new PurseSaid { Town = site.StringId, Ahead = ahead, Said = Forecast.TillOnArrival(site, ahead / 24f) });
+                    due = new List<PurseSaid>();
+                    _purseDue[hour + ahead] = due;
                 }
+                due.Add(new PurseSaid { Town = site.StringId, Ahead = ahead, Said = Forecast.TillOnArrival(site, ahead / 24f) });
             }
         }
 
@@ -1048,43 +1060,52 @@ namespace TradeLord
         {
             int held = site.SettlementComponent.Gold;
             float off = TradeMath.PurseMissedBy(one.Said, held);
-            if (!_purseOff.TryGetValue(one.Ahead, out List<float> offs))
+            Dictionary<int, List<float>> offsBy = site.IsVillage ? _villagePurseOff : _purseOff;
+            Dictionary<int, (int over, float worst, string at)> worstBy = site.IsVillage ? _villagePurseWorst : _purseWorst;
+            if (!offsBy.TryGetValue(one.Ahead, out List<float> offs))
             {
                 offs = new List<float>();
-                _purseOff[one.Ahead] = offs;
+                offsBy[one.Ahead] = offs;
             }
             offs.Add(off);
-            _purseWorst.TryGetValue(one.Ahead, out var worst);
+            worstBy.TryGetValue(one.Ahead, out var worst);
             if (off < 0f) worst.over++;
             if (worst.at == null || Math.Abs(off) > Math.Abs(worst.worst))
             {
                 worst.worst = off;
                 worst.at = Tongue.Named(site.Name, site.StringId) + " (said " + one.Said + ", held " + held + ")";
             }
-            _purseWorst[one.Ahead] = worst;
+            worstBy[one.Ahead] = worst;
         }
 
         internal static void SayThePurses()
         {
-            if (!Writing || _purseOff.Count == 0) return;
+            if (!Writing || (_purseOff.Count == 0 && _villagePurseOff.Count == 0)) return;
             var lines = new List<string>();
+            ThePurseLines(lines, _purseOff, _purseWorst, "a town's purse");
+            ThePurseLines(lines, _villagePurseOff, _villagePurseWorst, "a village's purse");
+            if (lines.Count > 0) Log.WriteMany(lines);
+            ClearThePurses();
+        }
+
+        private static void ThePurseLines(List<string> lines, Dictionary<int, List<float>> offsBy,
+                                          Dictionary<int, (int over, float worst, string at)> worstBy, string whose)
+        {
             foreach (int ahead in PurseHoursAhead)
             {
-                if (!_purseOff.TryGetValue(ahead, out List<float> offs) || offs.Count == 0) continue;
+                if (!offsBy.TryGetValue(ahead, out List<float> offs) || offs.Count == 0) continue;
                 offs.Sort();
-                _purseWorst.TryGetValue(ahead, out var worst);
+                worstBy.TryGetValue(ahead, out var worst);
                 int close = 0;
                 for (int i = 0; i < offs.Count; i++)
                     if (Math.Abs(offs[i]) <= PurseCloseEnough) close++;
-                lines.Add("purse check today, " + ahead + " h ahead: " + offs.Count + " forecast(s) of a town's purse; " +
+                lines.Add("purse check today, " + ahead + " h ahead: " + offs.Count + " forecast(s) of " + whose + "; " +
                           "it held a median " + Missed(TradeMath.Quantile(offs, 0.5f)) + " than said, the middle half " +
                           "from " + Missed(TradeMath.Quantile(offs, 0.25f)) + " to " +
                           Missed(TradeMath.Quantile(offs, 0.75f)) + ", " + close + " within " +
                           Percent(PurseCloseEnough) + ", " + worst.over + " holding less than said; the furthest off " +
                           worst.at);
             }
-            if (lines.Count > 0) Log.WriteMany(lines);
-            ClearThePurses();
         }
 
         private static string Missed(float off) =>
@@ -1095,6 +1116,8 @@ namespace TradeLord
         {
             _purseOff.Clear();
             _purseWorst.Clear();
+            _villagePurseOff.Clear();
+            _villagePurseWorst.Clear();
         }
 
         private static void Entered(MobileParty party, Settlement at)
@@ -1279,7 +1302,17 @@ namespace TradeLord
                           " days and the ride on the move took " + Figure(tookDays) +
                           (overCeiling ? ", past the ceiling TradeLord kept it under" : ""));
             }
-            if (_ride.TillSaid && at.SettlementComponent != null)
+            if (_ride.TillSaid && at.IsVillage && at.SettlementComponent != null)
+            {
+                int holds = at.SettlementComponent.Gold;
+                int missed = holds - _ride.TillOnArrival;
+                lines.Add("  purse: it held " + _ride.TillThen + " when you set off; TradeLord said the village would " +
+                          "cut it back to " + TradeMath.AVillagesPurseIsCutBackTo + " at its daily tick if it held more, " +
+                          "and it would hold " + _ride.TillOnArrival + " when you got there, and it holds " + holds + ", " +
+                          (missed == 0 ? "exactly what it said" : Math.Abs(missed) + (missed > 0 ? " more" : " less") +
+                                                                   " than it said"));
+            }
+            else if (_ride.TillSaid && at.SettlementComponent != null)
             {
                 int holds = at.SettlementComponent.Gold;
                 int missed = holds - _ride.TillOnArrival;

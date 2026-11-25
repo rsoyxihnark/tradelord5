@@ -2625,6 +2625,7 @@ namespace TradeLord
             SettlementComponent market = site?.SettlementComponent;
             if (market == null) return 0;
             int gold = market.Gold;
+            if (On && site.IsVillage) return TradeMath.AVillagesPurseWhenYouArrive(gold, withinDays, TheVillageTicksIn(site));
             if (!On || !site.IsTown || site.Town == null) return gold;
             Build();
             if (!_tillAhead.TryGetValue(site.StringId, out List<(float days, int gold)> paid))
@@ -2634,6 +2635,11 @@ namespace TradeLord
         }
 
         internal static float TheTownTicksIn(Settlement site) => TradeMath.ATownTicksIn(DaysSinceTheTick(site));
+
+        private static float TheVillageTicksIn(Settlement site) =>
+            site?.StringId != null && _villageMadeAt.TryGetValue(site.StringId, out double madeAt)
+                ? TradeMath.DaysToAVillagesNextTick(CampaignTime.Now.ToDays, madeAt)
+                : float.NaN;
 
         private static readonly List<double> _runsRead = new List<double>();
 
